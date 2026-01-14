@@ -1,0 +1,8 @@
+langchain
+langgraph
+langchain-openai
+langsmith
+python-dotenv
+chromadb
+pypdf
+jupyter
