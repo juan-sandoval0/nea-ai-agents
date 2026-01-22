@@ -1,3 +1,12 @@
-# Meeting Briefing Agent Dependencies
+# Core dependencies
+langchain
+langgraph
+langchain-openai
+langsmith
+python-dotenv
+chromadb
+pypdf
+jupyter
+
+# Meeting Briefing Agent
 openai>=1.0.0
-chromadb>=0.4.0
