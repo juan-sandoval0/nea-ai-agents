@@ -48,7 +48,8 @@ class TestMeetingBriefingTools(unittest.TestCase):
                     "document_type": "news",
                     "company_name": "TestCo",
                     "source": "Tech News",
-                    "date": datetime.now().isoformat()
+                    "date": datetime.now().isoformat(),
+                    "date_timestamp": datetime.now().timestamp()
                 }
             },
             {
@@ -58,7 +59,8 @@ class TestMeetingBriefingTools(unittest.TestCase):
                     "document_type": "news",
                     "company_name": "TestCo",
                     "source": "Business Wire",
-                    "date": (datetime.now() - timedelta(days=10)).isoformat()
+                    "date": (datetime.now() - timedelta(days=10)).isoformat(),
+                    "date_timestamp": (datetime.now() - timedelta(days=10)).timestamp()
                 }
             },
             {

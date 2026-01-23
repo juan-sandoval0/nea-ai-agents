@@ -15,8 +15,8 @@ Requirements:
 - python-dateutil (for date parsing)
 """
 
-from langchain.tools import Tool
-from langchain.pydantic_v1 import BaseModel, Field
+from langchain_core.tools import Tool, StructuredTool
+from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 import chromadb
@@ -158,12 +158,11 @@ class MeetingBriefingTools:
             Formatted string containing recent news articles with sources
         """
         try:
-            # Calculate cutoff date
+            # Calculate cutoff date as Unix timestamp (ChromaDB requires numeric for $gte)
             cutoff_date = datetime.now() - timedelta(days=days)
-            cutoff_date_str = cutoff_date.isoformat()
-            
+            cutoff_timestamp = cutoff_date.timestamp()
+
             # Query the collection with filters
-            # Note: ChromaDB's date filtering requires dates to be stored as ISO strings
             results = self.collection.query(
                 query_texts=[f"recent news about {company_name}"],
                 n_results=10,
@@ -171,7 +170,7 @@ class MeetingBriefingTools:
                     "$and": [
                         {"document_type": {"$eq": "news"}},
                         {"company_name": {"$eq": company_name}},
-                        {"date": {"$gte": cutoff_date_str}}
+                        {"date_timestamp": {"$gte": cutoff_timestamp}}
                     ]
                 }
             )
@@ -302,8 +301,6 @@ def create_structured_tools(
     Returns:
         List of structured LangChain Tool objects
     """
-    from langchain.tools import StructuredTool
-    
     briefing_tools = MeetingBriefingTools(
         chroma_client=chroma_client,
         collection_name=collection_name,
