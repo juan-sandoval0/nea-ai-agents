@@ -5,6 +5,7 @@ langchain-openai
 langsmith
 python-dotenv
 chromadb
+python-dateutil
 pypdf
 jupyter
 
