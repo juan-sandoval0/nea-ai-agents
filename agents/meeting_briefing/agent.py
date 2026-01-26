@@ -39,10 +39,12 @@ try:
 except ImportError:
     pass
 
+import chromadb
 from langgraph.graph import StateGraph, START, END
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from tools.meeting_briefing_tools import MeetingBriefingTools
 from observability.langsmith import (
     tracing_enabled,
     TracingContext,
@@ -463,6 +465,222 @@ class MockDataSource:
 
 
 # =============================================================================
+# LANGCHAIN TOOLS DATA SOURCE (Uses MeetingBriefingTools)
+# =============================================================================
+
+class LangChainToolsDataSource:
+    """
+    DataSource implementation that uses MeetingBriefingTools for ChromaDB retrieval.
+
+    This bridges the LangChain tools with the LangGraph workflow by wrapping
+    MeetingBriefingTools and converting results to RetrievalResult format.
+
+    Usage:
+        # With default settings
+        source = LangChainToolsDataSource()
+
+        # With custom ChromaDB path
+        source = LangChainToolsDataSource(persist_directory="./my_chroma_db")
+
+        # Use with agent
+        agent = MeetingBriefingAgent(data_source=source)
+    """
+
+    def __init__(
+        self,
+        chroma_client: Optional[chromadb.Client] = None,
+        collection_name: str = "company_documents",
+        persist_directory: Optional[str] = "./chroma_db",
+    ):
+        """
+        Initialize the LangChain tools data source.
+
+        Args:
+            chroma_client: Existing ChromaDB client (optional)
+            collection_name: Name of the ChromaDB collection
+            persist_directory: Path to persist ChromaDB data
+        """
+        self.tools = MeetingBriefingTools(
+            chroma_client=chroma_client,
+            collection_name=collection_name,
+            persist_directory=persist_directory,
+        )
+        # Access the underlying collection for raw queries
+        self.collection = self.tools.collection
+
+    def _generate_source_id(self, content: str, metadata: dict) -> str:
+        """Generate stable ID from content hash."""
+        hash_input = f"{content[:200]}|{metadata.get('company_name', '')}|{metadata.get('document_type', '')}"
+        return hashlib.md5(hash_input.encode()).hexdigest()[:12]
+
+    def _query_to_retrieval_result(
+        self,
+        results: dict,
+        document_type: str,
+        max_results: int = 5,
+    ) -> RetrievalResult:
+        """Convert ChromaDB query results to RetrievalResult."""
+        if not results or not results.get("documents") or not results["documents"][0]:
+            return RetrievalResult(content="", sources=[], raw_results=[])
+
+        documents = results["documents"][0][:max_results]
+        metadatas = results["metadatas"][0][:max_results] if results.get("metadatas") else []
+        distances = results["distances"][0][:max_results] if results.get("distances") else []
+
+        sources = []
+        content_parts = []
+        raw_results = []
+
+        for idx, doc in enumerate(documents):
+            metadata = metadatas[idx] if idx < len(metadatas) else {}
+            distance = distances[idx] if idx < len(distances) else None
+            similarity = 1 - distance if distance is not None else None
+
+            # Create source
+            source_id = metadata.get("id") or self._generate_source_id(doc, metadata)
+
+            source = Source(
+                id=source_id,
+                title=metadata.get("title", f"{metadata.get('company_name', 'Unknown')} {document_type}"),
+                document_type=document_type,
+                description=doc[:150] if doc else "",
+                date=metadata.get("date"),
+                signal_type=metadata.get("signal_type"),
+                similarity_score=similarity,
+            )
+            sources.append(source)
+
+            # Format content
+            score_str = f"[Score: {similarity:.2f}]" if similarity else ""
+            if document_type == "news_article":
+                date = metadata.get("date", "Unknown date")
+                content_parts.append(f"[{date}] {score_str}\n{doc}")
+            elif document_type == "signal_report":
+                signal_type = metadata.get("signal_type", "general")
+                content_parts.append(f"[Signal: {signal_type}] {score_str}\n{doc}")
+            else:
+                content_parts.append(f"{score_str}\n{doc}")
+
+            raw_results.append({
+                "content": doc,
+                "metadata": metadata,
+                "similarity_score": similarity,
+            })
+
+        return RetrievalResult(
+            content="\n\n---\n\n".join(content_parts) if content_parts else "",
+            sources=sources,
+            raw_results=raw_results,
+        )
+
+    def get_company_profile(self, company_name: str) -> RetrievalResult:
+        """
+        Retrieve company profile using MeetingBriefingTools' ChromaDB collection.
+
+        Uses the same query logic as the LangChain tool but returns
+        structured RetrievalResult for the LangGraph workflow.
+        """
+        try:
+            results = self.collection.query(
+                query_texts=[f"company profile overview for {company_name}"],
+                n_results=5,
+                where={
+                    "$and": [
+                        {"document_type": {"$eq": "profile"}},
+                        {"company_name": {"$eq": company_name}},
+                    ]
+                },
+            )
+            return self._query_to_retrieval_result(results, "company_profile", max_results=5)
+        except Exception as e:
+            return RetrievalResult(
+                content=f"Error retrieving company profile: {str(e)}",
+                sources=[],
+                raw_results=[],
+            )
+
+    def get_recent_news(
+        self,
+        company_name: str,
+        days: int = DEFAULT_NEWS_DAYS,
+    ) -> RetrievalResult:
+        """
+        Retrieve recent news using MeetingBriefingTools' ChromaDB collection.
+
+        Uses the same query logic as the LangChain tool but returns
+        structured RetrievalResult for the LangGraph workflow.
+        """
+        try:
+            from datetime import timedelta
+            cutoff_date = datetime.now() - timedelta(days=days)
+            cutoff_timestamp = cutoff_date.timestamp()
+
+            results = self.collection.query(
+                query_texts=[f"recent news about {company_name}"],
+                n_results=10,
+                where={
+                    "$and": [
+                        {"document_type": {"$eq": "news"}},
+                        {"company_name": {"$eq": company_name}},
+                        {"date_timestamp": {"$gte": cutoff_timestamp}},
+                    ]
+                },
+            )
+            return self._query_to_retrieval_result(results, "news_article", max_results=10)
+        except Exception as e:
+            return RetrievalResult(
+                content=f"Error retrieving news: {str(e)}",
+                sources=[],
+                raw_results=[],
+            )
+
+    def get_key_signals(self, company_name: str) -> RetrievalResult:
+        """
+        Retrieve key signals using MeetingBriefingTools' ChromaDB collection.
+
+        Uses the same query logic as the LangChain tool but returns
+        structured RetrievalResult for the LangGraph workflow.
+        """
+        try:
+            results = self.collection.query(
+                query_texts=[f"key signals and strategic insights for {company_name}"],
+                n_results=7,
+                where={
+                    "$and": [
+                        {"document_type": {"$eq": "signal"}},
+                        {"company_name": {"$eq": company_name}},
+                    ]
+                },
+            )
+            return self._query_to_retrieval_result(results, "signal_report", max_results=7)
+        except Exception as e:
+            return RetrievalResult(
+                content=f"Error retrieving signals: {str(e)}",
+                sources=[],
+                raw_results=[],
+            )
+
+    def list_companies(self) -> list[str]:
+        """
+        List available companies.
+
+        Note: ChromaDB doesn't have a built-in way to list unique metadata values,
+        so we return the mock companies list. In production, this would query
+        a separate companies index or CRM.
+        """
+        return MOCK_COMPANIES.copy()
+
+    def get_langchain_tools(self):
+        """
+        Get the underlying LangChain tools for direct use if needed.
+
+        Returns:
+            List of LangChain Tool objects
+        """
+        return self.tools.get_langchain_tools()
+
+
+# =============================================================================
 # PLACEHOLDER DATA SOURCES (Templates for Future Integration)
 # =============================================================================
 
@@ -653,7 +871,7 @@ def validate_company_node(state: BriefingState) -> dict:
 
     # Get data source from state or create default
     # Note: In production, data_source would be injected via config
-    data_source = state.get("_data_source") or MockDataSource()
+    data_source = state.get("_data_source") or LangChainToolsDataSource()
     available_companies = data_source.list_companies()
 
     # Check if company exists (case-insensitive)
@@ -690,7 +908,7 @@ def retrieve_profile_node(state: BriefingState) -> dict:
 
     company_name = state["company_name"]
     ctx = state.get("tracing_context")
-    data_source = state.get("_data_source") or MockDataSource()
+    data_source = state.get("_data_source") or LangChainToolsDataSource()
 
     result = data_source.get_company_profile(company_name)
 
@@ -725,7 +943,7 @@ def retrieve_news_node(state: BriefingState) -> dict:
 
     company_name = state["company_name"]
     ctx = state.get("tracing_context")
-    data_source = state.get("_data_source") or MockDataSource()
+    data_source = state.get("_data_source") or LangChainToolsDataSource()
 
     result = data_source.get_recent_news(company_name, days=DEFAULT_NEWS_DAYS)
 
@@ -759,7 +977,7 @@ def retrieve_signals_node(state: BriefingState) -> dict:
 
     company_name = state["company_name"]
     ctx = state.get("tracing_context")
-    data_source = state.get("_data_source") or MockDataSource()
+    data_source = state.get("_data_source") or LangChainToolsDataSource()
 
     result = data_source.get_key_signals(company_name)
 
@@ -983,17 +1201,21 @@ class MeetingBriefingAgent:
     - Returns a structured result with the briefing and metadata
 
     Usage:
-        # With mock data (default)
+        # With LangChain tools data source (default)
         agent = MeetingBriefingAgent()
         result = agent.prepare_briefing("Nexus AI")
         print(result["briefing_markdown"])
+
+        # With mock data source (for testing with ingestion pipeline)
+        agent = MeetingBriefingAgent(data_source=MockDataSource())
+        result = agent.prepare_briefing("Nexus AI")
 
         # With custom data source (future)
         agent = MeetingBriefingAgent(data_source=HarmonicDataSource(api_key))
         result = agent.prepare_briefing("Acme Corp")
 
     Args:
-        data_source: DataSource implementation (defaults to MockDataSource)
+        data_source: DataSource implementation (defaults to LangChainToolsDataSource)
         time_window_days: Days to look back for news (default: 30)
     """
 
@@ -1006,10 +1228,10 @@ class MeetingBriefingAgent:
         Initialize the meeting briefing agent.
 
         Args:
-            data_source: Data source for retrieval (defaults to MockDataSource)
+            data_source: Data source for retrieval (defaults to LangChainToolsDataSource)
             time_window_days: Days to look back for news articles
         """
-        self.data_source = data_source or MockDataSource()
+        self.data_source = data_source or LangChainToolsDataSource()
         self.time_window_days = time_window_days
 
         # Build and compile the graph
