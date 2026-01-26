@@ -13,11 +13,19 @@ This module handles:
 import os
 import re
 from pathlib import Path
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 from datetime import datetime
 from typing import Optional
 
 import chromadb
 from chromadb.config import Settings
+from chromadb.utils import embedding_functions
 from openai import OpenAI
 
 
@@ -46,12 +54,19 @@ class DocumentIngestionPipeline:
 
         self.openai_client = OpenAI(api_key=self.api_key)
 
+        # Set up OpenAI embedding function for consistent querying
+        self.embedding_function = embedding_functions.OpenAIEmbeddingFunction(
+            api_key=self.api_key,
+            model_name=EMBEDDING_MODEL,
+        )
+
         # Initialize ChromaDB with persistence
         CHROMA_PERSIST_DIR.mkdir(parents=True, exist_ok=True)
         self.chroma_client = chromadb.PersistentClient(path=str(CHROMA_PERSIST_DIR))
         self.collection = self.chroma_client.get_or_create_collection(
             name=COLLECTION_NAME,
-            metadata={"hnsw:space": "cosine"}
+            metadata={"hnsw:space": "cosine"},
+            embedding_function=self.embedding_function,
         )
 
     def extract_metadata(self, file_path: Path) -> dict:

@@ -15,34 +15,59 @@ Requirements:
 - python-dateutil (for date parsing)
 """
 
+import os
 from langchain_core.tools import Tool, StructuredTool
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 import chromadb
 from chromadb.config import Settings
+from chromadb.utils import embedding_functions
+
+# Load environment variables
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 
 class MeetingBriefingTools:
     """
     A collection of LangChain tools for retrieving company briefing materials
     from a ChromaDB vector store.
+
+    Uses OpenAI embeddings (text-embedding-3-small) to match the ingestion pipeline.
     """
-    
+
+    EMBEDDING_MODEL = "text-embedding-3-small"
+
     def __init__(
         self,
         chroma_client: Optional[chromadb.Client] = None,
         collection_name: str = "company_documents",
-        persist_directory: Optional[str] = None
+        persist_directory: Optional[str] = None,
+        openai_api_key: Optional[str] = None,
     ):
         """
         Initialize the meeting briefing tools.
-        
+
         Args:
             chroma_client: Existing ChromaDB client (optional)
             collection_name: Name of the ChromaDB collection
             persist_directory: Path to persist ChromaDB data (if creating new client)
+            openai_api_key: OpenAI API key for embeddings (default: from OPENAI_API_KEY env var)
         """
+        # Set up OpenAI embedding function to match ingestion pipeline
+        self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
+        if not self.openai_api_key:
+            raise ValueError("OpenAI API key required. Set OPENAI_API_KEY env var or pass openai_api_key.")
+
+        self.embedding_function = embedding_functions.OpenAIEmbeddingFunction(
+            api_key=self.openai_api_key,
+            model_name=self.EMBEDDING_MODEL,
+        )
+
         if chroma_client is None:
             if persist_directory:
                 self.client = chromadb.PersistentClient(path=persist_directory)
@@ -50,11 +75,12 @@ class MeetingBriefingTools:
                 self.client = chromadb.Client()
         else:
             self.client = chroma_client
-            
+
         self.collection_name = collection_name
         self.collection = self.client.get_or_create_collection(
             name=collection_name,
-            metadata={"description": "Company documents for meeting briefings"}
+            metadata={"description": "Company documents for meeting briefings"},
+            embedding_function=self.embedding_function,
         )
     
     def _format_results(

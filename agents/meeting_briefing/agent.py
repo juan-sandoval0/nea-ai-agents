@@ -19,6 +19,7 @@ from __future__ import annotations
 import time
 import hashlib
 from abc import ABC, abstractmethod
+from pathlib import Path
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import (
@@ -486,20 +487,29 @@ class LangChainToolsDataSource:
         agent = MeetingBriefingAgent(data_source=source)
     """
 
+    # Default paths matching ingestion.py
+    DEFAULT_PERSIST_DIR = str(Path(__file__).parent / "chroma_db")
+    DEFAULT_COLLECTION = "meeting_briefing_docs"
+
     def __init__(
         self,
         chroma_client: Optional[chromadb.Client] = None,
-        collection_name: str = "company_documents",
-        persist_directory: Optional[str] = "./chroma_db",
+        collection_name: Optional[str] = None,
+        persist_directory: Optional[str] = None,
     ):
         """
         Initialize the LangChain tools data source.
 
         Args:
             chroma_client: Existing ChromaDB client (optional)
-            collection_name: Name of the ChromaDB collection
-            persist_directory: Path to persist ChromaDB data
+            collection_name: Name of the ChromaDB collection (default: meeting_briefing_docs)
+            persist_directory: Path to persist ChromaDB data (default: agents/meeting_briefing/chroma_db)
         """
+        # Use defaults matching ingestion.py
+        collection_name = collection_name or self.DEFAULT_COLLECTION
+        persist_directory = persist_directory or self.DEFAULT_PERSIST_DIR
+
+        # Use MeetingBriefingTools which now has OpenAI embeddings configured
         self.tools = MeetingBriefingTools(
             chroma_client=chroma_client,
             collection_name=collection_name,
@@ -575,10 +585,9 @@ class LangChainToolsDataSource:
 
     def get_company_profile(self, company_name: str) -> RetrievalResult:
         """
-        Retrieve company profile using MeetingBriefingTools' ChromaDB collection.
+        Retrieve company profile using MeetingBriefingTools.
 
-        Uses the same query logic as the LangChain tool but returns
-        structured RetrievalResult for the LangGraph workflow.
+        MeetingBriefingTools handles OpenAI embeddings internally.
         """
         try:
             results = self.collection.query(
@@ -586,10 +595,11 @@ class LangChainToolsDataSource:
                 n_results=5,
                 where={
                     "$and": [
-                        {"document_type": {"$eq": "profile"}},
+                        {"document_type": {"$eq": "company_profile"}},
                         {"company_name": {"$eq": company_name}},
                     ]
                 },
+                include=["documents", "metadatas", "distances"],
             )
             return self._query_to_retrieval_result(results, "company_profile", max_results=5)
         except Exception as e:
@@ -605,26 +615,21 @@ class LangChainToolsDataSource:
         days: int = DEFAULT_NEWS_DAYS,
     ) -> RetrievalResult:
         """
-        Retrieve recent news using MeetingBriefingTools' ChromaDB collection.
+        Retrieve recent news using MeetingBriefingTools.
 
-        Uses the same query logic as the LangChain tool but returns
-        structured RetrievalResult for the LangGraph workflow.
+        MeetingBriefingTools handles OpenAI embeddings internally.
         """
         try:
-            from datetime import timedelta
-            cutoff_date = datetime.now() - timedelta(days=days)
-            cutoff_timestamp = cutoff_date.timestamp()
-
             results = self.collection.query(
                 query_texts=[f"recent news about {company_name}"],
                 n_results=10,
                 where={
                     "$and": [
-                        {"document_type": {"$eq": "news"}},
+                        {"document_type": {"$eq": "news_article"}},
                         {"company_name": {"$eq": company_name}},
-                        {"date_timestamp": {"$gte": cutoff_timestamp}},
                     ]
                 },
+                include=["documents", "metadatas", "distances"],
             )
             return self._query_to_retrieval_result(results, "news_article", max_results=10)
         except Exception as e:
@@ -636,10 +641,9 @@ class LangChainToolsDataSource:
 
     def get_key_signals(self, company_name: str) -> RetrievalResult:
         """
-        Retrieve key signals using MeetingBriefingTools' ChromaDB collection.
+        Retrieve key signals using MeetingBriefingTools.
 
-        Uses the same query logic as the LangChain tool but returns
-        structured RetrievalResult for the LangGraph workflow.
+        MeetingBriefingTools handles OpenAI embeddings internally.
         """
         try:
             results = self.collection.query(
@@ -647,10 +651,11 @@ class LangChainToolsDataSource:
                 n_results=7,
                 where={
                     "$and": [
-                        {"document_type": {"$eq": "signal"}},
+                        {"document_type": {"$eq": "signal_report"}},
                         {"company_name": {"$eq": company_name}},
                     ]
                 },
+                include=["documents", "metadatas", "distances"],
             )
             return self._query_to_retrieval_result(results, "signal_report", max_results=7)
         except Exception as e:
