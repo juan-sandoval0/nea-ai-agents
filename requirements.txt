@@ -1,0 +1,22 @@
+# Core dependencies
+langchain>=0.1.0
+langgraph>=0.0.1
+langchain-openai>=0.0.5
+langsmith>=0.0.77
+python-dotenv>=1.0.0
+chromadb>=0.4.0
+python-dateutil>=2.8.0
+pypdf>=3.0.0
+jupyter>=1.0.0
+
+# Meeting Briefing Agent
+openai>=1.0.0
+
+# Observability (optional - only needed if LANGSMITH_TRACING=true)
+# langsmith is already included above
+
+# Testing
+pytest>=7.0.0
+
+# Pin protobuf to avoid Streamlit/grpc conflicts
+protobuf>=4.0.0,<5.0.0
