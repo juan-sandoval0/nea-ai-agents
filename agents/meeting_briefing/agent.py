@@ -138,7 +138,7 @@ class RetrievalResult:
         return [s.id for s in self.sources]
 
 
-class BriefingState(TypedDict):
+class BriefingState(TypedDict, total=False):
     """
     LangGraph state for the meeting briefing workflow.
 
@@ -168,6 +168,9 @@ class BriefingState(TypedDict):
     # Timing
     start_time: Optional[float]
     total_elapsed_ms: Optional[int]
+
+    # Injected data source for retrieval nodes
+    _data_source: Optional[Any]
 
 
 # =============================================================================
@@ -686,51 +689,31 @@ class LangChainToolsDataSource:
 
 
 # =============================================================================
-# PLACEHOLDER DATA SOURCES (Templates for Future Integration)
+# HARMONIC DATA SOURCE (Real API Integration)
 # =============================================================================
 
-# TODO: Implement these when API access is available
+# Import HarmonicDataSource from dedicated module
+# This provides real Harmonic.ai API integration with ChromaDB caching
+try:
+    from .harmonic_source import HarmonicDataSource
+except ImportError:
+    # Fallback placeholder if harmonic_source not available
+    class HarmonicDataSource:
+        """
+        Harmonic API data source for company intelligence.
 
-class HarmonicDataSource:
-    """
-    Harmonic API data source for company intelligence.
+        Requires: HARMONIC_API_KEY environment variable
 
-    IMPLEMENTATION GUIDE:
-    ---------------------
-    1. Install: pip install harmonic-sdk  # or whatever the package is
-    2. Set env: HARMONIC_API_KEY
-    3. Implement methods below
+        Usage:
+            source = HarmonicDataSource()
+            agent = MeetingBriefingAgent(data_source=source)
+        """
 
-    API Endpoints to use:
-    - Company profile: GET /v1/companies/{id}
-    - Company search: GET /v1/companies/search
-    - Signals: GET /v1/companies/{id}/signals
-    """
-
-    def __init__(self, api_key: Optional[str] = None):
-        import os
-        self.api_key = api_key or os.getenv("HARMONIC_API_KEY")
-        if not self.api_key:
-            raise ValueError("HARMONIC_API_KEY required")
-        # TODO: Initialize Harmonic client
-        # self.client = HarmonicClient(api_key=self.api_key)
-        raise NotImplementedError("HarmonicDataSource not yet implemented")
-
-    def get_company_profile(self, company_name: str) -> RetrievalResult:
-        # TODO: Implement Harmonic company lookup
-        raise NotImplementedError
-
-    def get_recent_news(self, company_name: str, days: int = 30) -> RetrievalResult:
-        # TODO: Implement Harmonic news/updates retrieval
-        raise NotImplementedError
-
-    def get_key_signals(self, company_name: str) -> RetrievalResult:
-        # TODO: Implement Harmonic signals retrieval
-        raise NotImplementedError
-
-    def list_companies(self) -> list[str]:
-        # TODO: Implement portfolio listing
-        raise NotImplementedError
+        def __init__(self, api_key: Optional[str] = None):
+            raise ImportError(
+                "HarmonicDataSource requires harmonic_source module. "
+                "Ensure harmonic_client.py and harmonic_source.py are present."
+            )
 
 
 class NewsDataSource:
@@ -868,6 +851,9 @@ def validate_company_node(state: BriefingState) -> dict:
 
     This is the first node in the graph - validates input before
     expensive retrieval operations.
+
+    For API-based sources (like Harmonic), validation is skipped since
+    they support dynamic company lookup.
     """
     start = time.perf_counter()
 
@@ -879,12 +865,17 @@ def validate_company_node(state: BriefingState) -> dict:
     data_source = state.get("_data_source") or LangChainToolsDataSource()
     available_companies = data_source.list_companies()
 
-    # Check if company exists (case-insensitive)
-    available_normalized = [normalize_company_name(c) for c in available_companies]
-
     error = None
-    if company_name not in available_normalized:
-        error = f"Company '{company_name}' not found. Available: {', '.join(available_companies)}"
+
+    # Check if data source supports dynamic lookup
+    # "*" in list or empty list means any company can be looked up
+    supports_dynamic_lookup = "*" in available_companies or not available_companies
+
+    if not supports_dynamic_lookup:
+        # Check if company exists (case-insensitive)
+        available_normalized = [normalize_company_name(c) for c in available_companies]
+        if company_name not in available_normalized:
+            error = f"Company '{company_name}' not found. Available: {', '.join(available_companies)}"
 
     elapsed_ms = int((time.perf_counter() - start) * 1000)
 

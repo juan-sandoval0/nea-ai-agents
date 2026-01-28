@@ -20,7 +20,19 @@ def __getattr__(name):
     if name == "MeetingBriefingAgent":
         from .agent import MeetingBriefingAgent
         return MeetingBriefingAgent
+    if name == "HarmonicDataSource":
+        from .harmonic_source import HarmonicDataSource
+        return HarmonicDataSource
+    if name == "HarmonicClient":
+        from .harmonic_client import HarmonicClient
+        return HarmonicClient
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-__all__ = ["DocumentIngestionPipeline", "MeetingBriefingAgent", "MOCK_COMPANIES"]
+__all__ = [
+    "DocumentIngestionPipeline",
+    "MeetingBriefingAgent",
+    "HarmonicDataSource",
+    "HarmonicClient",
+    "MOCK_COMPANIES",
+]
