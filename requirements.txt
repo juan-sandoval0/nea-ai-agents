@@ -15,6 +15,9 @@ openai>=1.0.0
 # Harmonic API integration
 requests>=2.28.0
 
+# Tavily API (website intelligence)
+tavily-python>=0.5.0
+
 # Observability (optional - only needed if LANGSMITH_TRACING=true)
 # langsmith is already included above
 

@@ -45,6 +45,7 @@ from core.database import (
     CompanyBundle,
 )
 from core.clients.harmonic import HarmonicClient, HarmonicCompany, HarmonicAPIError
+from core.clients.tavily import TavilyClient, TavilyAPIError
 from core.tracking import get_tracker
 
 logger = logging.getLogger(__name__)
@@ -75,6 +76,22 @@ def get_harmonic_client() -> HarmonicClient:
     if _harmonic_client is None:
         _harmonic_client = HarmonicClient()
     return _harmonic_client
+
+
+# Singleton Tavily client
+_tavily_client: Optional[TavilyClient] = None
+
+
+def get_tavily_client() -> Optional[TavilyClient]:
+    """Get or create Tavily client instance. Returns None if API key not set."""
+    global _tavily_client
+    if _tavily_client is None:
+        try:
+            _tavily_client = TavilyClient()
+        except ValueError:
+            logger.info("TAVILY_API_KEY not set - website intelligence disabled")
+            return None
+    return _tavily_client
 
 
 # =============================================================================
@@ -227,6 +244,15 @@ def get_company_profile(company_id: str) -> CompanyCore:
     products = company.description
     customers = company.customer_type
 
+    # Preserve existing website_update from DB (populated by Tavily during signal ingestion)
+    existing_website_update = None
+    try:
+        existing = db.get_company(normalized_id)
+        if existing and existing.website_update:
+            existing_website_update = existing.website_update
+    except Exception:
+        pass
+
     # Create CompanyCore object
     company_core = CompanyCore(
         company_id=normalized_id,
@@ -241,7 +267,7 @@ def get_company_profile(company_id: str) -> CompanyCore:
         last_round_date=company.funding_last_date,
         last_round_funding=company.funding_last_amount,
         web_traffic_trend=web_traffic_trend,
-        website_update=None,
+        website_update=existing_website_update,
         hiring_firing=hiring_firing,
         observed_at=datetime.utcnow().isoformat(),
         source_map=source_map,
@@ -510,14 +536,77 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
             source="harmonic",
         ))
 
-    # Signal: Website Update (NOT IMPLEMENTED)
-    signals.append(KeySignal(
-        company_id=normalized_id,
-        signal_type="website_update",
-        description="Website change detection not yet available",
-        observed_at=now,
-        source="pending_tavily",
-    ))
+    # Signal: Website Intelligence (Tavily)
+    tavily = get_tavily_client()
+    if tavily is not None:
+        try:
+            domain = normalized_id  # normalized_id is already a domain
+            intel = tavily.analyze_company_website(domain)
+
+            # Map Tavily signal types to our signal_type naming
+            type_map = {
+                "product_update": "website_product",
+                "pricing_change": "website_pricing",
+                "team_change": "website_team",
+                "partnership": "website_news",
+                "funding_news": "website_news",
+                "general_update": "website_update",
+            }
+
+            for sig in intel.signals:
+                signal_type = type_map.get(sig["type"], "website_update")
+                desc = sig["description"]
+                if sig.get("url"):
+                    desc += f" (source: {sig['url']})"
+                signals.append(KeySignal(
+                    company_id=normalized_id,
+                    signal_type=signal_type,
+                    description=desc,
+                    observed_at=now,
+                    source="tavily",
+                ))
+
+            # Update website_update field on CompanyCore
+            if intel.signals:
+                type_labels = list({sig["type"].replace("_", " ") for sig in intel.signals})
+                summary = f"{len(intel.signals)} website changes detected (30d): {', '.join(type_labels[:3])}"
+                conn = db._get_connection()
+                try:
+                    conn.execute(
+                        "UPDATE company_core SET website_update = ? WHERE company_id = ?",
+                        (summary, normalized_id),
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+                logger.info(f"Tavily: {len(intel.signals)} signals for {normalized_id}")
+            elif intel.answer_summary:
+                conn = db._get_connection()
+                try:
+                    conn.execute(
+                        "UPDATE company_core SET website_update = ? WHERE company_id = ?",
+                        (intel.answer_summary[:200], normalized_id),
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+        except TavilyAPIError as e:
+            logger.warning(f"Tavily analysis failed for {normalized_id}: {e}")
+            signals.append(KeySignal(
+                company_id=normalized_id,
+                signal_type="website_update",
+                description="Website intelligence temporarily unavailable",
+                observed_at=now,
+                source="tavily",
+            ))
+    else:
+        signals.append(KeySignal(
+            company_id=normalized_id,
+            signal_type="website_update",
+            description="Website change detection not yet available (TAVILY_API_KEY not set)",
+            observed_at=now,
+            source="pending_tavily",
+        ))
 
     if signals:
         db.upsert_signals(signals)

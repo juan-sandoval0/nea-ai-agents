@@ -2,6 +2,7 @@
 
 Available clients:
 - HarmonicClient: Harmonic.ai company intelligence API
+- TavilyClient: Tavily website intelligence API
 """
 
 from core.clients.harmonic import (
@@ -10,10 +11,18 @@ from core.clients.harmonic import (
     HarmonicPerson,
     HarmonicAPIError,
 )
+from core.clients.tavily import (
+    TavilyClient,
+    WebsiteIntelligence,
+    TavilyAPIError,
+)
 
 __all__ = [
     "HarmonicClient",
     "HarmonicCompany",
     "HarmonicPerson",
     "HarmonicAPIError",
+    "TavilyClient",
+    "WebsiteIntelligence",
+    "TavilyAPIError",
 ]
