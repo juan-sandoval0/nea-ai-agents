@@ -2,17 +2,17 @@
 """
 Evaluation Harness for Meeting Briefing Agent
 ==============================================
-Runs the agent on all 5 mock companies and logs results to LangSmith.
+Runs the agent on specified company URLs and logs results to LangSmith.
 
 Usage:
     # With tracing enabled
-    LANGSMITH_TRACING=true LANGSMITH_API_KEY=xxx python -m agents.meeting_briefing.eval_harness
+    LANGSMITH_TRACING=true LANGSMITH_API_KEY=xxx python -m agents.meeting_briefing.eval_harness --urls stripe.com airbnb.com
 
     # Without tracing (local only)
-    python -m agents.meeting_briefing.eval_harness
+    python -m agents.meeting_briefing.eval_harness --urls stripe.com
 
     # Save results to file
-    python -m agents.meeting_briefing.eval_harness --output results.json
+    python -m agents.meeting_briefing.eval_harness --urls stripe.com airbnb.com --output results.json
 """
 
 import argparse
@@ -30,27 +30,30 @@ load_dotenv()
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from agents.meeting_briefing.agent import MeetingBriefingAgent, MOCK_COMPANIES
+from agents.meeting_briefing.agent import MeetingBriefingAgent
 from observability.langsmith import tracing_enabled, get_project_name, get_langsmith_client
+
+# Default URLs for evaluation (company domains via Harmonic API)
+DEFAULT_EVAL_URLS = ["stripe.com", "airbnb.com", "openai.com"]
 
 
 def run_evaluation(
-    companies: list[str] = None,
+    urls: list[str] = None,
     output_file: str = None,
     verbose: bool = True
 ) -> dict:
     """
-    Run the meeting briefing agent on all mock companies.
+    Run the meeting briefing agent on specified company URLs.
 
     Args:
-        companies: List of company names to evaluate (defaults to MOCK_COMPANIES)
+        urls: List of company URLs to evaluate (defaults to DEFAULT_EVAL_URLS)
         output_file: Optional path to save results as JSON
         verbose: Whether to print progress
 
     Returns:
         Dict with evaluation results
     """
-    companies = companies or MOCK_COMPANIES
+    urls = urls or DEFAULT_EVAL_URLS
     eval_id = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     if verbose:
@@ -58,7 +61,7 @@ def run_evaluation(
         print("MEETING BRIEFING AGENT - EVALUATION HARNESS")
         print("=" * 70)
         print(f"Evaluation ID: {eval_id}")
-        print(f"Companies: {', '.join(companies)}")
+        print(f"URLs: {', '.join(urls)}")
         print(f"Tracing enabled: {tracing_enabled()}")
         if tracing_enabled():
             print(f"LangSmith project: {get_project_name()}")
@@ -73,10 +76,10 @@ def run_evaluation(
         "timestamp": datetime.now().isoformat(),
         "tracing_enabled": tracing_enabled(),
         "project_name": get_project_name() if tracing_enabled() else None,
-        "companies_evaluated": companies,
+        "urls_evaluated": urls,
         "runs": [],
         "summary": {
-            "total": len(companies),
+            "total": len(urls),
             "success": 0,
             "failed": 0,
             "total_elapsed_ms": 0,
@@ -84,16 +87,17 @@ def run_evaluation(
         }
     }
 
-    # Run on each company
-    for i, company in enumerate(companies, 1):
+    # Run on each URL
+    for i, url in enumerate(urls, 1):
         if verbose:
-            print(f"[{i}/{len(companies)}] Processing: {company}")
+            print(f"[{i}/{len(urls)}] Processing: {url}")
             print("-" * 50)
 
         try:
-            run_result = agent.prepare_briefing(company)
+            run_result = agent.prepare_briefing(url)
 
             results["runs"].append({
+                "url": run_result["url"],
                 "company_name": run_result["company_name"],
                 "run_id": run_result["run_id"],
                 "timestamp": run_result["timestamp"],
@@ -103,12 +107,13 @@ def run_evaluation(
                 "retrieval_doc_ids": run_result["retrieval_doc_ids"],
                 "step_timings_ms": run_result["step_timings_ms"],
                 "total_elapsed_ms": run_result["total_elapsed_ms"],
-                "output_markdown": run_result["output_markdown"],
+                "output_markdown": run_result["briefing_markdown"],
             })
 
             if run_result["success"]:
                 results["summary"]["success"] += 1
                 if verbose:
+                    print(f"  Company: {run_result['company_name']}")
                     print(f"  Status: SUCCESS")
                     print(f"  Retrieval counts: {run_result['retrieval_counts']}")
                     print(f"  Elapsed: {run_result['total_elapsed_ms']}ms")
@@ -123,7 +128,8 @@ def run_evaluation(
         except Exception as e:
             results["summary"]["failed"] += 1
             results["runs"].append({
-                "company_name": company,
+                "url": url,
+                "company_name": None,
                 "run_id": None,
                 "timestamp": datetime.now().isoformat(),
                 "success": False,
@@ -228,10 +234,10 @@ def main():
         help="Output file path for results JSON"
     )
     parser.add_argument(
-        "--companies", "-c",
+        "--urls", "-u",
         type=str,
         nargs="+",
-        help="Specific companies to evaluate (default: all mock companies)"
+        help="Company URLs to evaluate (default: stripe.com, airbnb.com, openai.com)"
     )
     parser.add_argument(
         "--quiet", "-q",
@@ -242,7 +248,7 @@ def main():
     args = parser.parse_args()
 
     results = run_evaluation(
-        companies=args.companies,
+        urls=args.urls,
         output_file=args.output,
         verbose=not args.quiet
     )

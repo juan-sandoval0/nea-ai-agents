@@ -136,10 +136,10 @@ LANGSMITH_TRACING=true python -m agents.meeting_briefing.agent
 
 ## Evaluation Harness
 
-Run the agent on all 5 mock companies and log results:
+Run the agent on company URLs and log results:
 
 ```bash
-# Run evaluation (tracing optional)
+# Run evaluation on default URLs (stripe.com, airbnb.com, openai.com)
 python -m agents.meeting_briefing.eval_harness
 
 # With tracing enabled
@@ -148,18 +148,12 @@ LANGSMITH_TRACING=true python -m agents.meeting_briefing.eval_harness
 # Save results to file
 python -m agents.meeting_briefing.eval_harness --output results/eval_results.json
 
-# Run on specific companies
-python -m agents.meeting_briefing.eval_harness --companies "Nexus AI" "Helix Therapeutics"
+# Run on specific company URLs
+python -m agents.meeting_briefing.eval_harness --urls stripe.com airbnb.com
+
+# Also supports LinkedIn URLs
+python -m agents.meeting_briefing.eval_harness --urls "linkedin.com/company/stripe"
 ```
-
-### Mock Companies
-
-The evaluation harness runs on these 5 companies:
-- Nexus AI
-- Quantum Ledger
-- Helix Therapeutics
-- TerraFlow
-- CodeLayer
 
 ### Viewing Results in LangSmith
 

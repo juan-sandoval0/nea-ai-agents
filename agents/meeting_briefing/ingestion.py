@@ -2,12 +2,15 @@
 Document Ingestion Pipeline for Meeting Briefing Agent
 
 This module handles:
-- Loading markdown documents from the mock_documents directory
+- Loading markdown documents from a specified directory
 - Parsing and extracting metadata (company name, document type, date)
 - Chunking documents for embedding
 - Creating embeddings using OpenAI text-embedding-3-small
 - Storing in ChromaDB with metadata
 - Querying by company name
+
+Note: This pipeline is primarily used for custom document ingestion.
+The default data source is HarmonicDataSource which uses the Harmonic API.
 """
 
 import os
@@ -30,7 +33,7 @@ from openai import OpenAI
 
 
 # Configuration
-DOCUMENTS_DIR = Path(__file__).parent.parent.parent / "data" / "mock_documents"
+DOCUMENTS_DIR = Path(__file__).parent.parent.parent / "data" / "documents"
 CHROMA_PERSIST_DIR = Path(__file__).parent / "chroma_db"
 COLLECTION_NAME = "meeting_briefing_docs"
 EMBEDDING_MODEL = "text-embedding-3-small"

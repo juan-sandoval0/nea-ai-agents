@@ -57,17 +57,7 @@ from observability.langsmith import (
 # =============================================================================
 
 DEFAULT_NEWS_DAYS = 30
-DEFAULT_LLM_MODEL = "gpt-4o"
-
-# Mock companies - keep in sync with data/mock_documents/
-MOCK_COMPANIES = [
-    "Nexus AI",
-    "Quantum Ledger",
-    "Helix Therapeutics",
-    "Terraflow",
-    "Codelayer",
-]
-
+DEFAULT_LLM_MODEL = "gpt-4o-mini"
 
 # =============================================================================
 # DATA MODELS
@@ -146,8 +136,11 @@ class BriefingState(TypedDict, total=False):
     and citation sources until final synthesis.
     """
     # Input
-    company_name: str
+    url: str  # Company website or LinkedIn URL
     run_id: str
+
+    # Derived from lookup (set by validate node)
+    company_name: str  # Resolved company name from Harmonic
 
     # Retrieval results (populated by retriever nodes)
     profile_result: Optional[RetrievalResult]
@@ -182,89 +175,61 @@ class DataSource(Protocol):
     """
     Protocol defining the interface for meeting briefing data sources.
 
-    FUTURE API INTEGRATION:
-    -----------------------
-    To add a new data source (e.g., Harmonic, Swarm, news APIs):
-
-    1. Create a new class implementing this protocol
-    2. Implement all four methods with your API calls
-    3. Pass your data source to MeetingBriefingAgent
+    All methods accept a URL (company website or LinkedIn URL) for exact matching.
+    This prevents hallucinations from ambiguous company names.
 
     Example:
         class HarmonicDataSource:
             def __init__(self, api_key: str):
                 self.client = HarmonicClient(api_key)
 
-            def get_company_profile(self, company: str) -> RetrievalResult:
-                response = self.client.company.get(company)
-                return RetrievalResult(
-                    content=response.summary,
-                    sources=[Source(
-                        id=response.id,
-                        title=response.name,
-                        document_type="company_profile",
-                        description=response.description,
-                        url=response.harmonic_url,
-                    )]
-                )
-            # ... implement other methods
+            def get_company_profile(self, url: str) -> RetrievalResult:
+                company = self.client.lookup_company(domain=url)
+                return RetrievalResult(...)
 
         # Use it:
         agent = MeetingBriefingAgent(data_source=HarmonicDataSource(api_key))
+        result = agent.prepare_briefing("https://stripe.com")
     """
 
-    def get_company_profile(self, company_name: str) -> RetrievalResult:
+    def get_company_profile(self, url: str) -> RetrievalResult:
         """
         Retrieve company profile/overview information.
 
         Args:
-            company_name: Normalized company name
+            url: Company website URL or LinkedIn URL
 
         Returns:
             RetrievalResult with company overview content and sources
-
-        TODO (API Integration):
-            - Harmonic: Use company enrichment endpoint
-            - Crunchbase: Use organization endpoint
-            - Custom CRM: Query company records
         """
         ...
 
     def get_recent_news(
         self,
-        company_name: str,
+        url: str,
         days: int = DEFAULT_NEWS_DAYS
     ) -> RetrievalResult:
         """
         Retrieve recent news articles about the company.
 
         Args:
-            company_name: Normalized company name
+            url: Company website URL or LinkedIn URL
             days: Number of days to look back
 
         Returns:
             RetrievalResult with news content and sources
-
-        TODO (API Integration):
-            - News API: Use search API with company name + news filter
-            - Swarm: Use news intelligence endpoint
         """
         ...
 
-    def get_key_signals(self, company_name: str) -> RetrievalResult:
+    def get_key_signals(self, url: str) -> RetrievalResult:
         """
         Retrieve strategic signals and indicators.
 
         Args:
-            company_name: Normalized company name
+            url: Company website URL or LinkedIn URL
 
         Returns:
             RetrievalResult with signal content and sources
-
-        TODO (API Integration):
-            - Harmonic: Use signals/alerts endpoint
-            - Swarm: Use market intelligence endpoint
-            - Custom: Aggregate from multiple signal sources
         """
         ...
 
@@ -273,199 +238,9 @@ class DataSource(Protocol):
         List all companies available in this data source.
 
         Returns:
-            List of company names
-
-        TODO (API Integration):
-            - For API sources, this might query a portfolio/watchlist
-            - Or return companies from a CRM/database
+            List of company names or "*" for dynamic lookup
         """
         ...
-
-
-# =============================================================================
-# MOCK DATA SOURCE IMPLEMENTATION
-# =============================================================================
-
-class MockDataSource:
-    """
-    Mock data source using local ChromaDB with embedded documents.
-
-    This implementation uses the DocumentIngestionPipeline to retrieve
-    from mock documents stored in data/mock_documents/.
-
-    SWAP GUIDE:
-    -----------
-    To replace with a real API:
-
-    1. Create a new class (e.g., HarmonicDataSource)
-    2. Implement the DataSource protocol methods
-    3. Update MeetingBriefingAgent instantiation:
-
-       # Before (mock):
-       agent = MeetingBriefingAgent()
-
-       # After (real API):
-       agent = MeetingBriefingAgent(
-           data_source=HarmonicDataSource(api_key=os.getenv("HARMONIC_API_KEY"))
-       )
-    """
-
-    def __init__(self):
-        """Initialize with document ingestion pipeline."""
-        # Import here to avoid circular imports and allow lazy loading
-        from .ingestion import DocumentIngestionPipeline
-
-        self.pipeline = DocumentIngestionPipeline()
-        self.pipeline.ingest()  # Ensure documents are loaded
-
-    def _generate_source_id(self, content: str, metadata: dict) -> str:
-        """Generate stable ID from content hash."""
-        hash_input = f"{content[:200]}|{metadata.get('company_name', '')}|{metadata.get('document_type', '')}"
-        return hashlib.md5(hash_input.encode()).hexdigest()[:12]
-
-    def _results_to_retrieval(
-        self,
-        results: list[dict],
-        document_type: str
-    ) -> RetrievalResult:
-        """Convert pipeline query results to RetrievalResult."""
-        sources = []
-        content_parts = []
-
-        for r in results:
-            metadata = r.get("metadata", {})
-            content = r.get("content", "")
-
-            source_id = metadata.get("id") or self._generate_source_id(content, metadata)
-
-            # Build source for citation tracking
-            source = Source(
-                id=source_id,
-                title=metadata.get("title", f"{metadata.get('company_name', 'Unknown')} {document_type}"),
-                document_type=document_type,
-                description=content[:150] if content else "",
-                date=metadata.get("date"),
-                signal_type=metadata.get("signal_type"),
-                similarity_score=r.get("similarity_score"),
-                # TODO: Add URL when integrating with real APIs
-                url=None,
-            )
-            sources.append(source)
-
-            # Format content with source reference marker
-            score = r.get("similarity_score", 0)
-            if document_type == "news_article":
-                date = metadata.get("date", "Unknown date")
-                content_parts.append(f"[{date}] [Score: {score:.2f}]\n{content}")
-            elif document_type == "signal_report":
-                signal_type = metadata.get("signal_type", "general")
-                content_parts.append(f"[Signal: {signal_type}] [Score: {score:.2f}]\n{content}")
-            else:
-                content_parts.append(f"[Score: {score:.2f}]\n{content}")
-
-        return RetrievalResult(
-            content="\n\n---\n\n".join(content_parts) if content_parts else "",
-            sources=sources,
-            raw_results=results,
-        )
-
-    def get_company_profile(self, company_name: str) -> RetrievalResult:
-        """
-        Retrieve company profile from mock documents.
-
-        TODO (Future API):
-            Replace with Harmonic API call:
-            ```python
-            response = self.harmonic_client.company.get(company_name)
-            return self._format_harmonic_profile(response)
-            ```
-        """
-        results = self.pipeline.query_by_company(
-            company_name,
-            document_types=["company_profile"],
-            n_results=5
-        )
-
-        if not results:
-            return RetrievalResult(
-                content=f"No company profile found for {company_name}.",
-                sources=[],
-            )
-
-        return self._results_to_retrieval(results, "company_profile")
-
-    def get_recent_news(
-        self,
-        company_name: str,
-        days: int = DEFAULT_NEWS_DAYS
-    ) -> RetrievalResult:
-        """
-        Retrieve recent news from mock documents.
-
-        TODO (Future API):
-            Replace with news API call:
-            ```python
-            response = self.news_client.search(
-                query=f"{company_name} news",
-                days=days,
-                max_results=10
-            )
-            return self._format_news_response(response)
-            ```
-        """
-        results = self.pipeline.query_by_company(
-            company_name,
-            document_types=["news_article"],
-            n_results=10
-        )
-
-        if not results:
-            return RetrievalResult(
-                content=f"No recent news found for {company_name}.",
-                sources=[],
-            )
-
-        return self._results_to_retrieval(results, "news_article")
-
-    def get_key_signals(self, company_name: str) -> RetrievalResult:
-        """
-        Retrieve key signals from mock documents.
-
-        TODO (Future API):
-            Replace with Swarm/Harmonic signals API:
-            ```python
-            response = self.swarm_client.signals.get(
-                company=company_name,
-                signal_types=["hiring", "funding", "product", "competitive"]
-            )
-            return self._format_swarm_signals(response)
-            ```
-        """
-        results = self.pipeline.query_by_company(
-            company_name,
-            document_types=["signal_report"],
-            n_results=7
-        )
-
-        if not results:
-            return RetrievalResult(
-                content=f"No key signals found for {company_name}.",
-                sources=[],
-            )
-
-        return self._results_to_retrieval(results, "signal_report")
-
-    def list_companies(self) -> list[str]:
-        """
-        List companies available in mock data.
-
-        TODO (Future API):
-            Replace with portfolio/CRM query:
-            ```python
-            return self.crm_client.portfolio.list_companies()
-            ```
-        """
-        return MOCK_COMPANIES.copy()
 
 
 # =============================================================================
@@ -586,22 +361,32 @@ class LangChainToolsDataSource:
             raw_results=raw_results,
         )
 
-    def get_company_profile(self, company_name: str) -> RetrievalResult:
+    def _extract_company_from_url(self, url: str) -> str:
+        """Extract company name/domain from URL for ChromaDB queries."""
+        from urllib.parse import urlparse
+        url = url.strip()
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+        parsed = urlparse(url)
+        # Use domain as the search term
+        domain = parsed.netloc.replace("www.", "")
+        # Remove TLD for better matching
+        company = domain.split(".")[0] if domain else url
+        return company.title()
+
+    def get_company_profile(self, url: str) -> RetrievalResult:
         """
         Retrieve company profile using MeetingBriefingTools.
 
-        MeetingBriefingTools handles OpenAI embeddings internally.
+        Args:
+            url: Company URL (domain extracted for ChromaDB query)
         """
+        company_name = self._extract_company_from_url(url)
         try:
             results = self.collection.query(
                 query_texts=[f"company profile overview for {company_name}"],
                 n_results=5,
-                where={
-                    "$and": [
-                        {"document_type": {"$eq": "company_profile"}},
-                        {"company_name": {"$eq": company_name}},
-                    ]
-                },
+                where={"document_type": {"$eq": "company_profile"}},
                 include=["documents", "metadatas", "distances"],
             )
             return self._query_to_retrieval_result(results, "company_profile", max_results=5)
@@ -614,24 +399,21 @@ class LangChainToolsDataSource:
 
     def get_recent_news(
         self,
-        company_name: str,
+        url: str,
         days: int = DEFAULT_NEWS_DAYS,
     ) -> RetrievalResult:
         """
         Retrieve recent news using MeetingBriefingTools.
 
-        MeetingBriefingTools handles OpenAI embeddings internally.
+        Args:
+            url: Company URL (domain extracted for ChromaDB query)
         """
+        company_name = self._extract_company_from_url(url)
         try:
             results = self.collection.query(
                 query_texts=[f"recent news about {company_name}"],
                 n_results=10,
-                where={
-                    "$and": [
-                        {"document_type": {"$eq": "news_article"}},
-                        {"company_name": {"$eq": company_name}},
-                    ]
-                },
+                where={"document_type": {"$eq": "news_article"}},
                 include=["documents", "metadatas", "distances"],
             )
             return self._query_to_retrieval_result(results, "news_article", max_results=10)
@@ -642,22 +424,19 @@ class LangChainToolsDataSource:
                 raw_results=[],
             )
 
-    def get_key_signals(self, company_name: str) -> RetrievalResult:
+    def get_key_signals(self, url: str) -> RetrievalResult:
         """
         Retrieve key signals using MeetingBriefingTools.
 
-        MeetingBriefingTools handles OpenAI embeddings internally.
+        Args:
+            url: Company URL (domain extracted for ChromaDB query)
         """
+        company_name = self._extract_company_from_url(url)
         try:
             results = self.collection.query(
                 query_texts=[f"key signals and strategic insights for {company_name}"],
                 n_results=7,
-                where={
-                    "$and": [
-                        {"document_type": {"$eq": "signal_report"}},
-                        {"company_name": {"$eq": company_name}},
-                    ]
-                },
+                where={"document_type": {"$eq": "signal_report"}},
                 include=["documents", "metadatas", "distances"],
             )
             return self._query_to_retrieval_result(results, "signal_report", max_results=7)
@@ -670,13 +449,23 @@ class LangChainToolsDataSource:
 
     def list_companies(self) -> list[str]:
         """
-        List available companies.
+        List available companies from ChromaDB collection.
 
-        Note: ChromaDB doesn't have a built-in way to list unique metadata values,
-        so we return the mock companies list. In production, this would query
-        a separate companies index or CRM.
+        Queries the collection metadata for unique company names.
+        Returns ["*"] to indicate dynamic lookup is supported if no
+        companies are found.
         """
-        return MOCK_COMPANIES.copy()
+        try:
+            results = self.collection.get(include=["metadatas"])
+            companies = set()
+            for meta in results.get("metadatas", []):
+                if meta.get("company_name"):
+                    companies.add(meta["company_name"])
+            if companies:
+                return sorted(companies)
+            return ["*"]  # Indicates dynamic lookup supported
+        except Exception:
+            return ["*"]
 
     def get_langchain_tools(self):
         """
@@ -847,35 +636,41 @@ def format_references_section(sources: list[Source]) -> str:
 @trace_step("validate_company", run_type="chain")
 def validate_company_node(state: BriefingState) -> dict:
     """
-    Validate that the company exists in our data source.
+    Validate URL and look up company in Harmonic.
 
-    This is the first node in the graph - validates input before
-    expensive retrieval operations.
-
-    For API-based sources (like Harmonic), validation is skipped since
-    they support dynamic company lookup.
+    This is the first node in the graph - validates the URL and looks up
+    the company to get its name before retrieval operations.
     """
     start = time.perf_counter()
 
-    company_name = normalize_company_name(state["company_name"])
+    url = state["url"]
     ctx = state.get("tracing_context")
 
-    # Get data source from state or create default
-    # Note: In production, data_source would be injected via config
-    data_source = state.get("_data_source") or LangChainToolsDataSource()
-    available_companies = data_source.list_companies()
+    # Get data source from state or create default (HarmonicDataSource)
+    data_source = state.get("_data_source")
+    if data_source is None:
+        from .harmonic_source import HarmonicDataSource
+        data_source = HarmonicDataSource()
 
     error = None
+    company_name = None
 
-    # Check if data source supports dynamic lookup
-    # "*" in list or empty list means any company can be looked up
-    supports_dynamic_lookup = "*" in available_companies or not available_companies
-
-    if not supports_dynamic_lookup:
-        # Check if company exists (case-insensitive)
-        available_normalized = [normalize_company_name(c) for c in available_companies]
-        if company_name not in available_normalized:
-            error = f"Company '{company_name}' not found. Available: {', '.join(available_companies)}"
+    # Look up company by URL to validate and get company name
+    try:
+        # Use the profile retrieval to validate - it will return the company name
+        profile_result = data_source.get_company_profile(url)
+        if profile_result.sources and profile_result.sources[0].title:
+            # Extract company name from the source title (e.g., "Stripe Company Profile" -> "Stripe")
+            title = profile_result.sources[0].title
+            company_name = title.replace(" Company Profile", "").strip()
+        elif profile_result.raw_results:
+            # Get name from raw results
+            raw = profile_result.raw_results[0] if profile_result.raw_results else {}
+            company_name = raw.get("name", url)
+        else:
+            error = f"Company not found in Harmonic for URL: {url}"
+    except Exception as e:
+        error = f"Error looking up company: {str(e)}"
 
     elapsed_ms = int((time.perf_counter() - start) * 1000)
 
@@ -883,7 +678,7 @@ def validate_company_node(state: BriefingState) -> dict:
         ctx.record_step_timing("validate_company", elapsed_ms)
 
     return {
-        "company_name": company_name,
+        "company_name": company_name or url,
         "error": error,
         "step_timings_ms": {**state.get("step_timings_ms", {}), "validate_company": elapsed_ms},
     }
@@ -902,11 +697,14 @@ def retrieve_profile_node(state: BriefingState) -> dict:
     if state.get("error"):
         return {}  # Skip if previous error
 
-    company_name = state["company_name"]
+    url = state["url"]
     ctx = state.get("tracing_context")
-    data_source = state.get("_data_source") or LangChainToolsDataSource()
+    data_source = state.get("_data_source")
+    if data_source is None:
+        from .harmonic_source import HarmonicDataSource
+        data_source = HarmonicDataSource()
 
-    result = data_source.get_company_profile(company_name)
+    result = data_source.get_company_profile(url)
 
     elapsed_ms = int((time.perf_counter() - start) * 1000)
 
@@ -937,11 +735,14 @@ def retrieve_news_node(state: BriefingState) -> dict:
     if state.get("error"):
         return {}
 
-    company_name = state["company_name"]
+    url = state["url"]
     ctx = state.get("tracing_context")
-    data_source = state.get("_data_source") or LangChainToolsDataSource()
+    data_source = state.get("_data_source")
+    if data_source is None:
+        from .harmonic_source import HarmonicDataSource
+        data_source = HarmonicDataSource()
 
-    result = data_source.get_recent_news(company_name, days=DEFAULT_NEWS_DAYS)
+    result = data_source.get_recent_news(url, days=DEFAULT_NEWS_DAYS)
 
     elapsed_ms = int((time.perf_counter() - start) * 1000)
 
@@ -971,11 +772,14 @@ def retrieve_signals_node(state: BriefingState) -> dict:
     if state.get("error"):
         return {}
 
-    company_name = state["company_name"]
+    url = state["url"]
     ctx = state.get("tracing_context")
-    data_source = state.get("_data_source") or LangChainToolsDataSource()
+    data_source = state.get("_data_source")
+    if data_source is None:
+        from .harmonic_source import HarmonicDataSource
+        data_source = HarmonicDataSource()
 
-    result = data_source.get_key_signals(company_name)
+    result = data_source.get_key_signals(url)
 
     elapsed_ms = int((time.perf_counter() - start) * 1000)
 
@@ -1045,37 +849,45 @@ def synthesize_briefing_node(state: BriefingState) -> dict:
     # Initialize LLM
     llm = ChatOpenAI(model=DEFAULT_LLM_MODEL, temperature=0)
 
-    system_prompt = """You are an AI assistant preparing BRIEF meeting briefings for busy venture capital investors.
+    system_prompt = """You are an AI assistant preparing meeting briefings for venture capital investors.
 
-Your task is to distill the most critical information into an executive-level brief. Investors have limited time - only include what truly matters for this meeting.
+Your task is to synthesize the provided information into a comprehensive but succinct executive brief. Cover all important points without unnecessary filler.
 
 CITATION FORMAT:
-- Use minimal inline citations [1], [2] only for key claims
-- Don't over-cite - one citation per major point is enough
+- Use inline citations [1], [2] for key claims and data points
+- Cite sources when referencing specific facts, metrics, or quotes
 
 STRUCTURE YOUR OUTPUT EXACTLY AS:
 
 ## TL;DR
-[2-3 sentences MAX. The single most important thing to know going into this meeting.]
+[2-3 sentences summarizing the most important thing to know going into this meeting.]
+
+## Company Overview
+[Brief description of what the company does, stage, and key metrics]
 
 ## Key Points
-• [Most critical point - what makes this company interesting/concerning] [1]
-• [Second most important point] [2]
-• [Third point if truly important]
-• [Fourth point only if critical]
+• [Critical point with supporting detail] [1]
+• [Second important point] [2]
+• [Additional points as needed - include all relevant information]
+
+## Recent Developments
+• [Notable recent news, funding, product launches, etc.]
+
+## Signals & Trends
+• [Hiring trends, traffic changes, competitive dynamics]
 
 ## For This Meeting
-• [Primary question to ask or topic to discuss]
-• [Key risk or opportunity to probe]
+• [Key questions to ask]
+• [Risks or opportunities to probe]
+• [Areas needing clarification]
 
-CRITICAL RULES:
-- Maximum 150 words total
-- No fluff, no filler, no obvious statements
-- Only include information that changes how you'd approach the meeting
+GUIDELINES:
+- Be succinct but comprehensive - don't omit important information
+- No fluff or filler, but include all relevant details
 - Be direct and opinionated - flag what matters most
 - If something is concerning, say so clearly"""
 
-    user_prompt = f"""Create a BRIEF meeting briefing for **{company_name}**.
+    user_prompt = f"""Create a meeting briefing for **{company_name}**.
 
 ## Available Sources (use these citation numbers):
 {profile_sources}
@@ -1091,7 +903,7 @@ CRITICAL RULES:
 ## Key Signals
 {signals.content if signals else 'No signals data available.'}
 
-Remember: Maximum 150 words. Only the most critical insights. Be direct."""
+Synthesize all available information into a comprehensive briefing. Be succinct but don't cut off important details."""
 
     messages = [
         SystemMessage(content=system_prompt),
@@ -1103,25 +915,28 @@ Remember: Maximum 150 words. Only the most critical insights. Be direct."""
 
     step_timings = state.get("step_timings_ms", {})
 
-    # Build compact references (just titles and dates)
-    def format_compact_ref(idx: int, source: Source) -> str:
-        date_str = f" ({source.date})" if source.date else ""
-        return f"[{idx}] {source.title}{date_str}"
+    # Replace citation numbers [1], [2], etc. with clickable markdown links
+    import re
 
-    compact_refs = ", ".join(
-        format_compact_ref(i, s) for i, s in enumerate(all_sources[:10], 1)
-    )
-    if len(all_sources) > 10:
-        compact_refs += f" +{len(all_sources) - 10} more"
+    def make_citations_clickable(text: str, sources: list[Source]) -> str:
+        """Replace [N] citations with clickable markdown links."""
+        def replace_citation(match):
+            cite_num = int(match.group(1))
+            if 1 <= cite_num <= len(sources):
+                source = sources[cite_num - 1]
+                if source.url:
+                    return f"[[{cite_num}]]({source.url})"
+            return match.group(0)  # Return unchanged if no URL
+
+        return re.sub(r'\[(\d+)\]', replace_citation, text)
+
+    briefing_with_links = make_citations_clickable(briefing_content, all_sources)
 
     # Assemble final markdown - clean and compact
     final_markdown = f"""# {company_name} | Meeting Brief
 *{datetime.now().strftime('%Y-%m-%d')}*
 
-{briefing_content}
-
----
-**Sources:** {compact_refs}
+{briefing_with_links}
 """
 
     elapsed_ms = int((time.perf_counter() - start) * 1000)
@@ -1192,26 +1007,27 @@ class MeetingBriefingAgent:
     Meeting briefing agent with LangGraph workflow and LangSmith tracing.
 
     This is the main interface for generating meeting briefings. It:
-    - Accepts a company name as input
+    - Accepts a company/person URL as input (exact match via Harmonic)
     - Runs the LangGraph workflow
     - Returns a structured result with the briefing and metadata
 
     Usage:
-        # With LangChain tools data source (default)
+        # Default: Uses Harmonic API for company data
         agent = MeetingBriefingAgent()
-        result = agent.prepare_briefing("Nexus AI")
+
+        # Lookup by company website
+        result = agent.prepare_briefing("https://stripe.com")
+
+        # Lookup by company LinkedIn
+        result = agent.prepare_briefing("https://linkedin.com/company/stripe")
+
+        # Lookup by person LinkedIn (gets their current company)
+        result = agent.prepare_briefing("https://linkedin.com/in/johncollison")
+
         print(result["briefing_markdown"])
 
-        # With mock data source (for testing with ingestion pipeline)
-        agent = MeetingBriefingAgent(data_source=MockDataSource())
-        result = agent.prepare_briefing("Nexus AI")
-
-        # With custom data source (future)
-        agent = MeetingBriefingAgent(data_source=HarmonicDataSource(api_key))
-        result = agent.prepare_briefing("Acme Corp")
-
     Args:
-        data_source: DataSource implementation (defaults to LangChainToolsDataSource)
+        data_source: DataSource implementation (defaults to HarmonicDataSource)
         time_window_days: Days to look back for news (default: 30)
     """
 
@@ -1224,16 +1040,19 @@ class MeetingBriefingAgent:
         Initialize the meeting briefing agent.
 
         Args:
-            data_source: Data source for retrieval (defaults to LangChainToolsDataSource)
+            data_source: Data source for retrieval (defaults to HarmonicDataSource)
             time_window_days: Days to look back for news articles
         """
-        self.data_source = data_source or LangChainToolsDataSource()
+        if data_source is None:
+            from .harmonic_source import HarmonicDataSource
+            data_source = HarmonicDataSource()
+        self.data_source = data_source
         self.time_window_days = time_window_days
 
         # Build and compile the graph
         self.graph = build_briefing_graph().compile()
 
-    def prepare_briefing(self, company_name: str) -> dict:
+    def prepare_briefing(self, url: str) -> dict:
         """
         Prepare a comprehensive meeting briefing for a company.
 
@@ -1241,11 +1060,16 @@ class MeetingBriefingAgent:
         when tracing is enabled.
 
         Args:
-            company_name: Name of the company to brief on
+            url: Company website URL, LinkedIn company URL, or LinkedIn person URL.
+                 Examples:
+                 - "stripe.com" or "https://stripe.com"
+                 - "https://linkedin.com/company/stripe"
+                 - "https://linkedin.com/in/johncollison" (gets their company)
 
         Returns:
             Dict containing:
-                - company_name: Normalized company name
+                - url: The input URL
+                - company_name: Resolved company name from Harmonic
                 - run_id: Unique run identifier
                 - timestamp: ISO timestamp of generation
                 - briefing_markdown: The complete briefing document
@@ -1257,25 +1081,26 @@ class MeetingBriefingAgent:
                 - error: Error message if any
         """
         run_id = str(uuid4())
-        normalized_name = normalize_company_name(company_name)
         start_time = time.perf_counter()
 
-        # Create tracing context
+        # Create tracing context (company_name will be resolved during validation)
         ctx = TracingContext(
             run_id=run_id,
-            company_name=normalized_name,
+            company_name=url,  # Will be updated after validation
             time_window_days=self.time_window_days,
         )
         ctx.start()
 
         error_str = None
         output_markdown = None
+        company_name = url
 
         try:
             # Build initial state
             initial_state: BriefingState = {
-                "company_name": company_name,
+                "url": url,
                 "run_id": run_id,
+                "company_name": "",  # Will be resolved by validate node
                 "profile_result": None,
                 "news_result": None,
                 "signals_result": None,
@@ -1295,10 +1120,11 @@ class MeetingBriefingAgent:
 
             output_markdown = final_state.get("briefing_markdown", "")
             error_str = final_state.get("error")
+            company_name = final_state.get("company_name", url)
 
         except Exception as e:
             error_str = str(e)
-            output_markdown = f"# Error\n\nFailed to generate briefing for {normalized_name}: {error_str}"
+            output_markdown = f"# Error\n\nFailed to generate briefing for {url}: {error_str}"
 
         finally:
             ctx.end(output=output_markdown, error=error_str)
@@ -1306,7 +1132,8 @@ class MeetingBriefingAgent:
         total_elapsed_ms = int((time.perf_counter() - start_time) * 1000)
 
         return {
-            "company_name": normalized_name,
+            "url": url,
+            "company_name": company_name,
             "run_id": run_id,
             "timestamp": datetime.now().isoformat(),
             "briefing_markdown": output_markdown,
@@ -1329,31 +1156,34 @@ class MeetingBriefingAgent:
 
 def main():
     """Demo the meeting briefing agent."""
+    import sys
+
     print("Meeting Briefing Agent - LangGraph Implementation")
     print("=" * 60)
     print(f"Tracing enabled: {tracing_enabled()}")
+    print("Data source: Harmonic API")
     print()
 
     agent = MeetingBriefingAgent()
 
-    print("Available companies:")
-    for company in agent.list_available_companies():
-        print(f"  - {company}")
-    print()
-
-    company = "Nexus AI"
-    print(f"Preparing briefing for: {company}")
+    # Use command line arg or default to stripe.com as demo
+    url = sys.argv[1] if len(sys.argv) > 1 else "stripe.com"
+    print(f"Preparing briefing for URL: {url}")
     print("-" * 60)
 
-    result = agent.prepare_briefing(company)
+    result = agent.prepare_briefing(url)
 
     if result["success"]:
+        print(f"Company: {result['company_name']}")
+        print()
         print(result["briefing_markdown"])
     else:
         print(f"Error: {result['error']}")
 
     print("\n" + "=" * 60)
     print("Run Metadata:")
+    print(f"  URL: {result['url']}")
+    print(f"  Company: {result['company_name']}")
     print(f"  Run ID: {result['run_id']}")
     print(f"  Retrieval Counts: {result['retrieval_counts']}")
     print(f"  Step Timings: {result['step_timings_ms']}")

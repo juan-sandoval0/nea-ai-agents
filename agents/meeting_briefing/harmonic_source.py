@@ -250,36 +250,82 @@ class HarmonicDataSource:
             },
         )
 
-    def _lookup_company_by_name(self, company_name: str) -> Optional[HarmonicCompany]:
+    def _parse_url(self, url: str) -> tuple[str, Optional[str]]:
         """
-        Find company in Harmonic by name.
+        Parse URL to determine type and extract domain/LinkedIn URL.
 
-        Tries typeahead search first, then full search if needed.
-        Always fetches full company details.
+        Args:
+            url: Company website URL, LinkedIn company URL, or LinkedIn person URL
+
+        Returns:
+            Tuple of (url_type, normalized_url) where url_type is one of:
+            - "company_domain": Company website (e.g., stripe.com)
+            - "company_linkedin": Company LinkedIn URL
+            - "person_linkedin": Person LinkedIn URL
         """
-        # Try typeahead first (faster)
-        results = self.client.search_typeahead(company_name, limit=5)
+        from urllib.parse import urlparse
 
-        # Look for exact or close match
-        name_lower = company_name.lower()
-        for company in results:
-            if company.name.lower() == name_lower or \
-               name_lower in company.name.lower() or \
-               company.name.lower() in name_lower:
-                # Always get full details
-                return self.client.get_company(company.id)
+        url = url.strip()
 
-        # Try full search if no typeahead match
-        results = self.client.search_companies(f"company named {company_name}", limit=5)
-        for company in results:
-            if company.name.lower() == name_lower or name_lower in company.name.lower():
-                return self.client.get_company(company.id)
+        # Add https if no scheme provided
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
 
-        # Return first result's full details if any
-        if results:
-            return self.client.get_company(results[0].id)
+        parsed = urlparse(url)
+        host = parsed.netloc.lower().replace("www.", "")
+        path = parsed.path.rstrip("/")
 
-        return None
+        # Check if it's a LinkedIn URL
+        if "linkedin.com" in host:
+            # Company LinkedIn: linkedin.com/company/stripe
+            if "/company/" in path:
+                return ("company_linkedin", url)
+            # Person LinkedIn: linkedin.com/in/johndoe
+            elif "/in/" in path:
+                return ("person_linkedin", url)
+            else:
+                # Unknown LinkedIn URL type
+                return ("company_linkedin", url)
+        else:
+            # Regular company website - extract domain
+            domain = host
+            return ("company_domain", domain)
+
+    def _lookup_by_url(self, url: str) -> Optional[HarmonicCompany]:
+        """
+        Look up company in Harmonic by URL (exact match).
+
+        Args:
+            url: Company website URL or LinkedIn URL
+
+        Returns:
+            HarmonicCompany if found, None otherwise
+
+        Raises:
+            ValueError: If URL format is invalid or unsupported
+        """
+        url_type, normalized = self._parse_url(url)
+
+        if url_type == "company_domain":
+            return self.client.lookup_company(domain=normalized)
+        elif url_type == "company_linkedin":
+            return self.client.lookup_company(linkedin_url=normalized)
+        elif url_type == "person_linkedin":
+            # For person URLs, we need to look up the person first,
+            # then get their current company
+            person = self.client.lookup_person(normalized)
+            if person and person.raw_data:
+                # Get company from person's current experience
+                experience = person.raw_data.get("experience", []) or []
+                for exp in experience:
+                    if exp.get("is_current_position"):
+                        company_urn = exp.get("company_urn")
+                        if company_urn and "company:" in company_urn:
+                            company_id = company_urn.split("company:")[-1]
+                            return self.client.get_company(company_id)
+            return None
+        else:
+            raise ValueError(f"Unsupported URL type: {url}")
 
     def _format_company_profile(
         self,
@@ -396,18 +442,21 @@ class HarmonicDataSource:
     # DATA SOURCE PROTOCOL IMPLEMENTATION
     # =========================================================================
 
-    def get_company_profile(self, company_name: str) -> RetrievalResult:
+    def get_company_profile(self, url: str) -> RetrievalResult:
         """
-        Retrieve company profile from Harmonic API.
+        Retrieve company profile from Harmonic API by URL.
+
+        Args:
+            url: Company website URL or LinkedIn URL (company or person)
 
         Implements DataSource Protocol.
         """
         try:
-            # Look up company
-            company = self._lookup_company_by_name(company_name)
+            # Look up company by URL (exact match)
+            company = self._lookup_by_url(url)
             if not company:
                 return RetrievalResult(
-                    content=f"Company '{company_name}' not found in Harmonic database.",
+                    content=f"Company not found in Harmonic for URL: {url}",
                     sources=[],
                     raw_results=[],
                 )
@@ -458,20 +507,23 @@ class HarmonicDataSource:
 
     def get_recent_news(
         self,
-        company_name: str,
+        url: str,
         days: int = DEFAULT_NEWS_DAYS,
     ) -> RetrievalResult:
         """
-        Retrieve recent updates/changes for company.
+        Retrieve recent updates/changes for company by URL.
+
+        Args:
+            url: Company website URL or LinkedIn URL
 
         Note: Harmonic doesn't have a dedicated news endpoint.
         This returns recent changes in metrics as "news".
         """
         try:
-            company = self._lookup_company_by_name(company_name)
+            company = self._lookup_by_url(url)
             if not company:
                 return RetrievalResult(
-                    content=f"Company '{company_name}' not found.",
+                    content=f"Company not found in Harmonic for URL: {url}",
                     sources=[],
                     raw_results=[],
                 )
@@ -539,17 +591,20 @@ class HarmonicDataSource:
                 raw_results=[],
             )
 
-    def get_key_signals(self, company_name: str) -> RetrievalResult:
+    def get_key_signals(self, url: str) -> RetrievalResult:
         """
-        Retrieve key signals (hiring, traffic, funding) from Harmonic.
+        Retrieve key signals (hiring, traffic, funding) from Harmonic by URL.
+
+        Args:
+            url: Company website URL or LinkedIn URL
 
         Implements DataSource Protocol.
         """
         try:
-            company = self._lookup_company_by_name(company_name)
+            company = self._lookup_by_url(url)
             if not company:
                 return RetrievalResult(
-                    content=f"Company '{company_name}' not found.",
+                    content=f"Company not found in Harmonic for URL: {url}",
                     sources=[],
                     raw_results=[],
                 )
