@@ -305,6 +305,28 @@ def get_founders(company_id: str) -> list[Founder]:
     founders_list: list[Founder] = []
     seen_names: set[str] = set()
 
+    # Check for manual corrections first (local import to avoid circular dependency)
+    from agents.meeting_briefing.data_corrections import get_corrected_founders
+    if company.domain:
+        corrected = get_corrected_founders(company.domain)
+        if corrected:
+            # Clear existing founders before inserting corrections
+            db.delete_founders(normalized_id)
+            for f in corrected:
+                founder = Founder(
+                    company_id=normalized_id,
+                    name=f["name"],
+                    role_title=f.get("title"),
+                    linkedin_url=f.get("linkedin_url"),
+                    background=None,
+                    observed_at=datetime.utcnow().isoformat(),
+                    source="manual_correction",
+                )
+                founders_list.append(founder)
+            db.upsert_founders(founders_list)
+            logger.info(f"Using manual corrections for {normalized_id}: {len(founders_list)} founders")
+            return founders_list
+
     # Get founders from company's 'people' array
     people_array = company.raw_data.get("people", [])
 

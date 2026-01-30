@@ -34,6 +34,7 @@ import chromadb
 from chromadb.config import Settings
 
 from .harmonic_client import HarmonicClient, HarmonicCompany, HarmonicPerson, HarmonicAPIError
+from .data_corrections import get_corrected_founders
 
 # Import from agent.py for type compatibility
 from .agent import RetrievalResult, Source, DEFAULT_NEWS_DAYS
@@ -475,6 +476,24 @@ class HarmonicDataSource:
                         founders.append(person)
                 except HarmonicAPIError:
                     pass
+
+            # Check for manual corrections first
+            if company.domain:
+                corrected = get_corrected_founders(company.domain)
+                if corrected:
+                    # Convert corrections to HarmonicPerson-like objects
+                    founders = [
+                        HarmonicPerson(
+                            id=f"correction_{i}",
+                            name=f["name"],
+                            title=f.get("title"),
+                            linkedin_url=f.get("linkedin_url"),
+                            email=None,
+                            raw_data={},
+                            fetched_at=datetime.utcnow().isoformat(),
+                        )
+                        for i, f in enumerate(corrected)
+                    ]
 
             # Cache for historical tracking
             self._cache_company_data(company, founders)

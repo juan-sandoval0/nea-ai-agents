@@ -387,6 +387,17 @@ class Database:
         finally:
             conn.close()
 
+    def delete_founders(self, company_id: str) -> None:
+        """Delete all founders for a company."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM founders WHERE company_id = ?", (company_id,))
+            conn.commit()
+            logger.debug(f"Deleted founders for {company_id}")
+        finally:
+            conn.close()
+
     # =========================================================================
     # NEWS OPERATIONS
     # =========================================================================
