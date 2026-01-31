@@ -181,7 +181,7 @@ class HarmonicCompany:
 
         return cls(
             id=str(company_id or ""),
-            name=data.get("name", "Unknown"),
+            name=data.get("name") or "Unknown",
             description=data.get("description"),
             domain=website.get("domain"),
             website_url=website.get("url"),

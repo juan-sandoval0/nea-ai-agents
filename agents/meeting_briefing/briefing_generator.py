@@ -154,14 +154,17 @@ def format_signals_data(signals: list[KeySignal]) -> str:
 
     # Check which signal types are present
     signal_types_present = {s.signal_type for s in signals}
-    expected_types = {"web_traffic", "hiring", "funding", "website_update"}
-    missing_types = expected_types - signal_types_present
+    tavily_types = {"website_update", "website_product", "website_pricing", "website_team", "website_news"}
+    has_tavily = bool(signal_types_present & tavily_types)
 
     for s in signals:
+        # Skip stale placeholder signals if real Tavily data exists
+        if s.source == "pending_tavily" and has_tavily:
+            continue
         lines.append(f"- [{s.signal_type.upper()}] {s.description} (Source: {s.source})")
 
-    # Note missing signal types
-    if "website_update" in missing_types:
+    # Only show pending message if no Tavily signals exist at all
+    if not has_tavily and not any(s.source == "tavily" for s in signals):
         lines.append("- [WEBSITE_UPDATE] Source not yet implemented (pending Tavily)")
 
     max_observed = max(s.observed_at for s in signals) if signals else "N/A"
@@ -308,7 +311,8 @@ Display as a formatted table or list:
 
 ### 5) Key Signals
 - One bullet per signal from the key_signals table
-- If website_update signal is missing: "Website updates not yet implemented"
+- Signal types include: web_traffic, hiring, funding, website_product, website_pricing, website_team, website_news, website_update
+- Summarize website signals concisely (don't just repeat page titles)
 - Include signal source and last updated timestamp
 
 ### 6) In the News
@@ -417,6 +421,9 @@ def main():
     )
 
     args = parser.parse_args()
+
+    from dotenv import load_dotenv
+    load_dotenv()
 
     logging.basicConfig(level=logging.INFO)
 
