@@ -9,9 +9,7 @@ Implemented Sources:
 - Harmonic: Company profiles, founders, signals
 - Swarm: Founder background enrichment
 - Tavily: Website intelligence/updates
-
-NOT YET Implemented Sources:
-- News API: Media/news ingestion
+- NewsAPI (EventRegistry): News articles, event signals
 
 Usage:
     from tools.company_tools import (
@@ -51,6 +49,7 @@ from core.database import (
 from core.clients.harmonic import HarmonicClient, HarmonicCompany, HarmonicAPIError
 from core.clients.tavily import TavilyClient, TavilyAPIError
 from core.clients.swarm import SwarmClient, SwarmAPIError
+from core.clients.newsapi import NewsApiClient, NewsApiError
 from core.tracking import get_tracker
 
 logger = logging.getLogger(__name__)
@@ -113,6 +112,22 @@ def get_swarm_client() -> Optional[SwarmClient]:
             logger.info("SWARM_API_KEY not set - founder background enrichment disabled")
             return None
     return _swarm_client
+
+
+# Singleton NewsAPI client
+_newsapi_client: Optional[NewsApiClient] = None
+
+
+def get_newsapi_client() -> Optional[NewsApiClient]:
+    """Get or create NewsAPI client instance. Returns None if API key not set."""
+    global _newsapi_client
+    if _newsapi_client is None:
+        try:
+            _newsapi_client = NewsApiClient()
+        except ValueError:
+            logger.info("NEWSAPI_API_KEY not set - news ingestion disabled")
+            return None
+    return _newsapi_client
 
 
 # =============================================================================
@@ -678,20 +693,58 @@ def enrich_founder_backgrounds(company_id: str, summarize: bool = True) -> dict:
 
 def get_recent_news(company_id: str, days: int = 30) -> list[NewsArticle]:
     """
-    Fetch recent news articles for a company.
+    Fetch recent news articles for a company via EventRegistry (newsapi.ai).
 
-    STATUS: NOT IMPLEMENTED (News API pending)
+    STATUS: IMPLEMENTED (NewsAPI)
 
     Args:
         company_id: Company URL or domain
-        days: Number of days to look back (unused)
+        days: Number of days to look back
 
     Returns:
-        Empty list (source not yet implemented)
+        List of NewsArticle objects
     """
+    db = get_db()
     normalized_id = normalize_company_id(company_id)
-    logger.info(f"get_recent_news called for {normalized_id} - News API not yet implemented")
-    return []
+
+    newsapi = get_newsapi_client()
+    if newsapi is None:
+        logger.info(f"get_recent_news: NEWSAPI_API_KEY not set, skipping for {normalized_id}")
+        return []
+
+    # Resolve company name for keyword search
+    company_name = None
+    existing = db.get_company(normalized_id)
+    if existing:
+        company_name = existing.company_name
+    if not company_name:
+        # Fall back to domain hint
+        company_name = normalized_id.split(".")[0]
+
+    try:
+        api_articles = newsapi.search_articles(keyword=company_name, days_back=days)
+    except NewsApiError as e:
+        logger.error(f"NewsAPI search failed for {normalized_id}: {e}")
+        return []
+
+    # Transform to NewsArticle DB models, filtering for relevance
+    articles: list[NewsArticle] = []
+    for a in api_articles:
+        articles.append(NewsArticle(
+            company_id=normalized_id,
+            article_headline=a.title,
+            outlet=a.source_name,
+            url=a.url,
+            published_date=a.published_date,
+            observed_at=datetime.utcnow().isoformat(),
+            source="newsapi",
+        ))
+
+    if articles:
+        db.insert_news(articles)
+        logger.info(f"Stored {len(articles)} news articles for {normalized_id}")
+
+    return articles
 
 
 # =============================================================================
@@ -872,6 +925,26 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
             observed_at=now,
             source="pending_tavily",
         ))
+
+    # Signal: News Events (EventRegistry)
+    newsapi = get_newsapi_client()
+    if newsapi is not None:
+        try:
+            company_name = company.name
+            events = newsapi.get_events(keyword=company_name, days_back=30)
+            for event in events:
+                signal_type = event.to_signal_type()
+                signals.append(KeySignal(
+                    company_id=normalized_id,
+                    signal_type=signal_type,
+                    description=event.title,
+                    observed_at=event.event_date or now,
+                    source="newsapi",
+                ))
+            if events:
+                logger.info(f"NewsAPI: {len(events)} event signals for {normalized_id}")
+        except NewsApiError as e:
+            logger.warning(f"NewsAPI event search failed for {normalized_id}: {e}")
 
     if signals:
         db.upsert_signals(signals)

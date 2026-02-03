@@ -248,7 +248,8 @@ class Database:
                     published_date TEXT,
                     observed_at TEXT NOT NULL,
                     source TEXT DEFAULT 'news_api',
-                    FOREIGN KEY (company_id) REFERENCES company_core(company_id)
+                    FOREIGN KEY (company_id) REFERENCES company_core(company_id),
+                    UNIQUE(company_id, url)
                 )
             """)
 
@@ -269,6 +270,7 @@ class Database:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_founders_company ON founders(company_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_news_company ON news(company_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_signals_company ON key_signals(company_id)")
+            cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_news_company_url ON news(company_id, url)")
 
             conn.commit()
             logger.info(f"Database schema initialized at {self.db_path}")
@@ -414,7 +416,7 @@ class Database:
             for article in articles:
                 data = article.to_dict()
                 cursor.execute("""
-                    INSERT INTO news (
+                    INSERT OR IGNORE INTO news (
                         company_id, article_headline, outlet, url,
                         published_date, observed_at, source
                     ) VALUES (
