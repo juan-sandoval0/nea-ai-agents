@@ -151,7 +151,7 @@ class ParallelSearchClient:
 
         start = time.time()
         try:
-            response = self._client.search(
+            response = self._client.beta.search(
                 objective=self.SEARCH_OBJECTIVE,
                 search_queries=search_queries,
                 max_results=max_results,
@@ -180,13 +180,13 @@ class ParallelSearchClient:
             raise ParallelSearchError(f"API request failed: {e}")
 
         results = []
-        for item in response.get("results", []):
-            url = item.get("url", "")
+        for item in response.results or []:
+            url = getattr(item, "url", "") or ""
             result = ParallelSearchResult(
                 url=url,
-                title=item.get("title", ""),
-                publish_date=item.get("publish_date"),
-                excerpts=item.get("excerpts", []),
+                title=getattr(item, "title", "") or "",
+                publish_date=getattr(item, "publish_date", None),
+                excerpts=getattr(item, "excerpts", []) or [],
                 source_domain=_extract_source_domain(url),
             )
             results.append(result)
