@@ -854,12 +854,13 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
             source="harmonic",
         ))
 
-    # Signal: Website Intelligence (Tavily)
+    # Signal: Website Intelligence (Tavily Crawl)
     tavily = get_tavily_client()
     if tavily is not None:
         try:
-            domain = normalized_id  # normalized_id is already a domain
-            intel = tavily.analyze_company_website(domain)
+            # Ensure URL is properly formatted for crawl
+            url = normalized_id if normalized_id.startswith(("http://", "https://")) else f"https://{normalized_id}"
+            intel = tavily.crawl_company_website(url)
 
             # Map Tavily signal types to our signal_type naming
             type_map = {

@@ -2,16 +2,15 @@
 Tavily API Client
 ==================
 
-Website intelligence via Tavily search + extract APIs.
-Budget: ~3 credits per company.
-  - 1 credit: basic search for recent company mentions
-  - 1 credit: basic extract on up to 5 URLs from search results
+Website intelligence via Tavily Crawl API.
+Crawls a company's own website to discover product updates, blog posts,
+press releases, and other strategic content.
 
 Usage:
     from core.clients import TavilyClient
 
     client = TavilyClient()
-    intel = client.analyze_company_website("mercor.com")
+    intel = client.crawl_company_website("stripe.com")
 """
 
 from __future__ import annotations
@@ -55,28 +54,6 @@ SIGNAL_KEYWORDS = {
 # =============================================================================
 
 @dataclass
-class TavilySearchResult:
-    """Single search result from Tavily API."""
-    title: str
-    url: str
-    content: str
-    score: float
-    published_date: Optional[str] = None
-    raw_data: dict = field(default_factory=dict)
-
-    @classmethod
-    def from_api_response(cls, data: dict) -> "TavilySearchResult":
-        return cls(
-            title=data.get("title", ""),
-            url=data.get("url", ""),
-            content=data.get("content", ""),
-            score=data.get("score", 0.0),
-            published_date=data.get("published_date"),
-            raw_data=data,
-        )
-
-
-@dataclass
 class WebsiteIntelligence:
     """Aggregated output from analyzing a company's web presence."""
     domain: str
@@ -99,13 +76,40 @@ class TavilyAPIError(Exception):
 
 class TavilyClient:
     """
-    Website intelligence via Tavily search + extract.
+    Website intelligence via Tavily Crawl API.
 
     Strategy:
-      1. search (basic, 1 credit) - find recent pages about the company
-      2. extract (basic, ~1 credit per 5 URLs) - get full content from top results
-      3. Classify and summarize from extracted content
+      1. crawl - discover pages on the company's website (blog, news, pricing, etc.)
+      2. Classify each page by URL path and content keywords
+      3. Extract key sentences to build meaningful signals
     """
+
+    # Path patterns to prioritize during crawl
+    CRAWL_SELECT_PATHS = [
+        "/blog.*",
+        "/news.*",
+        "/press.*",
+        "/newsroom.*",
+        "/changelog.*",
+        "/releases.*",
+        "/updates.*",
+        "/announcements.*",
+        "/about.*",
+        "/team.*",
+        "/careers.*",
+        "/pricing.*",
+        "/plans.*",
+        "/product.*",
+        "/features.*",
+        "/launch.*",
+    ]
+
+    # Natural language instructions for the crawler
+    CRAWL_INSTRUCTIONS = (
+        "Find pages about: product announcements, feature launches, company news, "
+        "press releases, blog posts, pricing information, team updates, and recent "
+        "company developments. Prioritize recent content and official announcements."
+    )
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("TAVILY_API_KEY")
@@ -117,95 +121,61 @@ class TavilyClient:
         from tavily import TavilyClient as _TavilyClient
         self._client = _TavilyClient(api_key=self.api_key)
 
-    def search(self, query: str, max_results: int = 5, **kwargs) -> dict:
-        """Run a basic search. 1 credit."""
-        try:
-            return self._client.search(
-                query=query,
-                max_results=max_results,
-                include_answer=True,
-                **kwargs,
-            )
-        except Exception as e:
-            raise TavilyAPIError(f"Search failed: {e}")
-
-    def extract(self, urls: list[str]) -> dict:
-        """Extract full content from URLs. 1 credit per 5 successful extractions."""
-        try:
-            return self._client.extract(urls=urls)
-        except Exception as e:
-            raise TavilyAPIError(f"Extract failed: {e}")
-
-    def analyze_company_website(self, domain: str) -> WebsiteIntelligence:
+    def crawl_company_website(self, url: str) -> WebsiteIntelligence:
         """
-        Search for recent company activity, then extract full content
-        from top results to build meaningful signals.
+        Crawl a company's website to discover product updates, blog posts,
+        press releases, and other strategic content.
 
-        ~2-3 credits total.
+        Args:
+            url: Company website URL (e.g., "https://stripe.com" or "stripe.com")
+
+        Returns:
+            WebsiteIntelligence with classified signals from crawled pages
         """
-        credits_used = 0
+        # Normalize URL
+        if not url.startswith(("http://", "https://")):
+            url = f"https://{url}"
+
+        # Extract domain for the response
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        domain = parsed.netloc or parsed.path.split("/")[0]
+
         signals: list[dict] = []
-        answer_summary = None
 
-        # Step 1: Search for recent company activity (1 credit)
-        # Use domain without TLD as a company name hint for better results
-        company_hint = domain.split(".")[0]
-        search_results = []
         try:
-            response = self.search(
-                query=f'"{company_hint}" company news updates announcements',
-                topic="news",
-                days=30,
-                max_results=5,
+            response = self._client.crawl(
+                url=url,
+                max_depth=2,
+                limit=30,
+                allow_external=False,
+                instructions=self.CRAWL_INSTRUCTIONS,
+                select_paths=self.CRAWL_SELECT_PATHS,
+                timeout=120,
             )
-            credits_used += 1
-            answer_summary = response.get("answer")
-            search_results = response.get("results", [])
-        except TavilyAPIError as e:
-            logger.warning(f"Tavily search failed for {domain}: {e}")
+        except Exception as e:
+            logger.warning(f"Tavily crawl failed for {url}: {e}")
+            raise TavilyAPIError(f"Crawl failed: {e}")
 
-        if not search_results:
-            return WebsiteIntelligence(
-                domain=domain,
-                answer_summary=answer_summary,
-                credit_cost=credits_used,
-            )
+        # Process crawled pages
+        results = response.get("results", [])
+        logger.info(f"Tavily crawl returned {len(results)} pages for {domain}")
 
-        # Step 2: Extract full content from top URLs (1 credit for up to 5 URLs)
-        urls = [r["url"] for r in search_results if r.get("url")][:5]
-        extracted_content = {}  # url -> full text
+        for page in results:
+            page_url = page.get("url", "")
+            raw_content = page.get("raw_content", "")
 
-        if urls:
-            try:
-                extract_response = self.extract(urls)
-                credits_used += 1
-                for item in extract_response.get("results", []):
-                    url = item.get("url", "")
-                    text = item.get("raw_content", "") or item.get("text", "")
-                    if url and text:
-                        extracted_content[url] = text
-            except TavilyAPIError as e:
-                logger.warning(f"Tavily extract failed for {domain}: {e}")
-
-        # Step 3: Build signals from search results enriched with extracted content
-        # Only keep results that actually mention the company
-        company_hint_lower = company_hint.lower()
-        for result_data in search_results:
-            result = TavilySearchResult.from_api_response(result_data)
-            # Relevance check: company name must appear in title, URL, or content
-            combined_text = f"{result.title} {result.url} {result.content}".lower()
-            if company_hint_lower not in combined_text:
+            if not page_url or not raw_content:
                 continue
-            full_text = extracted_content.get(result.url, "")
-            signal = _classify_and_summarize(result, full_text)
+
+            signal = _classify_crawled_page(page_url, raw_content)
             if signal:
                 signals.append(signal)
 
         return WebsiteIntelligence(
             domain=domain,
             signals=signals,
-            answer_summary=answer_summary,
-            credit_cost=credits_used,
+            credit_cost=1,  # Crawl uses credits based on pages crawled
         )
 
 
@@ -213,43 +183,58 @@ class TavilyClient:
 # SIGNAL CLASSIFICATION & SUMMARIZATION
 # =============================================================================
 
-def _classify_and_summarize(result: TavilySearchResult, full_text: str) -> Optional[dict]:
-    """Classify a result and build a meaningful description from extracted content."""
-    # Use full extracted text if available, otherwise fall back to search snippet
-    content = full_text or result.content
-    combined = f"{result.title} {content}".lower()
+# URL path hints for classification boost
+PATH_TYPE_HINTS = {
+    "product_update": ["/blog", "/changelog", "/releases", "/updates", "/launch", "/announcements", "/product", "/features"],
+    "pricing_change": ["/pricing", "/plans"],
+    "team_change": ["/team", "/about", "/careers"],
+    "partnership": ["/partners", "/integrations"],
+    "funding_news": ["/press", "/news", "/newsroom"],
+}
 
-    # Classify signal type
-    signal_type = "general_update"
-    for stype, keywords in SIGNAL_KEYWORDS.items():
-        if any(kw in combined for kw in keywords):
+
+def _classify_crawled_page(url: str, raw_content: str) -> Optional[dict]:
+    """
+    Classify a crawled page and build a meaningful signal.
+
+    Uses URL path hints for classification boost, then falls back to
+    content keyword matching.
+    """
+    from urllib.parse import urlparse
+
+    if not raw_content or len(raw_content) < 50:
+        return None
+
+    parsed = urlparse(url)
+    path = parsed.path.lower()
+    content_lower = raw_content.lower()
+
+    # Try to classify by URL path first
+    signal_type = None
+    for stype, path_patterns in PATH_TYPE_HINTS.items():
+        if any(pattern in path for pattern in path_patterns):
             signal_type = stype
             break
 
-    # Build description from the best available content
-    title = result.title.strip()
+    # Fall back to content keyword matching
+    if signal_type is None:
+        signal_type = "general_update"
+        for stype, keywords in SIGNAL_KEYWORDS.items():
+            if any(kw in content_lower for kw in keywords):
+                signal_type = stype
+                break
 
-    if full_text:
-        # Extract the most informative sentences from full content
-        summary = _extract_key_sentences(full_text, max_chars=200)
-        if summary:
-            description = summary
-        else:
-            description = title
-    elif result.content.strip():
-        description = result.content.strip()[:200]
-    else:
-        description = title
+    # Extract key sentences for description
+    description = _extract_key_sentences(raw_content, max_chars=200)
 
-    # Don't return signals with no real information
-    if len(description) < 10:
+    if not description or len(description) < 10:
         return None
 
     return {
         "type": signal_type,
         "description": description,
-        "url": result.url,
-        "date": result.published_date,
+        "url": url,
+        "date": None,  # Crawl doesn't provide dates
     }
 
 
