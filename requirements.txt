@@ -19,7 +19,7 @@ requests>=2.28.0
 tavily-python>=0.5.0
 
 # Parallel Search API (news research)
-parallel-api>=0.1.0
+parallel-web>=0.4.0
 
 # Observability (optional - only needed if LANGSMITH_TRACING=true)
 # langsmith is already included above
