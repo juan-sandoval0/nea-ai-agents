@@ -7,10 +7,10 @@ Used by multiple agents for company intelligence.
 
 Implemented Sources:
 - Harmonic: Company profiles, founders, signals
+- Swarm: Founder background enrichment
+- Tavily: Website intelligence/updates
 
 NOT YET Implemented Sources:
-- Tavily: Website updates
-- Swarm: Founder background enrichment
 - News API: Media/news ingestion
 
 Usage:
@@ -19,12 +19,16 @@ Usage:
         get_founders,
         get_recent_news,
         get_key_signals,
+        enrich_founder_backgrounds,
         ingest_company,
         get_company_bundle,
     )
 
     # Ingest all data for a company
     result = ingest_company("stripe.com")
+
+    # Enrich founder backgrounds with Swarm data
+    enriched = enrich_founder_backgrounds("stripe.com")
 
     # Get complete bundle for briefing
     bundle = get_company_bundle("stripe.com")
@@ -46,6 +50,7 @@ from core.database import (
 )
 from core.clients.harmonic import HarmonicClient, HarmonicCompany, HarmonicAPIError
 from core.clients.tavily import TavilyClient, TavilyAPIError
+from core.clients.swarm import SwarmClient, SwarmAPIError
 from core.tracking import get_tracker
 
 logger = logging.getLogger(__name__)
@@ -92,6 +97,22 @@ def get_tavily_client() -> Optional[TavilyClient]:
             logger.info("TAVILY_API_KEY not set - website intelligence disabled")
             return None
     return _tavily_client
+
+
+# Singleton Swarm client
+_swarm_client: Optional[SwarmClient] = None
+
+
+def get_swarm_client() -> Optional[SwarmClient]:
+    """Get or create Swarm client instance. Returns None if API key not set."""
+    global _swarm_client
+    if _swarm_client is None:
+        try:
+            _swarm_client = SwarmClient()
+        except ValueError:
+            logger.info("SWARM_API_KEY not set - founder background enrichment disabled")
+            return None
+    return _swarm_client
 
 
 # =============================================================================
@@ -408,6 +429,250 @@ def get_founders(company_id: str) -> list[Founder]:
 
 
 # =============================================================================
+# HELPER: Summarize founder background with LLM
+# =============================================================================
+
+def _summarize_founder_background(
+    name: str,
+    role_title: str,
+    raw_background: str,
+    company_name: str,
+) -> str:
+    """
+    Use OpenAI to create a concise founder background summary.
+
+    Args:
+        name: Founder name
+        role_title: Current role at the company
+        raw_background: Raw background text from Swarm
+        company_name: Current company name (to exclude from summary)
+
+    Returns:
+        Concise 2-4 sentence summary focused on prior experience
+    """
+    import os
+    from langchain_openai import ChatOpenAI
+    from langchain_core.messages import SystemMessage, HumanMessage
+
+    # Skip if no OpenAI key
+    if not os.getenv("OPENAI_API_KEY"):
+        logger.warning("OPENAI_API_KEY not set - skipping LLM summarization")
+        return raw_background
+
+    system_prompt = """You are a VC research assistant creating concise founder backgrounds.
+Your task is to summarize a founder's background in 2-4 sentences.
+
+Rules:
+- Focus on PRIOR experience (not their current role - that's already displayed elsewhere)
+- Highlight: previous companies, notable roles, education, achievements
+- Skip: current role details, generic skills lists, redundant info
+- Be factual and concise
+- If they were at notable companies (Google, Meta, OpenAI, etc.), mention it
+- If they have a technical background (PhD, engineering), mention it
+- If they previously founded or exited a company, mention it"""
+
+    user_prompt = f"""Summarize this founder's background for a VC meeting brief.
+
+Founder: {name}
+Current Role: {role_title} at {company_name}
+
+Raw Background Data:
+{raw_background}
+
+Write a 2-4 sentence summary focusing on their PRIOR experience and credentials (not their current role at {company_name})."""
+
+    try:
+        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_prompt),
+        ]
+        response = llm.invoke(messages)
+        return response.content.strip()
+    except Exception as e:
+        logger.warning(f"LLM summarization failed for {name}: {e}")
+        return raw_background
+
+
+# =============================================================================
+# TOOL 2b: enrich_founder_backgrounds (Swarm)
+# =============================================================================
+
+def enrich_founder_backgrounds(company_id: str, summarize: bool = True) -> dict:
+    """
+    Enrich founder backgrounds using Swarm API.
+
+    Fetches detailed profile information for each founder using their
+    LinkedIn URL and updates the founders table with background text
+    and sources.
+
+    STATUS: IMPLEMENTED (Swarm + optional OpenAI summarization)
+
+    Args:
+        company_id: Company URL or domain
+        summarize: If True, use OpenAI to create concise summaries (default: True)
+
+    Returns:
+        Dict with enrichment results:
+        {
+            "company_id": str,
+            "enriched_count": int,
+            "skipped_count": int,
+            "failed_count": int,
+            "founders": [
+                {
+                    "name": str,
+                    "status": "enriched" | "skipped" | "failed",
+                    "reason": str (optional),
+                    "sources": list[dict] (if enriched),
+                }
+            ]
+        }
+
+    Raises:
+        ValueError: If Swarm API key is not set
+    """
+    swarm = get_swarm_client()
+    if swarm is None:
+        raise ValueError("SWARM_API_KEY not set - founder background enrichment unavailable")
+
+    db = get_db()
+    normalized_id = normalize_company_id(company_id)
+
+    # Get existing founders from database
+    founders = db.get_founders(normalized_id)
+
+    if not founders:
+        logger.info(f"No founders found in database for {normalized_id}")
+        return {
+            "company_id": normalized_id,
+            "enriched_count": 0,
+            "skipped_count": 0,
+            "failed_count": 0,
+            "founders": [],
+        }
+
+    results = {
+        "company_id": normalized_id,
+        "enriched_count": 0,
+        "skipped_count": 0,
+        "failed_count": 0,
+        "founders": [],
+    }
+
+    for founder in founders:
+        founder_result = {
+            "name": founder.name,
+            "status": "pending",
+        }
+
+        # Skip if already enriched (has meaningful background)
+        if founder.background and len(founder.background) > 50:
+            founder_result["status"] = "skipped"
+            founder_result["reason"] = "Already has background"
+            results["skipped_count"] += 1
+            results["founders"].append(founder_result)
+            continue
+
+        # Try to enrich via LinkedIn URL
+        profile = None
+
+        if founder.linkedin_url:
+            try:
+                profile = swarm.get_profile_by_linkedin(founder.linkedin_url)
+            except SwarmAPIError as e:
+                logger.warning(f"Swarm API error for {founder.name}: {e}")
+
+        # Fallback: search by name and company
+        if not profile:
+            try:
+                # Get company name from database
+                company = db.get_company(normalized_id)
+                company_name = company.company_name if company else None
+                profile = swarm.search_by_name_and_company(founder.name, company_name)
+            except SwarmAPIError as e:
+                logger.warning(f"Swarm name search failed for {founder.name}: {e}")
+
+        if not profile:
+            founder_result["status"] = "failed"
+            founder_result["reason"] = "Profile not found in Swarm"
+            results["failed_count"] += 1
+            results["founders"].append(founder_result)
+            continue
+
+        # Format background and extract sources
+        raw_background = profile.format_background()
+        sources = profile.get_sources()
+
+        if not raw_background or len(raw_background) < 20:
+            founder_result["status"] = "failed"
+            founder_result["reason"] = "No meaningful background data"
+            results["failed_count"] += 1
+            results["founders"].append(founder_result)
+            continue
+
+        # Optionally summarize with LLM
+        if summarize:
+            company = db.get_company(normalized_id)
+            company_name = company.company_name if company else "the company"
+            background = _summarize_founder_background(
+                name=founder.name,
+                role_title=founder.role_title or "",
+                raw_background=raw_background,
+                company_name=company_name,
+            )
+        else:
+            background = raw_background
+
+        # Format sources as string for storage
+        sources_str = ""
+        if sources:
+            source_urls = [s["url"] for s in sources if s.get("url")]
+            if source_urls:
+                sources_str = "\n\n---\nSources: " + ", ".join(source_urls[:3])
+
+        # Combine background with sources
+        full_background = background + sources_str if background else None
+
+        if not full_background or len(full_background) < 20:
+            founder_result["status"] = "failed"
+            founder_result["reason"] = "No meaningful background data"
+            results["failed_count"] += 1
+            results["founders"].append(founder_result)
+            continue
+
+        # Update founder in database
+        founder.background = full_background
+        founder.source = "swarm"
+        founder.observed_at = datetime.utcnow().isoformat()
+
+        # Also update LinkedIn URL if we found one
+        if profile.linkedin_url and not founder.linkedin_url:
+            if not profile.linkedin_url.startswith("http"):
+                founder.linkedin_url = "https://" + profile.linkedin_url
+            else:
+                founder.linkedin_url = profile.linkedin_url
+
+        db.upsert_founders([founder])
+
+        founder_result["status"] = "enriched"
+        founder_result["sources"] = sources
+        results["enriched_count"] += 1
+        results["founders"].append(founder_result)
+
+        logger.info(f"Enriched background for {founder.name} at {normalized_id}")
+
+    logger.info(
+        f"Founder enrichment complete for {normalized_id}: "
+        f"enriched={results['enriched_count']}, "
+        f"skipped={results['skipped_count']}, "
+        f"failed={results['failed_count']}"
+    )
+
+    return results
+
+
+# =============================================================================
 # TOOL 3: get_recent_news
 # =============================================================================
 
@@ -619,7 +884,11 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
 # TOOL 5: ingest_company
 # =============================================================================
 
-def ingest_company(company_id: str, user: Optional[str] = None) -> dict:
+def ingest_company(
+    company_id: str,
+    user: Optional[str] = None,
+    enrich_backgrounds: bool = False,
+) -> dict:
     """
     Single entrypoint for company data ingestion.
 
@@ -629,6 +898,7 @@ def ingest_company(company_id: str, user: Optional[str] = None) -> dict:
     Args:
         company_id: Company URL or domain
         user: Optional user identifier for tracking
+        enrich_backgrounds: If True, enrich founder backgrounds using Swarm API
 
     Returns:
         Dict with ingestion results
@@ -641,6 +911,7 @@ def ingest_company(company_id: str, user: Optional[str] = None) -> dict:
         "company_name": None,
         "company_core": False,
         "founders_count": 0,
+        "founders_enriched": 0,
         "signals_count": 0,
         "news_count": 0,
         "errors": [],
@@ -664,6 +935,15 @@ def ingest_company(company_id: str, user: Optional[str] = None) -> dict:
         results["errors"].append(f"Founders: {str(e)}")
         logger.error(f"Failed to ingest founders for {company_id}: {e}")
 
+    # 2b. Enrich founder backgrounds (optional)
+    if enrich_backgrounds and results["founders_count"] > 0:
+        try:
+            enrichment = enrich_founder_backgrounds(company_id)
+            results["founders_enriched"] = enrichment["enriched_count"]
+        except Exception as e:
+            results["errors"].append(f"Founder backgrounds: {str(e)}")
+            logger.error(f"Failed to enrich founder backgrounds for {company_id}: {e}")
+
     # 3. Fetch key signals
     try:
         signals = get_key_signals(company_id)
@@ -682,7 +962,7 @@ def ingest_company(company_id: str, user: Optional[str] = None) -> dict:
 
     logger.info(
         f"Ingestion complete for {results['company_name']}: "
-        f"founders={results['founders_count']}, "
+        f"founders={results['founders_count']} (enriched={results['founders_enriched']}), "
         f"signals={results['signals_count']}, "
         f"news={results['news_count']}"
     )
@@ -694,6 +974,7 @@ def ingest_company(company_id: str, user: Optional[str] = None) -> dict:
         user=user,
         metadata={
             "founders_count": results["founders_count"],
+            "founders_enriched": results["founders_enriched"],
             "signals_count": results["signals_count"],
             "errors": results["errors"],
         }

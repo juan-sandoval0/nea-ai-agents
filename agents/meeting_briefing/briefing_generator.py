@@ -127,20 +127,32 @@ def format_founders_data(founders: list[Founder]) -> str:
 
     lines = []
     for f in founders:
-        line = f"- {f.name}"
+        # Name and title on first line
+        header = f"**{f.name}**"
         if f.role_title:
-            line += f" ({f.role_title})"
+            header += f" - {f.role_title}"
+        lines.append(header)
+
+        # LinkedIn on separate line
         if f.linkedin_url:
-            line += f" | LinkedIn: {f.linkedin_url}"
+            lines.append(f"  LinkedIn: {f.linkedin_url}")
+
+        # Background as indented block
         if f.background:
-            line += f" | Background: {f.background}"
+            # Clean up the background - remove source lines for cleaner display
+            bg_text = f.background.split("\n---\n")[0].strip()
+            # Indent each line
+            for bg_line in bg_text.split("\n"):
+                if bg_line.strip():
+                    lines.append(f"  {bg_line}")
         else:
-            line += " | Background: Not yet available (source not implemented)"
-        line += f" | Source: {f.source}"
-        lines.append(line)
+            lines.append("  Background: Not yet available")
+
+        lines.append(f"  (Source: {f.source})")
+        lines.append("")  # Blank line between founders
 
     max_observed = max(f.observed_at for f in founders) if founders else "N/A"
-    lines.append(f"\nData Last Updated: {max_observed}")
+    lines.append(f"Data Last Updated: {max_observed}")
 
     return "\n".join(lines)
 
@@ -304,10 +316,13 @@ Display as a formatted table or list:
 - Last Updated: [observed_at timestamp]
 
 ### 4) Founder Information
-- One bullet per founder from the founders table
-- Include LinkedIn links if available
-- If background is missing: "Background not yet available"
-- If no founders: "No founder data available"
+For each founder, display:
+- **Name** - Title | [LinkedIn](url)
+- Background summary (the 2-3 sentence summary from the data)
+
+IMPORTANT: You MUST include the background text for each founder. Do not omit it.
+If background is missing: "Background not yet available"
+If no founders: "No founder data available"
 
 ### 5) Key Signals
 - One bullet per signal from the key_signals table

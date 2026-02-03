@@ -3,6 +3,7 @@
 Available clients:
 - HarmonicClient: Harmonic.ai company intelligence API
 - TavilyClient: Tavily website intelligence API
+- SwarmClient: The Swarm profile intelligence API
 """
 
 from core.clients.harmonic import (
@@ -16,6 +17,13 @@ from core.clients.tavily import (
     WebsiteIntelligence,
     TavilyAPIError,
 )
+from core.clients.swarm import (
+    SwarmClient,
+    SwarmProfile,
+    SwarmExperience,
+    SwarmEducation,
+    SwarmAPIError,
+)
 
 __all__ = [
     "HarmonicClient",
@@ -25,4 +33,9 @@ __all__ = [
     "TavilyClient",
     "WebsiteIntelligence",
     "TavilyAPIError",
+    "SwarmClient",
+    "SwarmProfile",
+    "SwarmExperience",
+    "SwarmEducation",
+    "SwarmAPIError",
 ]

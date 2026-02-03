@@ -33,7 +33,7 @@ from typing import Optional
 import chromadb
 from chromadb.config import Settings
 
-from .harmonic_client import HarmonicClient, HarmonicCompany, HarmonicPerson, HarmonicAPIError
+from core.clients.harmonic import HarmonicClient, HarmonicCompany, HarmonicPerson, HarmonicAPIError
 from .data_corrections import get_corrected_founders
 
 # Import from agent.py for type compatibility
