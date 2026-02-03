@@ -4,7 +4,7 @@ Available clients:
 - HarmonicClient: Harmonic.ai company intelligence API
 - TavilyClient: Tavily website intelligence API
 - SwarmClient: The Swarm profile intelligence API
-- NewsApiClient: EventRegistry news and event API
+- ParallelSearchClient: Parallel Search API for news research
 """
 
 from core.clients.harmonic import (
@@ -25,11 +25,10 @@ from core.clients.swarm import (
     SwarmEducation,
     SwarmAPIError,
 )
-from core.clients.newsapi import (
-    NewsApiClient,
-    NewsApiArticle,
-    NewsApiEvent,
-    NewsApiError,
+from core.clients.parallel_search import (
+    ParallelSearchClient,
+    ParallelSearchResult,
+    ParallelSearchError,
 )
 
 __all__ = [
@@ -45,8 +44,7 @@ __all__ = [
     "SwarmExperience",
     "SwarmEducation",
     "SwarmAPIError",
-    "NewsApiClient",
-    "NewsApiArticle",
-    "NewsApiEvent",
-    "NewsApiError",
+    "ParallelSearchClient",
+    "ParallelSearchResult",
+    "ParallelSearchError",
 ]

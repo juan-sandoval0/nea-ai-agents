@@ -9,7 +9,7 @@ Implemented Sources:
 - Harmonic: Company profiles, founders, signals
 - Swarm: Founder background enrichment
 - Tavily: Website intelligence/updates
-- NewsAPI (EventRegistry): News articles, event signals
+- Parallel Search: News articles, event signals
 
 Usage:
     from tools.company_tools import (
@@ -49,7 +49,11 @@ from core.database import (
 from core.clients.harmonic import HarmonicClient, HarmonicCompany, HarmonicAPIError
 from core.clients.tavily import TavilyClient, TavilyAPIError
 from core.clients.swarm import SwarmClient, SwarmAPIError
-from core.clients.newsapi import NewsApiClient, NewsApiError
+from core.clients.parallel_search import (
+    ParallelSearchClient,
+    ParallelSearchError,
+    _classify_signal_type,
+)
 from core.tracking import get_tracker
 
 logger = logging.getLogger(__name__)
@@ -114,20 +118,20 @@ def get_swarm_client() -> Optional[SwarmClient]:
     return _swarm_client
 
 
-# Singleton NewsAPI client
-_newsapi_client: Optional[NewsApiClient] = None
+# Singleton Parallel Search client
+_parallel_client: Optional[ParallelSearchClient] = None
 
 
-def get_newsapi_client() -> Optional[NewsApiClient]:
-    """Get or create NewsAPI client instance. Returns None if API key not set."""
-    global _newsapi_client
-    if _newsapi_client is None:
+def get_parallel_client() -> Optional[ParallelSearchClient]:
+    """Get or create Parallel Search client instance. Returns None if API key not set."""
+    global _parallel_client
+    if _parallel_client is None:
         try:
-            _newsapi_client = NewsApiClient()
+            _parallel_client = ParallelSearchClient()
         except ValueError:
-            logger.info("NEWSAPI_API_KEY not set - news ingestion disabled")
+            logger.info("PARALLEL_API_KEY not set - news research disabled")
             return None
-    return _newsapi_client
+    return _parallel_client
 
 
 # =============================================================================
@@ -693,13 +697,13 @@ def enrich_founder_backgrounds(company_id: str, summarize: bool = True) -> dict:
 
 def get_recent_news(company_id: str, days: int = 30) -> list[NewsArticle]:
     """
-    Fetch recent news articles for a company via EventRegistry (newsapi.ai).
+    Fetch recent news articles for a company via Parallel Search.
 
-    STATUS: IMPLEMENTED (NewsAPI)
+    STATUS: IMPLEMENTED (Parallel Search)
 
     Args:
         company_id: Company URL or domain
-        days: Number of days to look back
+        days: Number of days to look back (not currently used by Parallel Search)
 
     Returns:
         List of NewsArticle objects
@@ -707,12 +711,12 @@ def get_recent_news(company_id: str, days: int = 30) -> list[NewsArticle]:
     db = get_db()
     normalized_id = normalize_company_id(company_id)
 
-    newsapi = get_newsapi_client()
-    if newsapi is None:
-        logger.info(f"get_recent_news: NEWSAPI_API_KEY not set, skipping for {normalized_id}")
+    parallel = get_parallel_client()
+    if parallel is None:
+        logger.info(f"get_recent_news: PARALLEL_API_KEY not set, skipping for {normalized_id}")
         return []
 
-    # Resolve company name for keyword search
+    # Resolve company name for search
     company_name = None
     existing = db.get_company(normalized_id)
     if existing:
@@ -722,22 +726,22 @@ def get_recent_news(company_id: str, days: int = 30) -> list[NewsArticle]:
         company_name = normalized_id.split(".")[0]
 
     try:
-        api_articles = newsapi.search_articles(keyword=company_name, days_back=days)
-    except NewsApiError as e:
-        logger.error(f"NewsAPI search failed for {normalized_id}: {e}")
+        results = parallel.search_company_news(company_name, max_results=10)
+    except ParallelSearchError as e:
+        logger.error(f"Parallel Search failed for {normalized_id}: {e}")
         return []
 
-    # Transform to NewsArticle DB models, filtering for relevance
+    # Transform to NewsArticle DB models
     articles: list[NewsArticle] = []
-    for a in api_articles:
+    for r in results:
         articles.append(NewsArticle(
             company_id=normalized_id,
-            article_headline=a.title,
-            outlet=a.source_name,
-            url=a.url,
-            published_date=a.published_date,
+            article_headline=r.title,
+            outlet=r.source_domain,
+            url=r.url,
+            published_date=r.publish_date,
             observed_at=datetime.utcnow().isoformat(),
-            source="newsapi",
+            source="parallel",
         ))
 
     if articles:
@@ -927,25 +931,29 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
             source="pending_tavily",
         ))
 
-    # Signal: News Events (EventRegistry)
-    newsapi = get_newsapi_client()
-    if newsapi is not None:
+    # Signal: News Events (Parallel Search)
+    parallel = get_parallel_client()
+    if parallel is not None:
         try:
             company_name = company.name
-            events = newsapi.get_events(keyword=company_name, days_back=30)
-            for event in events:
-                signal_type = event.to_signal_type()
+            results = parallel.search_company_news(company_name, max_results=10)
+            for r in results:
+                signal_type = _classify_signal_type(r.title, r.excerpts)
+                # Use first excerpt as description (truncated)
+                description = r.excerpts[0][:200] if r.excerpts else r.title
+                if r.url:
+                    description += f" (source: {r.source_domain})"
                 signals.append(KeySignal(
                     company_id=normalized_id,
                     signal_type=signal_type,
-                    description=event.title,
-                    observed_at=event.event_date or now,
-                    source="newsapi",
+                    description=description,
+                    observed_at=r.publish_date or now,
+                    source="parallel",
                 ))
-            if events:
-                logger.info(f"NewsAPI: {len(events)} event signals for {normalized_id}")
-        except NewsApiError as e:
-            logger.warning(f"NewsAPI event search failed for {normalized_id}: {e}")
+            if results:
+                logger.info(f"Parallel Search: {len(results)} news signals for {normalized_id}")
+        except ParallelSearchError as e:
+            logger.warning(f"Parallel Search failed for {normalized_id}: {e}")
 
     if signals:
         db.upsert_signals(signals)
