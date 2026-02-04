@@ -34,6 +34,7 @@ import chromadb
 from chromadb.config import Settings
 
 from core.clients.harmonic import HarmonicClient, HarmonicCompany, HarmonicPerson, HarmonicAPIError
+from core.database import Database, Founder as DBFounder
 from .data_corrections import get_corrected_founders
 
 # Import from agent.py for type compatibility
@@ -388,8 +389,14 @@ class HarmonicDataSource:
         if founders:
             lines.append("## Founders & Leadership")
             for person in founders[:5]:
-                title = f" - {person.title}" if person.title else ""
+                # Handle both HarmonicPerson (title) and DBFounder (role_title)
+                title_value = getattr(person, 'title', None) or getattr(person, 'role_title', None)
+                title = f" - {title_value}" if title_value else ""
                 lines.append(f"- **{person.name}**{title}")
+                # Include background if available (from enriched DBFounder objects)
+                if hasattr(person, 'background') and person.background:
+                    # Indent background text for readability
+                    lines.append(f"  {person.background}")
             lines.append("")
 
         return "\n".join(lines)
@@ -443,9 +450,97 @@ class HarmonicDataSource:
     # DATA SOURCE PROTOCOL IMPLEMENTATION
     # =========================================================================
 
+    def _get_enriched_founders_from_db(self, company_domain: str) -> list[DBFounder]:
+        """
+        Get founders with enriched backgrounds from the database.
+
+        Args:
+            company_domain: Company domain to look up
+
+        Returns:
+            List of DBFounder objects with backgrounds, or empty list if none found
+        """
+        try:
+            db = Database()
+            founders = db.get_founders(company_domain)
+            # Check if any founders have enriched backgrounds
+            enriched = [f for f in founders if f.background and len(f.background) > 50]
+            return enriched
+        except Exception as e:
+            logger.warning(f"Failed to get founders from DB: {e}")
+            return []
+
+    def _ensure_founders_enriched(self, url: str, company_domain: str) -> list[DBFounder]:
+        """
+        Ensure founders are fetched and enriched for the given company.
+
+        This will:
+        1. Check if enriched founders exist in the database
+        2. If not, fetch founders from Harmonic and store them
+        3. Then enrich them with Swarm data
+
+        Args:
+            url: Company URL for Harmonic lookup
+            company_domain: Company domain for database storage
+
+        Returns:
+            List of enriched DBFounder objects
+        """
+        from tools.company_tools import (
+            get_founders as fetch_founders_from_harmonic,
+            enrich_founder_backgrounds,
+            normalize_company_id,
+        )
+
+        normalized_id = normalize_company_id(url)
+
+        # First check if we already have enriched founders
+        enriched_founders = self._get_enriched_founders_from_db(normalized_id)
+        if enriched_founders:
+            logger.info(f"Found {len(enriched_founders)} enriched founders in DB for {normalized_id}")
+            return enriched_founders
+
+        # No enriched founders - need to fetch and enrich
+        logger.info(f"No enriched founders in DB for {normalized_id}, triggering enrichment...")
+
+        try:
+            # Step 1: Fetch founders from Harmonic and store in DB
+            founders_from_harmonic = fetch_founders_from_harmonic(url)
+            logger.info(f"Fetched {len(founders_from_harmonic)} founders from Harmonic for {normalized_id}")
+
+            if not founders_from_harmonic:
+                logger.warning(f"No founders found in Harmonic for {normalized_id}")
+                return []
+
+            # Step 2: Enrich with Swarm data
+            try:
+                enrichment_result = enrich_founder_backgrounds(url, summarize=True)
+                logger.info(
+                    f"Enrichment complete for {normalized_id}: "
+                    f"{enrichment_result.get('enriched_count', 0)} enriched, "
+                    f"{enrichment_result.get('failed_count', 0)} failed"
+                )
+            except ValueError as e:
+                # Swarm API key not set - log and continue with unenriched founders
+                logger.warning(f"Swarm enrichment unavailable: {e}")
+            except Exception as e:
+                logger.warning(f"Swarm enrichment failed: {e}")
+
+            # Step 3: Return founders from DB (now potentially enriched)
+            db = Database()
+            return db.get_founders(normalized_id)
+
+        except Exception as e:
+            logger.error(f"Failed to fetch/enrich founders for {normalized_id}: {e}")
+            return []
+
     def get_company_profile(self, url: str) -> RetrievalResult:
         """
         Retrieve company profile from Harmonic API by URL.
+
+        This method also checks for enriched founder data in the database.
+        If founders aren't enriched yet, it triggers the enrichment process
+        using Swarm API.
 
         Args:
             url: Company website URL or LinkedIn URL (company or person)
@@ -462,25 +557,13 @@ class HarmonicDataSource:
                     raw_results=[],
                 )
 
-            # Extract key people from company contact info (faster than API calls)
-            founders = []
-            contact = company.raw_data.get("contact", {}) or {}
-            primary_email = contact.get("primary_email")
-            primary_person_id = contact.get("primary_email_person_id")
-
-            # Fetch primary contact if available (usually a founder/exec)
-            if primary_person_id:
-                try:
-                    person = self.client.get_person(str(primary_person_id))
-                    if person:
-                        founders.append(person)
-                except HarmonicAPIError:
-                    pass
-
             # Check for manual corrections first
+            founders = []
+            use_manual_corrections = False
             if company.domain:
                 corrected = get_corrected_founders(company.domain)
                 if corrected:
+                    use_manual_corrections = True
                     # Convert corrections to HarmonicPerson-like objects
                     founders = [
                         HarmonicPerson(
@@ -495,25 +578,72 @@ class HarmonicDataSource:
                         for i, f in enumerate(corrected)
                     ]
 
-            # Cache for historical tracking
-            self._cache_company_data(company, founders)
+            # If no manual corrections, get enriched founders from DB (or trigger enrichment)
+            if not use_manual_corrections:
+                # Try to get enriched founders from database, triggering enrichment if needed
+                db_founders = self._ensure_founders_enriched(url, company.domain or url)
 
-            # Format content
+                if db_founders:
+                    # Use DB founders (they have background info)
+                    # Convert to objects that _format_company_profile can handle
+                    founders = db_founders
+                    logger.info(f"Using {len(founders)} founders from database for {company.name}")
+                else:
+                    # Fallback: Extract key people from company contact info
+                    contact = company.raw_data.get("contact", {}) or {}
+                    primary_person_id = contact.get("primary_email_person_id")
+                    if primary_person_id:
+                        try:
+                            person = self.client.get_person(str(primary_person_id))
+                            if person:
+                                founders.append(person)
+                        except HarmonicAPIError:
+                            pass
+
+            # Cache for historical tracking (convert DB founders back to HarmonicPerson for caching)
+            founders_for_cache = []
+            for f in founders:
+                if isinstance(f, DBFounder):
+                    founders_for_cache.append(HarmonicPerson(
+                        id=f"db_{hash(f.name)}",
+                        name=f.name,
+                        title=f.role_title,
+                        linkedin_url=f.linkedin_url,
+                        email=None,
+                        raw_data={},
+                        fetched_at=f.observed_at,
+                    ))
+                else:
+                    founders_for_cache.append(f)
+            self._cache_company_data(company, founders_for_cache)
+
+            # Format content - pass founders (may be DBFounder or HarmonicPerson)
             content = self._format_company_profile(company, founders)
 
             # Build source for citations
-            source = Source(
+            sources = [Source(
                 id=f"harmonic_{company.id}",
                 title=f"{company.name} Company Profile",
                 document_type="company_profile",
                 description=company.description[:150] if company.description else "",
                 date=company.fetched_at[:10],
                 url=f"https://console.harmonic.ai/companies/{company.id}",
-            )
+            )]
+
+            # Add Swarm as a source if we used enriched founders
+            if any(isinstance(f, DBFounder) and f.background for f in founders):
+                sources.append(Source(
+                    id="swarm_enrichment",
+                    title="Founder Backgrounds (Swarm)",
+                    document_type="founder_profiles",
+                    description="Enriched founder background information from Swarm database",
+                    date=datetime.utcnow().strftime("%Y-%m-%d"),
+                    url="https://swarm.com",
+                ))
 
             return RetrievalResult(
                 content=content,
-                sources=[source],
+                sources=sources,
                 raw_results=[asdict(company)],
             )
 
