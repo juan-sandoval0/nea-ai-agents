@@ -571,9 +571,7 @@ class HarmonicDataSource:
                             name=f["name"],
                             title=f.get("title"),
                             linkedin_url=f.get("linkedin_url"),
-                            email=None,
                             raw_data={},
-                            fetched_at=datetime.utcnow().isoformat(),
                         )
                         for i, f in enumerate(corrected)
                     ]
@@ -609,9 +607,7 @@ class HarmonicDataSource:
                         name=f.name,
                         title=f.role_title,
                         linkedin_url=f.linkedin_url,
-                        email=None,
                         raw_data={},
-                        fetched_at=f.observed_at,
                     ))
                 else:
                     founders_for_cache.append(f)
