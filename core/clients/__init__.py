@@ -24,6 +24,10 @@ from core.clients.swarm import (
     SwarmExperience,
     SwarmEducation,
     SwarmAPIError,
+    # Unified founder models
+    FounderProfile,
+    FounderExperience,
+    FounderEducation,
 )
 from core.clients.parallel_search import (
     ParallelSearchClient,
@@ -44,6 +48,10 @@ __all__ = [
     "SwarmExperience",
     "SwarmEducation",
     "SwarmAPIError",
+    # Unified founder models
+    "FounderProfile",
+    "FounderExperience",
+    "FounderEducation",
     "ParallelSearchClient",
     "ParallelSearchResult",
     "ParallelSearchError",

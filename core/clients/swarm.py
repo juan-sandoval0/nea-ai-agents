@@ -19,15 +19,24 @@ Usage:
 
 from __future__ import annotations
 
+import asyncio
 import os
 import time
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timedelta
+from typing import Optional, TYPE_CHECKING
 from urllib.parse import urlparse
 
 import requests
+
+# Optional async support - aiohttp is only needed for batch async methods
+try:
+    import aiohttp
+    AIOHTTP_AVAILABLE = True
+except ImportError:
+    aiohttp = None  # type: ignore
+    AIOHTTP_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +47,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_BASE_URL = "https://bee.theswarm.com/v2"
 DEFAULT_TIMEOUT = 30  # seconds
 RATE_LIMIT_RPS = 5  # requests per second (conservative)
+BATCH_SIZE = 50  # Maximum LinkedIn slugs per batch request
 
 
 # =============================================================================
@@ -353,6 +363,391 @@ class SwarmProfile:
 
         return sources
 
+    def to_founder_profile(self) -> "FounderProfile":
+        """Convert SwarmProfile to unified FounderProfile model."""
+        return FounderProfile.from_swarm_profile(self)
+
+
+# =============================================================================
+# UNIFIED FOUNDER PROFILE MODEL
+# =============================================================================
+
+@dataclass
+class FounderExperience:
+    """
+    Unified work experience entry.
+
+    Bridges the rich experience data from Swarm with the database model.
+    """
+    company_name: str
+    title: str
+    is_current: bool = False
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    num_years: Optional[float] = None
+    description: Optional[str] = None
+    location: Optional[str] = None
+    company_website: Optional[str] = None
+    company_industry: Optional[str] = None
+    company_linkedin: Optional[str] = None
+    seniority: list[str] = field(default_factory=list)
+
+    @classmethod
+    def from_swarm_experience(cls, exp: SwarmExperience) -> "FounderExperience":
+        """Convert from SwarmExperience."""
+        num_years = None
+        if exp.start_date:
+            try:
+                start_dt = datetime.strptime(exp.start_date, "%Y-%m-%d")
+                if exp.end_date:
+                    end_dt = datetime.strptime(exp.end_date, "%Y-%m-%d")
+                else:
+                    end_dt = datetime.utcnow()
+                num_years = max(0.0, (end_dt - start_dt).days / 365.25)
+            except ValueError:
+                pass
+
+        return cls(
+            company_name=exp.company_name,
+            title=exp.title,
+            is_current=exp.is_current,
+            start_date=exp.start_date,
+            end_date=exp.end_date,
+            num_years=num_years,
+            description=exp.description,
+            location=exp.location,
+            company_website=exp.company_website,
+            company_industry=exp.company_industry,
+            seniority=exp.seniority,
+        )
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary."""
+        return {
+            "company_name": self.company_name,
+            "title": self.title,
+            "is_current": self.is_current,
+            "start_date": self.start_date,
+            "end_date": self.end_date,
+            "num_years": self.num_years,
+            "description": self.description,
+            "location": self.location,
+            "company_website": self.company_website,
+            "company_industry": self.company_industry,
+            "company_linkedin": self.company_linkedin,
+            "seniority": self.seniority,
+        }
+
+
+@dataclass
+class FounderEducation:
+    """
+    Unified education entry.
+
+    Bridges education data from Swarm with potential tier mapping.
+    """
+    school_name: str
+    degrees: list[str] = field(default_factory=list)
+    majors: list[str] = field(default_factory=list)
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    location: Optional[str] = None
+    education_years: Optional[float] = None
+
+    @classmethod
+    def from_swarm_education(cls, edu: SwarmEducation) -> "FounderEducation":
+        """Convert from SwarmEducation."""
+        education_years = None
+        if edu.start_date and edu.end_date:
+            try:
+                start_dt = datetime.strptime(edu.start_date, "%Y-%m-%d")
+                end_dt = datetime.strptime(edu.end_date, "%Y-%m-%d")
+                education_years = max(0.0, (end_dt - start_dt).days / 365.25)
+            except ValueError:
+                pass
+
+        return cls(
+            school_name=edu.school_name,
+            degrees=edu.degrees,
+            majors=edu.majors,
+            start_date=edu.start_date,
+            end_date=edu.end_date,
+            location=edu.location,
+            education_years=education_years,
+        )
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary."""
+        return {
+            "school_name": self.school_name,
+            "degrees": self.degrees,
+            "majors": self.majors,
+            "start_date": self.start_date,
+            "end_date": self.end_date,
+            "location": self.location,
+            "education_years": self.education_years,
+        }
+
+
+@dataclass
+class FounderProfile:
+    """
+    Unified founder profile model.
+
+    This model bridges:
+    - Rich Swarm profile data (experience, education, social)
+    - Database Founder model (company_id, role_title, background)
+    - Harmonic person data
+
+    Used for:
+    - Batch profile enrichment
+    - Meeting briefing generation
+    - Founder analysis workflows
+
+    Note: This model intentionally excludes scores. Scoring logic
+    should be implemented separately in analysis/evaluation code.
+    """
+    # Identity
+    id: str
+    name: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+
+    # Current position
+    current_title: Optional[str] = None
+    current_company: Optional[str] = None
+    headline: Optional[str] = None
+
+    # Contact & social
+    linkedin_url: Optional[str] = None
+    linkedin_slug: Optional[str] = None
+    work_email: Optional[str] = None
+    personal_emails: list[str] = field(default_factory=list)
+    twitter_url: Optional[str] = None
+    image_url: Optional[str] = None
+    current_location: Optional[str] = None
+
+    # Professional history
+    experience: list[FounderExperience] = field(default_factory=list)
+    education: list[FounderEducation] = field(default_factory=list)
+
+    # Skills & tags
+    skills: list[str] = field(default_factory=list)
+    smart_tags: list[str] = field(default_factory=list)
+
+    # Bio
+    about: Optional[str] = None
+
+    # Company context (set when used in company context)
+    company_id: Optional[str] = None
+    startup_company: Optional[str] = None
+
+    # Metadata
+    source: str = "swarm"  # "swarm", "harmonic", "manual"
+    fetched_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    raw_data: dict = field(default_factory=dict)
+
+    @classmethod
+    def from_swarm_profile(cls, profile: SwarmProfile) -> "FounderProfile":
+        """Create from SwarmProfile."""
+        # Convert experience
+        experience = [
+            FounderExperience.from_swarm_experience(exp)
+            for exp in profile.experience
+        ]
+
+        # Convert education
+        education = [
+            FounderEducation.from_swarm_education(edu)
+            for edu in profile.education
+        ]
+
+        # Extract Twitter URL from social media
+        twitter_url = None
+        personal_emails = []
+        for sm in profile.social_media:
+            if sm.get("network", "").lower() == "twitter":
+                twitter_url = sm.get("url")
+
+        return cls(
+            id=profile.id,
+            name=profile.full_name,
+            first_name=profile.first_name,
+            last_name=profile.last_name,
+            current_title=profile.current_title,
+            current_company=profile.current_company,
+            headline=profile.headline,
+            linkedin_url=profile.linkedin_url,
+            linkedin_slug=profile.linkedin_slug,
+            work_email=profile.work_email,
+            twitter_url=twitter_url,
+            image_url=profile.image_url,
+            current_location=profile.current_location,
+            experience=experience,
+            education=education,
+            skills=profile.skills,
+            smart_tags=profile.smart_tags,
+            about=profile.about,
+            source="swarm",
+            fetched_at=profile.fetched_at,
+            raw_data=profile.raw_data,
+        )
+
+    @classmethod
+    def from_api_response(cls, data: dict) -> "FounderProfile":
+        """
+        Create directly from Swarm API response.
+
+        This is the batch-friendly constructor that doesn't require
+        intermediate SwarmProfile creation.
+        """
+        profile = SwarmProfile.from_api_response(data)
+        return cls.from_swarm_profile(profile)
+
+    def get_prior_experience(self, exclude_company: Optional[str] = None) -> list[FounderExperience]:
+        """
+        Get prior (non-current) experience.
+
+        Args:
+            exclude_company: Company name to exclude (e.g., current startup)
+        """
+        prior = [exp for exp in self.experience if not exp.is_current]
+        if exclude_company:
+            exclude_lower = exclude_company.lower().strip()
+            prior = [
+                exp for exp in prior
+                if exp.company_name.lower().strip() != exclude_lower
+            ]
+        return prior
+
+    def get_total_experience_years(self, exclude_company: Optional[str] = None) -> float:
+        """Calculate total years of prior experience."""
+        prior = self.get_prior_experience(exclude_company)
+        return sum(exp.num_years or 0 for exp in prior)
+
+    def format_background(self) -> str:
+        """
+        Format profile data into a readable background summary.
+
+        Delegates to SwarmProfile.format_background() logic but works
+        directly with FounderProfile data.
+        """
+        lines = []
+
+        # Smart tags first (most VC-relevant signals)
+        notable_tags = [tag for tag in self.smart_tags if tag in (
+            "priorBackedFounder", "serialEntrepreneur", "techFounder",
+            "exitedFounder", "unicornAlum", "fangAlum", "yc", "USImmigrant",
+            "forbesUnder30", "thielFellow",
+        )]
+        if notable_tags:
+            formatted_tags = [tag.replace("priorBackedFounder", "Previously Backed Founder")
+                               .replace("serialEntrepreneur", "Serial Entrepreneur")
+                               .replace("techFounder", "Technical Founder")
+                               .replace("exitedFounder", "Exited Founder")
+                               .replace("unicornAlum", "Unicorn Alumni")
+                               .replace("fangAlum", "FAANG Alumni")
+                               .replace("yc", "Y Combinator")
+                               .replace("USImmigrant", "US Immigrant")
+                               .replace("forbesUnder30", "Forbes 30 Under 30")
+                               .replace("thielFellow", "Thiel Fellow")
+                             for tag in notable_tags]
+            lines.append(f"Notable: {', '.join(formatted_tags)}")
+            lines.append("")
+
+        # Prior experience (skip current role)
+        prior_roles = self.get_prior_experience(self.startup_company)
+        if prior_roles:
+            lines.append("Prior experience:")
+            for exp in prior_roles[:4]:
+                date_range = ""
+                if exp.start_date:
+                    start_year = exp.start_date[:4] if exp.start_date else ""
+                    end_year = exp.end_date[:4] if exp.end_date else ""
+                    if start_year and end_year:
+                        date_range = f" ({start_year}-{end_year})"
+                    elif start_year:
+                        date_range = f" ({start_year})"
+
+                role_line = f"- {exp.title} at {exp.company_name}{date_range}"
+                lines.append(role_line)
+
+                if exp.description and len(exp.description) > 30:
+                    desc = exp.description[:150]
+                    if len(exp.description) > 150:
+                        desc = desc.rsplit(" ", 1)[0] + "..."
+                    lines.append(f"  {desc}")
+            lines.append("")
+
+        # Education
+        if self.education:
+            lines.append("Education:")
+            for edu in self.education[:2]:
+                degree_str = ", ".join(edu.degrees) if edu.degrees else ""
+                major_str = " in " + ", ".join(edu.majors) if edu.majors else ""
+                if degree_str and edu.school_name:
+                    lines.append(f"- {degree_str}{major_str} from {edu.school_name}")
+                elif edu.school_name:
+                    lines.append(f"- {edu.school_name}")
+            lines.append("")
+
+        # About/bio section
+        if self.about:
+            about_text = self.about.strip()
+            if len(about_text) > 200:
+                about_text = about_text[:200].rsplit(" ", 1)[0] + "..."
+            lines.append(f"Bio: {about_text}")
+
+        while lines and lines[-1] == "":
+            lines.pop()
+
+        return "\n".join(lines).strip()
+
+    def to_db_founder(self, company_id: str) -> dict:
+        """
+        Convert to database Founder dict for storage.
+
+        Args:
+            company_id: The company_id to associate this founder with
+        """
+        return {
+            "company_id": company_id,
+            "name": self.name,
+            "role_title": self.current_title,
+            "linkedin_url": self.linkedin_url,
+            "background": self.format_background(),
+            "observed_at": self.fetched_at,
+            "source": self.source,
+        }
+
+    def to_dict(self) -> dict:
+        """Convert to full dictionary representation."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "current_title": self.current_title,
+            "current_company": self.current_company,
+            "headline": self.headline,
+            "linkedin_url": self.linkedin_url,
+            "linkedin_slug": self.linkedin_slug,
+            "work_email": self.work_email,
+            "personal_emails": self.personal_emails,
+            "twitter_url": self.twitter_url,
+            "image_url": self.image_url,
+            "current_location": self.current_location,
+            "experience": [exp.to_dict() for exp in self.experience],
+            "education": [edu.to_dict() for edu in self.education],
+            "skills": self.skills,
+            "smart_tags": self.smart_tags,
+            "about": self.about,
+            "company_id": self.company_id,
+            "startup_company": self.startup_company,
+            "source": self.source,
+            "fetched_at": self.fetched_at,
+        }
+
 
 # =============================================================================
 # SWARM API CLIENT
@@ -657,3 +1052,258 @@ class SwarmClient:
             return profiles[0]
 
         return None
+
+    # =========================================================================
+    # BATCH ASYNC METHODS
+    # =========================================================================
+
+    async def _async_request(
+        self,
+        session: "aiohttp.ClientSession",
+        method: str,
+        endpoint: str,
+        json_data: Optional[dict] = None,
+    ) -> dict:
+        """Make an async API request with error handling."""
+        if not AIOHTTP_AVAILABLE:
+            raise ImportError(
+                "aiohttp is required for async methods. "
+                "Install with: pip install aiohttp"
+            )
+        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        headers = {
+            "x-api-key": self.api_key,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+        try:
+            async with session.request(
+                method=method,
+                url=url,
+                json=json_data,
+                headers=headers,
+                timeout=aiohttp.ClientTimeout(total=self.timeout),
+            ) as response:
+                logger.debug(f"Swarm API {method} {url} -> {response.status}")
+
+                if response.status == 401:
+                    raise SwarmAPIError("Invalid API key", status_code=401)
+                elif response.status == 404:
+                    raise SwarmAPIError("Resource not found", status_code=404)
+                elif response.status == 429:
+                    raise SwarmAPIError("Rate limit exceeded", status_code=429)
+                elif response.status >= 400:
+                    text = await response.text()
+                    raise SwarmAPIError(
+                        f"API error: {text}",
+                        status_code=response.status,
+                    )
+
+                return await response.json() if response.content_length else {}
+
+        except asyncio.TimeoutError:
+            raise SwarmAPIError(f"Request timed out after {self.timeout}s")
+        except aiohttp.ClientError as e:
+            raise SwarmAPIError(f"Connection error: {e}")
+
+    async def fetch_profiles_by_linkedin_batch_async(
+        self,
+        linkedin_inputs: list[str],
+        session: Optional["aiohttp.ClientSession"] = None,
+    ) -> list["FounderProfile"]:
+        """
+        Fetch multiple profiles by LinkedIn URLs/slugs in a single batch.
+
+        This is the most efficient way to enrich multiple founders at once.
+        Reduces API calls from N to 2 (1 search + 1 fetch).
+
+        Args:
+            linkedin_inputs: List of LinkedIn URLs or slugs
+            session: Optional aiohttp session (creates one if not provided)
+
+        Returns:
+            List of FounderProfile objects for found profiles
+
+        Example:
+            async with aiohttp.ClientSession() as session:
+                profiles = await client.fetch_profiles_by_linkedin_batch_async(
+                    ["johndoe", "janedoe", "https://linkedin.com/in/bobsmith"],
+                    session=session
+                )
+        """
+        if not AIOHTTP_AVAILABLE:
+            raise ImportError(
+                "aiohttp is required for async batch methods. "
+                "Install with: pip install aiohttp"
+            )
+
+        if not linkedin_inputs:
+            return []
+
+        # Extract slugs from URLs
+        slugs = []
+        slug_to_input = {}  # Map slug back to original input for debugging
+        for input_val in linkedin_inputs:
+            slug = self._extract_linkedin_slug(input_val)
+            if slug:
+                slugs.append(slug.lower())
+                slug_to_input[slug.lower()] = input_val
+
+        if not slugs:
+            logger.warning("No valid LinkedIn slugs found in input")
+            return []
+
+        logger.info(f"Batch fetching {len(slugs)} LinkedIn profiles")
+
+        # Create session if not provided
+        own_session = session is None
+        if own_session:
+            session = aiohttp.ClientSession()
+
+        try:
+            profiles = []
+
+            # Process in batches to avoid API limits
+            for i in range(0, len(slugs), BATCH_SIZE):
+                batch_slugs = slugs[i:i + BATCH_SIZE]
+
+                # Search for all profiles in batch
+                query = {
+                    "terms": {
+                        "profile_info.linkedin_usernames": batch_slugs
+                    }
+                }
+
+                search_payload = {
+                    "query": query,
+                    "limit": len(batch_slugs),
+                }
+
+                try:
+                    search_data = await self._async_request(
+                        session, "POST", "/profiles/search", json_data=search_payload
+                    )
+
+                    # Extract profile IDs from search results
+                    if isinstance(search_data, list):
+                        profile_ids = [
+                            item if isinstance(item, str) else item.get("id")
+                            for item in search_data
+                        ]
+                    elif isinstance(search_data, dict):
+                        profile_ids = search_data.get("results", []) or search_data.get("ids", [])
+                    else:
+                        profile_ids = []
+
+                    if not profile_ids:
+                        logger.info(f"No profiles found for batch {i // BATCH_SIZE + 1}")
+                        continue
+
+                    # Fetch full profile data
+                    fetch_payload = {"ids": profile_ids[:1000]}
+                    fetch_data = await self._async_request(
+                        session, "POST", "/profiles/fetch", json_data=fetch_payload
+                    )
+
+                    results = fetch_data if isinstance(fetch_data, list) else fetch_data.get("results", [])
+
+                    for item in results:
+                        try:
+                            founder_profile = FounderProfile.from_api_response(item)
+                            profiles.append(founder_profile)
+                        except Exception as e:
+                            logger.warning(f"Failed to parse profile: {e}")
+
+                    logger.info(f"Batch {i // BATCH_SIZE + 1}: found {len(results)} profiles")
+
+                    # Rate limit between batches
+                    if i + BATCH_SIZE < len(slugs):
+                        await asyncio.sleep(0.5)
+
+                except SwarmAPIError as e:
+                    logger.error(f"Batch search failed: {e}")
+                    continue
+
+            return profiles
+
+        finally:
+            if own_session and session:
+                await session.close()
+
+    async def fetch_company_founders_async(
+        self,
+        linkedin_urls: list[str],
+        company_name: Optional[str] = None,
+        session: Optional["aiohttp.ClientSession"] = None,
+    ) -> list["FounderProfile"]:
+        """
+        Fetch all founder profiles for a company in one batch.
+
+        This is the recommended method for enriching founders during
+        meeting briefing preparation.
+
+        Args:
+            linkedin_urls: List of founder LinkedIn URLs
+            company_name: Company name (used to set startup_company context)
+            session: Optional aiohttp session
+
+        Returns:
+            List of FounderProfile objects with startup_company set
+
+        Example:
+            founders = await client.fetch_company_founders_async(
+                ["https://linkedin.com/in/founder1", "https://linkedin.com/in/founder2"],
+                company_name="Stripe"
+            )
+            for founder in founders:
+                print(founder.format_background())
+        """
+        profiles = await self.fetch_profiles_by_linkedin_batch_async(
+            linkedin_urls, session=session
+        )
+
+        # Set company context on each profile
+        if company_name:
+            for profile in profiles:
+                profile.startup_company = company_name
+
+        return profiles
+
+    def fetch_profiles_by_linkedin_batch(
+        self,
+        linkedin_inputs: list[str],
+    ) -> list["FounderProfile"]:
+        """
+        Synchronous wrapper for batch LinkedIn profile fetching.
+
+        Use this when you can't use async/await.
+
+        Args:
+            linkedin_inputs: List of LinkedIn URLs or slugs
+
+        Returns:
+            List of FounderProfile objects
+        """
+        return asyncio.run(
+            self.fetch_profiles_by_linkedin_batch_async(linkedin_inputs)
+        )
+
+    def fetch_company_founders(
+        self,
+        linkedin_urls: list[str],
+        company_name: Optional[str] = None,
+    ) -> list["FounderProfile"]:
+        """
+        Synchronous wrapper for company founder fetching.
+
+        Args:
+            linkedin_urls: List of founder LinkedIn URLs
+            company_name: Company name for context
+
+        Returns:
+            List of FounderProfile objects
+        """
+        return asyncio.run(
+            self.fetch_company_founders_async(linkedin_urls, company_name)
+        )

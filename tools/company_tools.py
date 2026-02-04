@@ -48,7 +48,7 @@ from core.database import (
 )
 from core.clients.harmonic import HarmonicClient, HarmonicCompany, HarmonicAPIError
 from core.clients.tavily import TavilyClient, TavilyAPIError
-from core.clients.swarm import SwarmClient, SwarmAPIError
+from core.clients.swarm import SwarmClient, SwarmAPIError, FounderProfile
 from core.clients.parallel_search import (
     ParallelSearchClient,
     ParallelSearchError,
@@ -519,13 +519,12 @@ Write a 2-4 sentence summary focusing on their PRIOR experience and credentials 
 
 def enrich_founder_backgrounds(company_id: str, summarize: bool = True) -> dict:
     """
-    Enrich founder backgrounds using Swarm API.
+    Enrich founder backgrounds using Swarm API with batch async fetching.
 
-    Fetches detailed profile information for each founder using their
-    LinkedIn URL and updates the founders table with background text
-    and sources.
+    Fetches detailed profile information for all founders in a single batch
+    API call, then updates the founders table with background text and sources.
 
-    STATUS: IMPLEMENTED (Swarm + optional OpenAI summarization)
+    STATUS: IMPLEMENTED (Swarm batch async + optional OpenAI summarization)
 
     Args:
         company_id: Company URL or domain
@@ -571,6 +570,10 @@ def enrich_founder_backgrounds(company_id: str, summarize: bool = True) -> dict:
             "founders": [],
         }
 
+    # Get company name for context
+    company = db.get_company(normalized_id)
+    company_name = company.company_name if company else None
+
     results = {
         "company_id": normalized_id,
         "enriched_count": 0,
@@ -578,6 +581,10 @@ def enrich_founder_backgrounds(company_id: str, summarize: bool = True) -> dict:
         "failed_count": 0,
         "founders": [],
     }
+
+    # Separate founders into those needing enrichment vs already enriched
+    founders_to_enrich = []
+    linkedin_urls_to_fetch = []
 
     for founder in founders:
         founder_result = {
@@ -593,22 +600,60 @@ def enrich_founder_backgrounds(company_id: str, summarize: bool = True) -> dict:
             results["founders"].append(founder_result)
             continue
 
-        # Try to enrich via LinkedIn URL
-        profile = None
-
+        # Collect for batch enrichment
+        founders_to_enrich.append((founder, founder_result))
         if founder.linkedin_url:
-            try:
-                profile = swarm.get_profile_by_linkedin(founder.linkedin_url)
-            except SwarmAPIError as e:
-                logger.warning(f"Swarm API error for {founder.name}: {e}")
+            linkedin_urls_to_fetch.append(founder.linkedin_url)
 
-        # Fallback: search by name and company
+    # If no founders need enrichment, return early
+    if not founders_to_enrich:
+        logger.info(f"All founders already enriched for {normalized_id}")
+        return results
+
+    # BATCH FETCH: Get all profiles in one API call
+    profiles_by_slug: dict[str, FounderProfile] = {}
+
+    if linkedin_urls_to_fetch:
+        logger.info(f"Batch fetching {len(linkedin_urls_to_fetch)} LinkedIn profiles for {normalized_id}")
+        try:
+            fetched_profiles = swarm.fetch_company_founders(
+                linkedin_urls_to_fetch,
+                company_name=company_name
+            )
+            # Index by LinkedIn slug for matching
+            for profile in fetched_profiles:
+                if profile.linkedin_slug:
+                    profiles_by_slug[profile.linkedin_slug.lower()] = profile
+                if profile.linkedin_url:
+                    # Also index by full URL for fallback matching
+                    profiles_by_slug[profile.linkedin_url.lower()] = profile
+            logger.info(f"Batch fetch returned {len(fetched_profiles)} profiles")
+        except SwarmAPIError as e:
+            logger.error(f"Batch Swarm fetch failed: {e}")
+
+    # Process each founder with the fetched profiles
+    for founder, founder_result in founders_to_enrich:
+        profile: Optional[FounderProfile] = None
+
+        # Try to find profile by LinkedIn URL
+        if founder.linkedin_url:
+            url_lower = founder.linkedin_url.lower()
+            # Try full URL match
+            if url_lower in profiles_by_slug:
+                profile = profiles_by_slug[url_lower]
+            else:
+                # Try slug extraction
+                slug = swarm._extract_linkedin_slug(founder.linkedin_url)
+                if slug:
+                    profile = profiles_by_slug.get(slug.lower())
+
+        # Fallback: search by name (individual API call - only if batch didn't find)
         if not profile:
             try:
-                # Get company name from database
-                company = db.get_company(normalized_id)
-                company_name = company.company_name if company else None
-                profile = swarm.search_by_name_and_company(founder.name, company_name)
+                swarm_profile = swarm.search_by_name_and_company(founder.name, company_name)
+                if swarm_profile:
+                    profile = swarm_profile.to_founder_profile()
+                    profile.startup_company = company_name
             except SwarmAPIError as e:
                 logger.warning(f"Swarm name search failed for {founder.name}: {e}")
 
@@ -619,9 +664,8 @@ def enrich_founder_backgrounds(company_id: str, summarize: bool = True) -> dict:
             results["founders"].append(founder_result)
             continue
 
-        # Format background and extract sources
+        # Format background
         raw_background = profile.format_background()
-        sources = profile.get_sources()
 
         if not raw_background or len(raw_background) < 20:
             founder_result["status"] = "failed"
@@ -632,18 +676,22 @@ def enrich_founder_backgrounds(company_id: str, summarize: bool = True) -> dict:
 
         # Optionally summarize with LLM
         if summarize:
-            company = db.get_company(normalized_id)
-            company_name = company.company_name if company else "the company"
             background = _summarize_founder_background(
                 name=founder.name,
                 role_title=founder.role_title or "",
                 raw_background=raw_background,
-                company_name=company_name,
+                company_name=company_name or "the company",
             )
         else:
             background = raw_background
 
         # Format sources as string for storage
+        sources = []
+        if profile.linkedin_url:
+            sources.append({"network": "linkedin", "url": profile.linkedin_url})
+        if profile.twitter_url:
+            sources.append({"network": "twitter", "url": profile.twitter_url})
+
         sources_str = ""
         if sources:
             source_urls = [s["url"] for s in sources if s.get("url")]

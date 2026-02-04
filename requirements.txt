@@ -15,6 +15,9 @@ openai>=1.0.0
 # Harmonic API integration
 requests>=2.28.0
 
+# Async HTTP (for batch Swarm API calls)
+aiohttp>=3.8.0
+
 # Tavily API (website intelligence)
 tavily-python>=0.5.0
 

@@ -12,8 +12,7 @@ Sections:
 4. Founder Information
 5. Key Signals
 6. In the News
-7. Market Context
-8. For This Meeting
+7. For This Meeting
 
 Usage:
     from agents.meeting_briefing.briefing_generator import generate_briefing
@@ -97,11 +96,6 @@ def format_company_snapshot_data(company: CompanyCore) -> str:
         lines.append(f"Customer Type: {company.customers}")
     else:
         lines.append("Customers: Not found in table")
-
-    if company.arr_apr:
-        lines.append(f"ARR/APR: {company.arr_apr}")
-    else:
-        lines.append("ARR/APR: Not found in table")
 
     if company.total_funding:
         lines.append(f"Total Funding: ${company.total_funding:,.0f}")
@@ -295,12 +289,15 @@ def generate_briefing(company_id: str, model: str = DEFAULT_LLM_MODEL) -> dict:
 Generate the briefing with EXACTLY these sections:
 
 ### 1) TL;DR
-- One sentence summarizing the most critical thing to know
+- Format: "[Company] is a [what they do in 5-7 words]. [Most critical investment-relevant insight]."
+- Example: "Stripe is a payments infrastructure platform for the internet. Series I at $95B valuation with 35% YoY revenue growth."
+- The "what they do" phrase should be derived from the products/description field
+- The insight should highlight the most notable signal (funding, growth, traction, or risk)
 - MUST be derived strictly from table data
 
 ### 2) Why This Meeting Matters
 - 2-4 bullet points
-- Generated from table data only
+- Synthesize from ALL tables: company_core, founders, key_signals, and news
 - Focus on investment relevance
 
 ### 3) Company Snapshot
@@ -310,7 +307,6 @@ Display as a formatted table or list:
 - Employees: [from table or "Not found in table"]
 - Products: [from table or "Not found in table"]
 - Customers: [from table or "Not found in table"]
-- ARR/APR: [from table or "Not found in table"]
 - Total Funding: [from table or "Not found in table"]
 - Last Round: [from table or "Not found in table"]
 - Last Updated: [observed_at timestamp]
@@ -335,13 +331,7 @@ If no founders: "No founder data available"
 - If no news: "No recent news available (source not yet implemented)"
 - Include last updated timestamp
 
-### 7) Market Context
-- Industry positioning based on products/tags from table
-- Potential tailwinds/headwinds (infer cautiously from signals ONLY)
-- If insufficient data: "Insufficient data for market context"
-- DO NOT use outside knowledge
-
-### 8) For This Meeting
+### 7) For This Meeting
 - 2-3 suggested agenda items or questions
 - Key risks to probe
 - Recommended next steps
