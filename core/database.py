@@ -107,6 +107,7 @@ class NewsArticle:
     outlet: Optional[str] = None
     url: Optional[str] = None
     published_date: Optional[str] = None
+    excerpts: Optional[str] = None  # Article content/excerpts for LLM context
     observed_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
     source: str = "news_api"  # or "pending_news_api"
 
@@ -246,12 +247,19 @@ class Database:
                     outlet TEXT,
                     url TEXT,
                     published_date TEXT,
+                    excerpts TEXT,
                     observed_at TEXT NOT NULL,
                     source TEXT DEFAULT 'news_api',
                     FOREIGN KEY (company_id) REFERENCES company_core(company_id),
                     UNIQUE(company_id, url)
                 )
             """)
+
+            # Add excerpts column if it doesn't exist (migration for existing DBs)
+            try:
+                cursor.execute("ALTER TABLE news ADD COLUMN excerpts TEXT")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
 
             # Key signals table
             cursor.execute("""
@@ -418,10 +426,10 @@ class Database:
                 cursor.execute("""
                     INSERT OR IGNORE INTO news (
                         company_id, article_headline, outlet, url,
-                        published_date, observed_at, source
+                        published_date, excerpts, observed_at, source
                     ) VALUES (
                         :company_id, :article_headline, :outlet, :url,
-                        :published_date, :observed_at, :source
+                        :published_date, :excerpts, :observed_at, :source
                     )
                 """, data)
 

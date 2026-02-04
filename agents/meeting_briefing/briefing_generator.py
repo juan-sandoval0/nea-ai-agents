@@ -66,8 +66,12 @@ Your output MUST follow the structure exactly as specified in the user prompt.""
 # DATA FORMATTING HELPERS
 # =============================================================================
 
-def format_company_snapshot_data(company: CompanyCore) -> str:
-    """Format company core data for LLM context."""
+def format_company_snapshot_data(company: CompanyCore) -> tuple[str, str]:
+    """Format company core data for LLM context.
+
+    Returns:
+        Tuple of (formatted_data, last_updated_timestamp)
+    """
     lines = []
 
     lines.append(f"Company Name: {company.company_name}")
@@ -109,9 +113,10 @@ def format_company_snapshot_data(company: CompanyCore) -> str:
     else:
         lines.append("Last Round: Not found in table")
 
-    lines.append(f"Data Last Updated: {company.observed_at}")
+    # Extract just the date portion from the ISO timestamp for display
+    last_updated = company.observed_at[:10] if company.observed_at else "Unknown"
 
-    return "\n".join(lines)
+    return "\n".join(lines), last_updated
 
 
 def format_founders_data(founders: list[Founder]) -> str:
@@ -180,23 +185,32 @@ def format_signals_data(signals: list[KeySignal]) -> str:
 
 
 def format_news_data(news: list[NewsArticle]) -> str:
-    """Format news data for LLM context."""
+    """Format news data for LLM context, including excerpts for takeaway generation."""
     if not news:
         return "No recent news available (source not yet implemented)."
 
     lines = []
-    for n in news:
-        line = f"- {n.article_headline}"
+    for i, n in enumerate(news, 1):
+        # Article header
+        line = f"**Article {i}:** {n.article_headline}"
         if n.outlet:
             line += f" ({n.outlet})"
         if n.published_date:
             line += f" | {n.published_date}"
         if n.url:
-            line += f" | {n.url}"
+            line += f"\n  URL: {n.url}"
         lines.append(line)
 
+        # Include excerpts for LLM to generate takeaway (truncate to ~1000 chars per article)
+        if n.excerpts:
+            excerpt_text = n.excerpts[:1000]
+            if len(n.excerpts) > 1000:
+                excerpt_text += "..."
+            lines.append(f"  Excerpt: {excerpt_text}")
+        lines.append("")  # Blank line between articles
+
     max_observed = max(n.observed_at for n in news) if news else "N/A"
-    lines.append(f"\nData Last Updated: {max_observed}")
+    lines.append(f"Data Last Updated: {max_observed}")
 
     return "\n".join(lines)
 
@@ -260,7 +274,7 @@ def generate_briefing(company_id: str, model: str = DEFAULT_LLM_MODEL) -> dict:
     result["data_sources"]["news"] = len(bundle.news)
 
     # Format data for LLM
-    company_data = format_company_snapshot_data(bundle.company_core)
+    company_data, snapshot_last_updated = format_company_snapshot_data(bundle.company_core)
     founders_data = format_founders_data(bundle.founders)
     signals_data = format_signals_data(bundle.key_signals)
     news_data = format_news_data(bundle.news)
@@ -289,10 +303,9 @@ def generate_briefing(company_id: str, model: str = DEFAULT_LLM_MODEL) -> dict:
 Generate the briefing with EXACTLY these sections:
 
 ### 1) TL;DR
-- Format: "[Company] is a [what they do in 5-7 words]. [Most critical investment-relevant insight]."
-- Example: "Stripe is a payments infrastructure platform for the internet. Series I at $95B valuation with 35% YoY revenue growth."
-- The "what they do" phrase should be derived from the products/description field
-- The insight should highlight the most notable signal (funding, growth, traction, or risk)
+- 2-3 sentences summarizing the company and the most important investment-relevant insights
+- First sentence: What the company does (derived from products/description field)
+- Remaining sentences: Key highlights from funding, growth metrics, signals, or recent news
 - MUST be derived strictly from table data
 
 ### 2) Why This Meeting Matters
@@ -300,7 +313,7 @@ Generate the briefing with EXACTLY these sections:
 - Synthesize from ALL tables: company_core, founders, key_signals, and news
 - Focus on investment relevance
 
-### 3) Company Snapshot
+### 3) Company Snapshot (last updated: {snapshot_last_updated})
 Display as a formatted table or list:
 - Founded: [from table or "Not found in table"]
 - HQ: [from table or "Not found in table"]
@@ -309,7 +322,6 @@ Display as a formatted table or list:
 - Customers: [from table or "Not found in table"]
 - Total Funding: [from table or "Not found in table"]
 - Last Round: [from table or "Not found in table"]
-- Last Updated: [observed_at timestamp]
 
 ### 4) Founder Information
 For each founder, display:
@@ -327,9 +339,13 @@ If no founders: "No founder data available"
 - Include signal source and last updated timestamp
 
 ### 6) In the News
-- One bullet per news article if available
-- If no news: "No recent news available (source not yet implemented)"
-- Include last updated timestamp
+For each news article, display in this format:
+- **[Article Headline]** | [Outlet] | [Published Date]
+  - [URL]
+  - Takeaway: [2-3 sentence summary of the key information and why it matters for the investment thesis]
+
+IMPORTANT: Use the article excerpts provided in the data to generate meaningful takeaways. Do NOT display the raw excerpts - synthesize them into a concise takeaway.
+If no news: "No recent news available (source not yet implemented)"
 
 ### 7) For This Meeting
 - 2-3 suggested agenda items or questions
@@ -373,7 +389,7 @@ Remember: Use ONLY the data provided above. If something is not in the tables, s
 
         # Assemble final markdown
         final_markdown = f"""# {bundle.company_core.company_name} | Meeting Brief
-*Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}*
+**Website:** {normalized_id}
 
 {briefing_content}
 """

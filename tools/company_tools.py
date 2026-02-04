@@ -782,12 +782,15 @@ def get_recent_news(company_id: str, days: int = 30) -> list[NewsArticle]:
     # Transform to NewsArticle DB models
     articles: list[NewsArticle] = []
     for r in results:
+        # Join excerpts into single text block for LLM context
+        excerpts_text = "\n".join(r.excerpts) if r.excerpts else None
         articles.append(NewsArticle(
             company_id=normalized_id,
             article_headline=r.title,
             outlet=r.source_domain,
             url=r.url,
             published_date=r.publish_date,
+            excerpts=excerpts_text,
             observed_at=datetime.utcnow().isoformat(),
             source="parallel",
         ))
