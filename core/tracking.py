@@ -39,11 +39,12 @@ Usage:
 
 from __future__ import annotations
 
+import csv
 import sqlite3
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 import logging
 import json
 
@@ -387,3 +388,482 @@ def get_tracker() -> Tracker:
     if _tracker is None:
         _tracker = Tracker()
     return _tracker
+
+
+# =============================================================================
+# COST TRACKING
+# =============================================================================
+
+# Cost per unit for each service (approximate)
+# Services used: Tavily (website intelligence), Harmonic (company data),
+# OpenAI (LLM), NewsAPI (news research)
+SERVICE_COSTS = {
+    "tavily": {
+        "unit": "credit",
+        "cost_per_unit": 0.01,  # $0.01 per credit
+        "credits_per_crawl": 2,  # ~2 credits per company crawl
+    },
+    "openai": {
+        "unit": "token",
+        "cost_per_1k_input": 0.0005,   # gpt-4o-mini input
+        "cost_per_1k_output": 0.0015,  # gpt-4o-mini output
+    },
+    "harmonic": {
+        "unit": "request",
+        "cost_per_request": 0.0,  # Included in subscription
+    },
+    "news_api": {
+        "unit": "search",
+        "cost_per_search": 0.01,  # Estimated per news search
+    },
+}
+
+
+def calculate_api_cost(
+    service: str,
+    tokens_in: int = 0,
+    tokens_out: int = 0,
+    credits_used: int = 0,
+    requests: int = 1,
+) -> float:
+    """
+    Calculate cost for an API call based on service pricing.
+
+    Args:
+        service: Service name (tavily, openai, etc.)
+        tokens_in: Input tokens (for LLM calls)
+        tokens_out: Output tokens (for LLM calls)
+        credits_used: Credits used (for Tavily)
+        requests: Number of requests
+
+    Returns:
+        Estimated cost in USD
+    """
+    service_lower = service.lower()
+    pricing = SERVICE_COSTS.get(service_lower, {})
+
+    if service_lower == "openai":
+        input_cost = (tokens_in / 1000) * pricing.get("cost_per_1k_input", 0)
+        output_cost = (tokens_out / 1000) * pricing.get("cost_per_1k_output", 0)
+        return input_cost + output_cost
+
+    elif service_lower == "tavily":
+        if credits_used > 0:
+            return credits_used * pricing.get("cost_per_unit", 0.01)
+        return pricing.get("credits_per_crawl", 2) * pricing.get("cost_per_unit", 0.01)
+
+    elif service_lower == "news_api":
+        return requests * pricing.get("cost_per_search", 0.01)
+
+    elif service_lower == "harmonic":
+        return requests * pricing.get("cost_per_request", 0.0)
+
+    return 0.0
+
+
+def get_cost_summary(
+    days: int = 30,
+    db_path: Optional[Path] = None,
+) -> dict:
+    """
+    Get comprehensive cost summary.
+
+    Args:
+        days: Look back period
+
+    Returns:
+        Dict with cost breakdown and projections
+    """
+    tracker = get_tracker()
+    api_stats = tracker.get_api_stats(days)
+
+    total_cost = 0.0
+    cost_by_service = {}
+
+    for service, stats in api_stats.items():
+        service_cost = stats.get("total_cost", 0) or 0
+        total_cost += service_cost
+        cost_by_service[service] = {
+            "total_cost": round(service_cost, 4),
+            "total_calls": stats.get("total_calls", 0),
+            "avg_cost_per_call": round(service_cost / max(stats.get("total_calls", 1), 1), 4),
+        }
+
+    # Calculate daily average and projections
+    daily_avg = total_cost / days if days > 0 else 0
+    projected_monthly = daily_avg * 30
+
+    # Get company count for per-company cost
+    usage_stats = tracker.get_stats(days)
+    unique_companies = usage_stats.get("usage", {}).get("unique_companies", 1) or 1
+    cost_per_company = total_cost / unique_companies
+
+    return {
+        "period_days": days,
+        "total_cost": round(total_cost, 2),
+        "cost_by_service": cost_by_service,
+        "daily_average": round(daily_avg, 2),
+        "projected_monthly": round(projected_monthly, 2),
+        "unique_companies_analyzed": unique_companies,
+        "cost_per_company": round(cost_per_company, 4),
+    }
+
+
+def project_costs_at_scale(
+    companies_per_month: int,
+    include_news: bool = True,
+) -> dict:
+    """
+    Project costs if deployed at NEA scale.
+
+    Args:
+        companies_per_month: Expected companies to analyze
+        include_news: Include NewsAPI news research
+
+    Returns:
+        Dict with projected costs
+    """
+    # Base costs per company (Tavily + OpenAI)
+    tavily_cost = SERVICE_COSTS["tavily"]["credits_per_crawl"] * SERVICE_COSTS["tavily"]["cost_per_unit"]
+    openai_cost = 0.02  # Estimated per briefing (input + output)
+
+    base_cost_per_company = tavily_cost + openai_cost
+
+    news_api_cost = 0.0
+    if include_news:
+        news_api_cost = SERVICE_COSTS["news_api"]["cost_per_search"]
+        base_cost_per_company += news_api_cost
+
+    monthly_cost = companies_per_month * base_cost_per_company
+    annual_cost = monthly_cost * 12
+
+    return {
+        "companies_per_month": companies_per_month,
+        "cost_per_company": round(base_cost_per_company, 4),
+        "monthly_cost": round(monthly_cost, 2),
+        "annual_cost": round(annual_cost, 2),
+        "breakdown": {
+            "tavily_crawl": tavily_cost,
+            "news_api_search": news_api_cost,
+            "openai_briefing": openai_cost,
+        },
+        "notes": "Estimates based on current pricing. Actual costs may vary.",
+    }
+
+
+def get_workflow_timing(
+    company_id: Optional[str] = None,
+    days: int = 30,
+) -> dict:
+    """
+    Get workflow timing metrics.
+
+    Returns average time for different operations.
+    """
+    tracker = get_tracker()
+    api_stats = tracker.get_api_stats(days)
+
+    # Calculate total latency by service
+    total_latency_by_service = {}
+    for service, stats in api_stats.items():
+        avg_latency = stats.get("avg_latency_ms", 0)
+        calls = stats.get("total_calls", 0)
+        total_latency_by_service[service] = {
+            "avg_latency_ms": round(avg_latency, 1),
+            "total_calls": calls,
+        }
+
+    # Estimate total time per company (sum of all service latencies)
+    # This is approximate - actual pipeline may have parallel calls
+    estimated_per_company_ms = sum(
+        s.get("avg_latency_ms", 0) for s in total_latency_by_service.values()
+    )
+
+    return {
+        "period_days": days,
+        "by_service": total_latency_by_service,
+        "estimated_total_per_company_ms": round(estimated_per_company_ms, 1),
+        "estimated_total_per_company_seconds": round(estimated_per_company_ms / 1000, 2),
+    }
+
+
+# =============================================================================
+# COST PERSISTENCE (JSON/CSV)
+# =============================================================================
+
+@dataclass
+class CostRecord:
+    """A single cost record for persistence."""
+    timestamp: str
+    company_id: str
+    service: str
+    operation: str
+    cost: float
+    tokens_in: int = 0
+    tokens_out: int = 0
+    latency_ms: int = 0
+    metadata: dict = None
+
+    def __post_init__(self):
+        if self.metadata is None:
+            self.metadata = {}
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+def save_cost_record(
+    company_id: str,
+    service: str,
+    operation: str,
+    cost: float,
+    tokens_in: int = 0,
+    tokens_out: int = 0,
+    latency_ms: int = 0,
+    metadata: Optional[dict] = None,
+    output_dir: Optional[Path] = None,
+) -> CostRecord:
+    """
+    Save a single cost record to both JSON and CSV files.
+
+    Args:
+        company_id: Company identifier
+        service: Service name (tavily, openai, etc.)
+        operation: Operation type (crawl, search, briefing, etc.)
+        cost: Cost in USD
+        tokens_in: Input tokens (for LLM)
+        tokens_out: Output tokens (for LLM)
+        latency_ms: Request latency in ms
+        metadata: Additional metadata
+        output_dir: Directory for output files (defaults to data/)
+
+    Returns:
+        The created CostRecord
+    """
+    if output_dir is None:
+        output_dir = Path(__file__).parent.parent / "data"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    record = CostRecord(
+        timestamp=datetime.utcnow().isoformat(),
+        company_id=company_id,
+        service=service,
+        operation=operation,
+        cost=cost,
+        tokens_in=tokens_in,
+        tokens_out=tokens_out,
+        latency_ms=latency_ms,
+        metadata=metadata or {},
+    )
+
+    # Append to JSON log (newline-delimited JSON)
+    json_path = output_dir / "cost_log.jsonl"
+    with open(json_path, "a") as f:
+        f.write(json.dumps(record.to_dict()) + "\n")
+
+    # Append to CSV
+    csv_path = output_dir / "cost_log.csv"
+    file_exists = csv_path.exists()
+    with open(csv_path, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=[
+            "timestamp", "company_id", "service", "operation",
+            "cost", "tokens_in", "tokens_out", "latency_ms"
+        ])
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow({
+            "timestamp": record.timestamp,
+            "company_id": record.company_id,
+            "service": record.service,
+            "operation": record.operation,
+            "cost": record.cost,
+            "tokens_in": record.tokens_in,
+            "tokens_out": record.tokens_out,
+            "latency_ms": record.latency_ms,
+        })
+
+    logger.debug(f"Saved cost record: {service}/{operation} ${cost:.4f}")
+    return record
+
+
+def load_cost_records(
+    output_dir: Optional[Path] = None,
+    company_id: Optional[str] = None,
+    service: Optional[str] = None,
+    days: int = 30,
+) -> list[CostRecord]:
+    """
+    Load cost records from JSON log.
+
+    Args:
+        output_dir: Directory with cost files
+        company_id: Filter by company
+        service: Filter by service
+        days: Look back period
+
+    Returns:
+        List of CostRecord objects
+    """
+    if output_dir is None:
+        output_dir = Path(__file__).parent.parent / "data"
+
+    json_path = output_dir / "cost_log.jsonl"
+    if not json_path.exists():
+        return []
+
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    records = []
+
+    with open(json_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            data = json.loads(line)
+
+            # Apply filters
+            if data.get("timestamp", "") < cutoff:
+                continue
+            if company_id and data.get("company_id") != company_id:
+                continue
+            if service and data.get("service") != service:
+                continue
+
+            records.append(CostRecord(**data))
+
+    return records
+
+
+def export_cost_summary(
+    output_path: Union[str, Path],
+    days: int = 30,
+    format: str = "json",
+) -> Path:
+    """
+    Export cost summary to JSON or CSV file.
+
+    Args:
+        output_path: Output file path
+        days: Look back period
+        format: "json" or "csv"
+
+    Returns:
+        Path to created file
+    """
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    summary = get_cost_summary(days=days)
+
+    if format == "json":
+        with open(output_path, "w") as f:
+            json.dump(summary, f, indent=2)
+    else:  # CSV
+        with open(output_path, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["metric", "value"])
+            writer.writerow(["period_days", summary["period_days"]])
+            writer.writerow(["total_cost", summary["total_cost"]])
+            writer.writerow(["daily_average", summary["daily_average"]])
+            writer.writerow(["projected_monthly", summary["projected_monthly"]])
+            writer.writerow(["cost_per_company", summary["cost_per_company"]])
+            writer.writerow(["unique_companies", summary["unique_companies_analyzed"]])
+            writer.writerow([])
+            writer.writerow(["service", "total_cost", "total_calls", "avg_cost_per_call"])
+            for service, data in summary["cost_by_service"].items():
+                writer.writerow([
+                    service,
+                    data["total_cost"],
+                    data["total_calls"],
+                    data["avg_cost_per_call"],
+                ])
+
+    logger.info(f"Exported cost summary to {output_path}")
+    return output_path
+
+
+def export_evaluation_costs(
+    company_ids: list[str],
+    output_path: Union[str, Path],
+    format: str = "json",
+    output_dir: Optional[Path] = None,
+) -> dict:
+    """
+    Export per-company costs for an evaluation run.
+
+    Args:
+        company_ids: Companies evaluated
+        output_path: Output file path
+        format: "json" or "csv"
+        output_dir: Directory with cost logs
+
+    Returns:
+        Dict with per-run and aggregate costs
+    """
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    records = load_cost_records(output_dir=output_dir, days=1)
+
+    # Filter to companies in this evaluation
+    eval_records = [r for r in records if r.company_id in company_ids]
+
+    # Aggregate by company
+    per_company = {}
+    for r in eval_records:
+        if r.company_id not in per_company:
+            per_company[r.company_id] = {
+                "company_id": r.company_id,
+                "total_cost": 0.0,
+                "by_service": {},
+                "operations": [],
+            }
+        per_company[r.company_id]["total_cost"] += r.cost
+
+        if r.service not in per_company[r.company_id]["by_service"]:
+            per_company[r.company_id]["by_service"][r.service] = 0.0
+        per_company[r.company_id]["by_service"][r.service] += r.cost
+
+        per_company[r.company_id]["operations"].append({
+            "service": r.service,
+            "operation": r.operation,
+            "cost": r.cost,
+            "timestamp": r.timestamp,
+        })
+
+    # Calculate aggregate
+    total_cost = sum(c["total_cost"] for c in per_company.values())
+    avg_cost = total_cost / len(company_ids) if company_ids else 0
+
+    result = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "companies_evaluated": company_ids,
+        "total_companies": len(company_ids),
+        "aggregate_cost": round(total_cost, 4),
+        "avg_cost_per_company": round(avg_cost, 4),
+        "per_company": list(per_company.values()),
+    }
+
+    if format == "json":
+        with open(output_path, "w") as f:
+            json.dump(result, f, indent=2)
+    else:  # CSV
+        with open(output_path, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["company_id", "total_cost", "tavily", "openai", "harmonic", "news_api"])
+            for company_data in per_company.values():
+                by_svc = company_data["by_service"]
+                writer.writerow([
+                    company_data["company_id"],
+                    round(company_data["total_cost"], 4),
+                    round(by_svc.get("tavily", 0), 4),
+                    round(by_svc.get("openai", 0), 4),
+                    round(by_svc.get("harmonic", 0), 4),
+                    round(by_svc.get("news_api", 0), 4),
+                ])
+            writer.writerow([])
+            writer.writerow(["Total", round(total_cost, 4)])
+            writer.writerow(["Average", round(avg_cost, 4)])
+
+    logger.info(f"Exported evaluation costs to {output_path}")
+    return result
