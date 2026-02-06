@@ -276,12 +276,19 @@ def cmd_alerts(days: int = 7, max_per_company: int = 4):
         print("\nNo signals found. Run --check first.\n")
         return
 
+    # Calculate cutoff date
+    cutoff_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+
     # Group by company, filter and deduplicate
     by_company = {}
 
     for s in signals:
         company = companies.get(s.company_id)
         if not company:
+            continue
+
+        # Skip old news
+        if s.published_date and s.published_date < cutoff_date:
             continue
 
         # Skip non-significant types
@@ -314,7 +321,7 @@ def cmd_alerts(days: int = 7, max_per_company: int = 4):
     # Display
     total_events = 0
     print("\n" + "=" * 60)
-    print("  KEY ALERTS")
+    print(f"  KEY ALERTS (last {days} days)")
     print("=" * 60)
 
     for company_name in sorted(by_company.keys()):
