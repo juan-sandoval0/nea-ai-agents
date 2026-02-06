@@ -335,12 +335,18 @@ def cmd_alerts(days: int = 7, max_per_company: int = 4):
                 'team_change': '👤',
             }.get(signal.signal_type, '📌')
 
+            # Format date
+            date_str = ""
+            if signal.published_date:
+                date_str = f" ({signal.published_date})"
+
             # Clean headline
             headline = signal.headline.strip()
-            if len(headline) > 55:
-                headline = headline[:52] + "..."
+            max_len = 50 - len(date_str)
+            if len(headline) > max_len:
+                headline = headline[:max_len-3] + "..."
 
-            print(f"  {type_icon} {headline}")
+            print(f"  {type_icon} {headline}{date_str}")
             if signal.source_url:
                 print(f"     {signal.source_url}")
 
