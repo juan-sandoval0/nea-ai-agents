@@ -541,6 +541,42 @@ def get_founders(company_id: str) -> list[Founder]:
 # HELPER: Summarize founder background with LLM
 # =============================================================================
 
+def _summarize_website_updates(raw_content: str, company_name: str) -> str:
+    """
+    Use OpenAI to summarize website updates into 1-2 VC-relevant sentences.
+    """
+    import os
+    from langchain_openai import ChatOpenAI
+    from langchain_core.messages import SystemMessage, HumanMessage
+
+    if not os.getenv("OPENAI_API_KEY"):
+        return raw_content[:200]
+
+    system_prompt = """You are a VC research assistant. Summarize website updates into 1-2 sentences.
+Focus on what matters to investors: product launches, partnerships, funding, growth signals, market expansion.
+Skip technical details, API changes, and developer documentation.
+If the content is mostly technical/irrelevant, say "No significant business updates detected."
+Be concise and factual."""
+
+    user_prompt = f"""Summarize these recent website updates for {company_name} in 1-2 sentences for a VC investor:
+
+{raw_content}
+
+Summary:"""
+
+    try:
+        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_prompt),
+        ]
+        response = llm.invoke(messages)
+        return response.content.strip()
+    except Exception as e:
+        logger.warning(f"LLM summarization failed for website updates: {e}")
+        return raw_content[:200]
+
+
 def _summarize_founder_background(
     name: str,
     role_title: str,
@@ -1047,14 +1083,17 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
                 priority_order = ["funding_news", "product_update", "partnership", "team_change", "general_update"]
                 relevant_updates.sort(key=lambda x: priority_order.index(x["type"]) if x["type"] in priority_order else 99)
 
-                # Take top 2-3 most relevant updates
-                top_updates = relevant_updates[:3]
-                combined_desc = " | ".join([u["desc"][:100] for u in top_updates])
+                # Take top 5 updates for LLM summarization
+                top_updates = relevant_updates[:5]
+                raw_content = "\n".join([f"- {u['desc']}" for u in top_updates])
+
+                # Use LLM to create VC-friendly summary
+                summary = _summarize_website_updates(raw_content, company.name if company else normalized_id)
 
                 signals.append(KeySignal(
                     company_id=normalized_id,
                     signal_type="website_update",
-                    description=f"Recent website activity: {combined_desc[:300]}",
+                    description=summary,
                     observed_at=now,
                     source="tavily",
                 ))
