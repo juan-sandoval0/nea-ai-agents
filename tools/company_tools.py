@@ -54,9 +54,74 @@ from core.clients.parallel_search import (
     ParallelSearchError,
     _classify_signal_type,
 )
+import re
 from core.tracking import get_tracker
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# EXCERPT CLEANING
+# =============================================================================
+
+# Patterns to skip when cleaning excerpts
+BOILERPLATE_PATTERNS = [
+    r"cookie", r"accept all", r"reject all", r"privacy policy", r"terms of service",
+    r"subscribe", r"sign up", r"log in", r"menu", r"navigation", r"toggle",
+    r"share this", r"follow us", r"copyright", r"all rights reserved",
+    r"skip to content", r"read more", r"learn more", r"click here",
+    r"manage cookies", r"cookie settings", r"we use cookies",
+]
+
+def _clean_excerpt(excerpt: str, max_chars: int = 200) -> str:
+    """
+    Clean an excerpt by removing boilerplate content.
+
+    Args:
+        excerpt: Raw excerpt text
+        max_chars: Maximum characters to return
+
+    Returns:
+        Cleaned excerpt or empty string if all content is boilerplate
+    """
+    if not excerpt:
+        return ""
+
+    # Split into sentences/lines
+    lines = excerpt.replace("\n", ". ").split(". ")
+    clean_lines = []
+
+    for line in lines:
+        line = line.strip()
+        if not line or len(line) < 20:
+            continue
+
+        # Skip lines matching boilerplate patterns
+        line_lower = line.lower()
+        if any(re.search(pattern, line_lower) for pattern in BOILERPLATE_PATTERNS):
+            continue
+
+        # Skip lines that are mostly URLs or markdown
+        if line.count("http") > 1 or line.count("](") > 1:
+            continue
+
+        # Clean markdown artifacts
+        clean = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', line)  # [text](url) -> text
+        clean = re.sub(r'[#*_`]', '', clean).strip()
+
+        if len(clean) > 20:
+            clean_lines.append(clean)
+
+    if not clean_lines:
+        return ""
+
+    # Join and truncate
+    result = ". ".join(clean_lines)
+    if len(result) > max_chars:
+        result = result[:max_chars].rsplit(" ", 1)[0] + "..."
+
+    return result
+
 
 # =============================================================================
 # CONFIGURATION
@@ -782,8 +847,16 @@ def get_recent_news(company_id: str, days: int = 30) -> list[NewsArticle]:
     # Transform to NewsArticle DB models
     articles: list[NewsArticle] = []
     for r in results:
-        # Join excerpts into single text block for LLM context
-        excerpts_text = "\n".join(r.excerpts) if r.excerpts else None
+        # Clean and join excerpts for LLM context
+        if r.excerpts:
+            cleaned_excerpts = []
+            for excerpt in r.excerpts:
+                cleaned = _clean_excerpt(excerpt, max_chars=500)
+                if cleaned:
+                    cleaned_excerpts.append(cleaned)
+            excerpts_text = "\n".join(cleaned_excerpts) if cleaned_excerpts else None
+        else:
+            excerpts_text = None
         articles.append(NewsArticle(
             company_id=normalized_id,
             article_headline=r.title,
@@ -990,8 +1063,18 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
             results = parallel.search_company_news(company_name, max_results=10)
             for r in results:
                 signal_type = _classify_signal_type(r.title, r.excerpts)
-                # Use first excerpt as description (truncated)
-                description = r.excerpts[0][:200] if r.excerpts else r.title
+                # Clean excerpt to remove boilerplate (cookie notices, etc.)
+                description = ""
+                if r.excerpts:
+                    # Try each excerpt until we find clean content
+                    for excerpt in r.excerpts[:3]:
+                        cleaned = _clean_excerpt(excerpt, max_chars=200)
+                        if cleaned:
+                            description = cleaned
+                            break
+                # Fall back to title if no clean excerpt found
+                if not description:
+                    description = r.title
                 if r.url:
                     description += f" (source: {r.source_domain})"
                 signals.append(KeySignal(
