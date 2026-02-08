@@ -118,6 +118,9 @@ class TavilyClient:
                 "Tavily API key required. Set TAVILY_API_KEY environment variable "
                 "or pass api_key parameter."
             )
+        # Debug: log key info (masked)
+        key_preview = f"{self.api_key[:8]}...{self.api_key[-4:]}" if len(self.api_key) > 12 else "too_short"
+        logger.info(f"Tavily client initializing with key: {key_preview} (len={len(self.api_key)})")
         from tavily import TavilyClient as _TavilyClient
         self._client = _TavilyClient(api_key=self.api_key)
 
