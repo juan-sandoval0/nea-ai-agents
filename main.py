@@ -9,8 +9,8 @@ from langgraph.graph import StateGraph, MessagesState, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_core.messages import HumanMessage, SystemMessage
 
-# Load environment variables
-load_dotenv()
+# Load environment variables (don't override existing env vars from Railway/production)
+load_dotenv(override=False)
 
 
 def search_companies(query: str) -> str:

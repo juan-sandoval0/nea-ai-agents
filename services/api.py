@@ -11,9 +11,9 @@ Run with:
     uvicorn services.api:app --reload --port 8000
 """
 
-# Load environment variables first
+# Load environment variables (don't override existing env vars from Railway/production)
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(override=False)
 
 from datetime import datetime
 from typing import Optional
