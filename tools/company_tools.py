@@ -69,8 +69,13 @@ BOILERPLATE_PATTERNS = [
     r"cookie", r"accept all", r"reject all", r"privacy policy", r"terms of service",
     r"subscribe", r"sign up", r"log in", r"menu", r"navigation", r"toggle",
     r"share this", r"follow us", r"copyright", r"all rights reserved",
-    r"skip to content", r"read more", r"learn more", r"click here",
+    r"skip to content", r"skip to main", r"read more", r"learn more", r"click here",
     r"manage cookies", r"cookie settings", r"we use cookies",
+    r"section title:", r"oops, something went wrong", r"go to hub",
+    r"futures & commodities", r"prediction markets", r"yahoo finance",
+    r"published \w+,", r"updated \w+,",  # Skip date lines like "Published Fri, Feb"
+    r"^\[.*\]\(.*\)$",  # Skip markdown links that are the entire line
+    r"^>\s*",  # Skip blockquotes
 ]
 
 def _clean_excerpt(excerpt: str, max_chars: int = 200) -> str:
@@ -87,6 +92,15 @@ def _clean_excerpt(excerpt: str, max_chars: int = 200) -> str:
     if not excerpt:
         return ""
 
+    # Pre-clean: remove common junk patterns
+    excerpt = re.sub(r'\[Skip to [^\]]+\]\([^)]*\)', '', excerpt)  # [Skip to X](url)
+    excerpt = re.sub(r'\[[^\]]*\]\(\s*\)', '', excerpt)  # Empty links [text]()
+    excerpt = re.sub(r'\[?\s*\]\([^)]+\)', '', excerpt)  # [](url) empty text links
+    excerpt = re.sub(r'Section Title:\s*', '', excerpt, flags=re.IGNORECASE)
+    excerpt = re.sub(r'>\s*Content:', '', excerpt)
+    excerpt = re.sub(r'Published \w+, \w+ \d+.*?(?=\.|$)', '', excerpt)
+    excerpt = re.sub(r'Updated \w+, \w+ \d+.*?(?=\.|$)', '', excerpt)
+
     # Split into sentences/lines
     lines = excerpt.replace("\n", ". ").split(". ")
     clean_lines = []
@@ -101,16 +115,27 @@ def _clean_excerpt(excerpt: str, max_chars: int = 200) -> str:
         if any(re.search(pattern, line_lower) for pattern in BOILERPLATE_PATTERNS):
             continue
 
-        # Skip lines that are mostly URLs or markdown
-        if line.count("http") > 1 or line.count("](") > 1:
+        # Skip lines that are mostly URLs or markdown links
+        if line.count("http") > 1 or line.count("](") > 2:
+            continue
+
+        # Skip lines that start with navigation-like content
+        if re.match(r'^[\[\(]', line) and '](/' in line:
             continue
 
         # Clean markdown artifacts
         clean = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', line)  # [text](url) -> text
-        clean = re.sub(r'[#*_`]', '', clean).strip()
+        clean = re.sub(r'[#*_`>\[\]]', '', clean).strip()
 
-        if len(clean) > 20:
-            clean_lines.append(clean)
+        # Skip if mostly punctuation or very short after cleaning
+        if len(clean) < 25:
+            continue
+
+        # Skip if it looks like a nav menu (multiple slashes, pipes)
+        if clean.count('/') > 2 or clean.count('|') > 1:
+            continue
+
+        clean_lines.append(clean)
 
     if not clean_lines:
         return ""
