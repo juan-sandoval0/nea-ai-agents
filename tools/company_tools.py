@@ -1015,49 +1015,60 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
             url = normalized_id if normalized_id.startswith(("http://", "https://")) else f"https://{normalized_id}"
             intel = tavily.crawl_company_website(url)
 
-            # Map Tavily signal types to our signal_type naming
-            type_map = {
-                "product_update": "website_product",
-                "pricing_change": "website_pricing",
-                "team_change": "website_team",
-                "partnership": "website_news",
-                "funding_news": "website_news",
-                "general_update": "website_update",
-            }
+            # VC-relevant signal types to include
+            vc_relevant_types = {"product_update", "funding_news", "partnership", "team_change"}
 
+            # Collect and filter signals
+            relevant_updates = []
             for sig in intel.signals:
-                signal_type = type_map.get(sig["type"], "website_update")
-                desc = sig["description"]
-                if sig.get("url"):
-                    desc += f" (source: {sig['url']})"
+                desc = sig.get("description", "")
+
+                # Skip non-English content (check for common non-ASCII patterns)
+                if any(ord(c) > 127 for c in desc[:50]):
+                    continue
+
+                # Skip junk content
+                junk_patterns = ["opens in a new tab", "opens in a new window", "Read more",
+                                 "newsletter", "Subscribe", "inbox", "cookie"]
+                if any(p.lower() in desc.lower() for p in junk_patterns):
+                    continue
+
+                # Clean and truncate
+                clean_desc = _clean_excerpt(desc, max_chars=150)
+                if clean_desc and len(clean_desc) > 30:
+                    relevant_updates.append({
+                        "type": sig["type"],
+                        "desc": clean_desc
+                    })
+
+            # Create ONE consolidated website signal for VCs
+            if relevant_updates:
+                # Prioritize: funding > product > partnership > team > general
+                priority_order = ["funding_news", "product_update", "partnership", "team_change", "general_update"]
+                relevant_updates.sort(key=lambda x: priority_order.index(x["type"]) if x["type"] in priority_order else 99)
+
+                # Take top 2-3 most relevant updates
+                top_updates = relevant_updates[:3]
+                combined_desc = " | ".join([u["desc"][:100] for u in top_updates])
+
                 signals.append(KeySignal(
                     company_id=normalized_id,
-                    signal_type=signal_type,
-                    description=desc,
+                    signal_type="website_update",
+                    description=f"Recent website activity: {combined_desc[:300]}",
                     observed_at=now,
                     source="tavily",
                 ))
 
+                logger.info(f"Tavily: {len(relevant_updates)} relevant signals for {normalized_id}")
+
             # Update website_update field on CompanyCore
-            if intel.signals:
-                type_labels = list({sig["type"].replace("_", " ") for sig in intel.signals})
-                summary = f"{len(intel.signals)} website changes detected (30d): {', '.join(type_labels[:3])}"
+            if relevant_updates:
+                summary = f"{len(relevant_updates)} website updates detected"
                 conn = db._get_connection()
                 try:
                     conn.execute(
                         "UPDATE company_core SET website_update = ? WHERE company_id = ?",
                         (summary, normalized_id),
-                    )
-                    conn.commit()
-                finally:
-                    conn.close()
-                logger.info(f"Tavily: {len(intel.signals)} signals for {normalized_id}")
-            elif intel.answer_summary:
-                conn = db._get_connection()
-                try:
-                    conn.execute(
-                        "UPDATE company_core SET website_update = ? WHERE company_id = ?",
-                        (intel.answer_summary[:200], normalized_id),
                     )
                     conn.commit()
                 finally:
