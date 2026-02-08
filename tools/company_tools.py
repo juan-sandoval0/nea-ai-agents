@@ -1080,39 +1080,8 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
             source="pending_tavily",
         ))
 
-    # Signal: News Events (Parallel Search)
-    parallel = get_parallel_client()
-    if parallel is not None:
-        try:
-            company_name = company.name
-            results = parallel.search_company_news(company_name, max_results=10)
-            for r in results:
-                signal_type = _classify_signal_type(r.title, r.excerpts)
-                # Clean excerpt to remove boilerplate (cookie notices, etc.)
-                description = ""
-                if r.excerpts:
-                    # Try each excerpt until we find clean content
-                    for excerpt in r.excerpts[:3]:
-                        cleaned = _clean_excerpt(excerpt, max_chars=200)
-                        if cleaned:
-                            description = cleaned
-                            break
-                # Fall back to title if no clean excerpt found
-                if not description:
-                    description = r.title
-                if r.url:
-                    description += f" (source: {r.source_domain})"
-                signals.append(KeySignal(
-                    company_id=normalized_id,
-                    signal_type=signal_type,
-                    description=description,
-                    observed_at=r.publish_date or now,
-                    source="parallel",
-                ))
-            if results:
-                logger.info(f"Parallel Search: {len(results)} news signals for {normalized_id}")
-        except ParallelSearchError as e:
-            logger.warning(f"Parallel Search failed for {normalized_id}: {e}")
+    # Note: News from Parallel Search is stored separately in the news table
+    # via get_recent_news(). We don't duplicate it as signals here.
 
     if signals:
         db.upsert_signals(signals)
