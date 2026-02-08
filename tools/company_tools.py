@@ -1063,11 +1063,20 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
                 finally:
                     conn.close()
         except TavilyAPIError as e:
-            logger.warning(f"Tavily analysis failed for {normalized_id}: {e}")
+            logger.error(f"Tavily API error for {normalized_id}: {e}")
             signals.append(KeySignal(
                 company_id=normalized_id,
                 signal_type="website_update",
-                description="Website intelligence temporarily unavailable",
+                description=f"Website intelligence error: {str(e)[:100]}",
+                observed_at=now,
+                source="tavily",
+            ))
+        except Exception as e:
+            logger.error(f"Tavily unexpected error for {normalized_id}: {type(e).__name__}: {e}")
+            signals.append(KeySignal(
+                company_id=normalized_id,
+                signal_type="website_update",
+                description=f"Website intelligence error: {type(e).__name__}",
                 observed_at=now,
                 source="tavily",
             ))
