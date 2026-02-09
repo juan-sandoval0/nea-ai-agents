@@ -20,10 +20,24 @@ import os
 import re
 import json
 from datetime import datetime, timedelta
+from pathlib import Path
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    # Look for .env in project root
+    env_path = Path(__file__).parent.parent.parent / ".env"
+    load_dotenv(env_path)
+except ImportError:
+    pass  # dotenv not installed, rely on environment variables
 
 from .database import (
     init_db, add_company, get_companies, get_signals,
-    WatchedCompany, CompanySignal
+    WatchedCompany, CompanySignal, get_portfolio_companies,
+    get_competitors_for_company, remove_company, deactivate_company,
+    get_or_create_default_investor, add_investor, get_investors,
+    link_investor_to_company, unlink_investor_from_company,
+    get_company_by_id, get_company_by_domain
 )
 from .detector import SignalDetector
 
@@ -92,42 +106,110 @@ def get_detector() -> SignalDetector:
     return SignalDetector(harmonic_client=harmonic, parallel_client=parallel)
 
 
-def cmd_add(domain: str, name: str, category: str):
+def cmd_add(domain: str, name: str, category: str, investor_id: str = None, parent_company_id: str = None):
     """Add a company to the watchlist."""
     if category not in ["portfolio", "competitor"]:
         print(f"Error: category must be 'portfolio' or 'competitor', got '{category}'")
         return
 
+    # Get or create default investor if none specified
+    if not investor_id:
+        default_investor = get_or_create_default_investor()
+        investor_id = default_investor.id
+
     company = add_company(
         company_id=domain,
         company_name=name,
-        category=category
+        category=category,
+        parent_company_id=parent_company_id
     )
+
+    # Link investor to company
+    link_investor_to_company(investor_id, company.id)
+
     print(f"[+] Added {name} ({domain}) as {category}")
     print(f"    ID: {company.id}")
+    if parent_company_id:
+        parent = get_company_by_id(parent_company_id)
+        if parent:
+            print(f"    Competitor of: {parent.company_name}")
 
 
-def cmd_list():
-    """List all watched companies."""
-    companies = get_companies()
-    if not companies:
+def cmd_list(investor_id: str = None):
+    """List all watched companies grouped by portfolio."""
+    # Get portfolio companies first
+    portfolio = get_portfolio_companies(investor_id)
+    all_companies = get_companies(investor_id=investor_id)
+
+    if not all_companies:
         print("No companies in watchlist. Use --add to add companies.")
         return
 
-    print(f"\n{'='*60}")
-    print(f"{'Company':<25} {'Domain':<20} {'Category':<12}")
-    print(f"{'='*60}")
+    print(f"\n{'='*70}")
+    print(f"  WATCHED COMPANIES")
+    print(f"{'='*70}")
 
+    # Show portfolio companies with their competitors
+    for p in portfolio:
+        competitors = get_competitors_for_company(p.id)
+        comp_refresh = ""
+        if p.competitors_refreshed_at:
+            comp_refresh = f" (competitors updated: {p.competitors_refreshed_at[:10]})"
+
+        print(f"\n📊 {p.company_name} ({p.company_id}){comp_refresh}")
+
+        if competitors:
+            for c in competitors:
+                print(f"   └── {c.company_name} ({c.company_id})")
+        else:
+            print(f"   └── (no competitors discovered yet)")
+
+    # Show any orphan competitors (those without a parent)
+    orphans = [c for c in all_companies if c.category == "competitor" and not c.parent_company_id]
+    if orphans:
+        print(f"\n📌 Unlinked Competitors:")
+        for c in orphans:
+            print(f"   • {c.company_name} ({c.company_id})")
+
+    portfolio_count = len(portfolio)
+    competitor_count = len([c for c in all_companies if c.category == "competitor"])
+    print(f"\n{'='*70}")
+    print(f"Total: {portfolio_count} portfolio + {competitor_count} competitors = {len(all_companies)} companies")
+    print(f"{'='*70}\n")
+
+
+def cmd_remove(domain: str, hard_delete: bool = False):
+    """Remove a company from the watchlist."""
+    # Find company by domain
+    companies = get_companies(active_only=False)
+    company = None
     for c in companies:
-        print(f"{c.company_name:<25} {c.company_id:<20} {c.category:<12}")
+        if c.company_id == domain:
+            company = c
+            break
 
-    print(f"{'='*60}")
-    print(f"Total: {len(companies)} companies\n")
+    if not company:
+        print(f"Error: Company with domain '{domain}' not found.")
+        return
+
+    if hard_delete:
+        success = remove_company(company.id, hard_delete=True)
+        if success:
+            print(f"[-] Permanently deleted {company.company_name} ({domain})")
+        else:
+            print(f"Error: Failed to delete {domain}")
+    else:
+        success = deactivate_company(company.id)
+        if success:
+            print(f"[-] Deactivated {company.company_name} ({domain})")
+            print("    Use --hard-delete to permanently remove.")
+        else:
+            print(f"Error: Failed to deactivate {domain}")
 
 
-def cmd_check():
+def cmd_check(investor_id: str = None, refresh_competitors: bool = True):
     """Check for new signals across all companies."""
-    companies = get_companies()
+    companies = get_companies(investor_id=investor_id)
     if not companies:
         print("No companies to check. Use --add first.")
         return
@@ -135,6 +217,29 @@ def cmd_check():
     detector = get_detector()
     total_signals = 0
     all_errors = []
+    new_competitors = []
+
+    # First, refresh competitors for portfolio companies if needed
+    if refresh_competitors and detector.harmonic:
+        portfolio = get_portfolio_companies(investor_id)
+        print(f"\nChecking competitor discovery for {len(portfolio)} portfolio companies...")
+
+        for p in portfolio:
+            if p.competitors_need_refresh():
+                print(f"[*] Discovering competitors for {p.company_name}...")
+                try:
+                    discovered = detector.discover_competitors(p, investor_id=investor_id)
+                    if discovered:
+                        new_competitors.extend(discovered)
+                        for comp in discovered:
+                            print(f"    [+] Found competitor: {comp.company_name} ({comp.company_id})")
+                except Exception as e:
+                    all_errors.append(f"Competitor discovery error for {p.company_name}: {str(e)}")
+
+        if new_competitors:
+            print(f"\n[+] Discovered {len(new_competitors)} new competitors")
+            # Refresh companies list to include new competitors
+            companies = get_companies(investor_id=investor_id)
 
     print(f"\nChecking {len(companies)} companies for signals...\n")
 
@@ -155,6 +260,8 @@ def cmd_check():
 
     print(f"\n{'='*60}")
     print(f"Scan complete. Found {total_signals} new signals.")
+    if new_competitors:
+        print(f"Discovered {len(new_competitors)} new competitors.")
     if all_errors:
         print(f"Encountered {len(all_errors)} errors.")
     print()
@@ -185,11 +292,16 @@ def cmd_signals(min_score: int = None, signal_type: str = None, limit: int = 50)
     print()
 
 
-def cmd_import_file(filepath: str, category: str):
+def cmd_import_file(filepath: str, category: str, investor_id: str = None):
     """Import companies from a file (one per line: domain,name)."""
     if not os.path.exists(filepath):
         print(f"Error: File not found: {filepath}")
         return
+
+    # Get or create default investor if none specified
+    if not investor_id:
+        default_investor = get_or_create_default_investor()
+        investor_id = default_investor.id
 
     with open(filepath, 'r') as f:
         lines = f.readlines()
@@ -208,11 +320,44 @@ def cmd_import_file(filepath: str, category: str):
             domain = parts[0].strip()
             name = domain.split('.')[0].title()
 
-        add_company(company_id=domain, company_name=name, category=category)
+        company = add_company(company_id=domain, company_name=name, category=category)
+        link_investor_to_company(investor_id, company.id)
         print(f"[+] Added {name} ({domain})")
         count += 1
 
     print(f"\nImported {count} companies as {category}")
+
+
+def cmd_investors(action: str = "list", name: str = None, email: str = None):
+    """Manage investors."""
+    if action == "list":
+        investors = get_investors()
+        if not investors:
+            print("No investors found. Use --investors add --investor-name 'Name' to add one.")
+            return
+
+        print(f"\n{'='*50}")
+        print(f"{'Name':<25} {'Email':<25}")
+        print(f"{'='*50}")
+
+        for inv in investors:
+            email_str = inv.email or "-"
+            print(f"{inv.name:<25} {email_str:<25}")
+
+        print(f"{'='*50}")
+        print(f"Total: {len(investors)} investors\n")
+
+    elif action == "add":
+        if not name:
+            print("Error: --investor-name required")
+            return
+
+        investor = add_investor(name=name, email=email)
+        print(f"[+] Created investor: {investor.name}")
+        print(f"    ID: {investor.id}")
+
+    else:
+        print(f"Error: Unknown action '{action}'. Use 'list' or 'add'.")
 
 
 def is_noise(headline: str, url: str) -> bool:
@@ -276,10 +421,19 @@ def cmd_alerts(days: int = 7, max_per_company: int = 4):
         print("\nNo signals found. Run --check first.\n")
         return
 
+    # Build parent company lookup for competitors
+    parent_names = {}
+    for c in companies.values():
+        if c.category == "competitor" and c.parent_company_id:
+            parent = companies.get(c.parent_company_id)
+            if parent:
+                parent_names[c.id] = parent.company_name
+
     # Calculate cutoff date
     cutoff_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
 
     # Group by company, filter and deduplicate
+    # Key is (company_name, parent_name or None) to keep display info
     by_company = {}
 
     for s in signals:
@@ -299,9 +453,13 @@ def cmd_alerts(days: int = 7, max_per_company: int = 4):
         if is_noise(s.headline, s.source_url or ""):
             continue
 
+        # Create display key with parent info
+        parent_name = parent_names.get(company.id)
+        display_key = (company.company_name, parent_name)
+
         # Initialize company bucket
-        if company.company_name not in by_company:
-            by_company[company.company_name] = {}
+        if display_key not in by_company:
+            by_company[display_key] = {}
 
         # Deduplicate by event key
         event_key = extract_event_key(s.headline, company.company_name)
@@ -309,10 +467,10 @@ def cmd_alerts(days: int = 7, max_per_company: int = 4):
         # Prefer quality sources
         is_quality = is_quality_source(s.source_name or "", s.source_url or "")
 
-        if event_key not in by_company[company.company_name]:
-            by_company[company.company_name][event_key] = (s, is_quality)
-        elif is_quality and not by_company[company.company_name][event_key][1]:
-            by_company[company.company_name][event_key] = (s, is_quality)
+        if event_key not in by_company[display_key]:
+            by_company[display_key][event_key] = (s, is_quality)
+        elif is_quality and not by_company[display_key][event_key][1]:
+            by_company[display_key][event_key] = (s, is_quality)
 
     if not by_company:
         print("\nNo significant alerts found.\n")
@@ -324,12 +482,19 @@ def cmd_alerts(days: int = 7, max_per_company: int = 4):
     print(f"  KEY ALERTS (last {days} days)")
     print("=" * 60)
 
-    for company_name in sorted(by_company.keys()):
-        events = by_company[company_name]
+    # Sort by company name, with portfolio companies first
+    sorted_keys = sorted(by_company.keys(), key=lambda x: (x[1] is not None, x[0]))
+
+    for display_key in sorted_keys:
+        events = by_company[display_key]
         if not events:
             continue
 
-        print(f"\n## {company_name}")
+        company_name, parent_name = display_key
+        if parent_name:
+            print(f"\n## {company_name}  ← competitor of {parent_name}")
+        else:
+            print(f"\n## {company_name}")
 
         count = 0
         for event_key, (signal, is_quality) in events.items():
@@ -366,20 +531,59 @@ def cmd_alerts(days: int = 7, max_per_company: int = 4):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="News Aggregator - Track company signals")
+    parser = argparse.ArgumentParser(
+        description="News Aggregator - Track company signals",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Add a portfolio company
+  python -m agents.news_aggregator.agent --add stripe.com --name Stripe --category portfolio
 
+  # List all companies with competitors
+  python -m agents.news_aggregator.agent --list
+
+  # Check for signals (auto-discovers competitors)
+  python -m agents.news_aggregator.agent --check
+
+  # Show significant alerts from last 7 days
+  python -m agents.news_aggregator.agent --alerts
+
+  # Remove a company
+  python -m agents.news_aggregator.agent --remove stripe.com
+
+  # Manage investors
+  python -m agents.news_aggregator.agent --investors list
+  python -m agents.news_aggregator.agent --investors add --investor-name "John Doe"
+"""
+    )
+
+    # Company management
     parser.add_argument("--add", metavar="DOMAIN", help="Add a company by domain")
     parser.add_argument("--name", help="Company name (for --add)")
-    parser.add_argument("--category", choices=["portfolio", "competitor"], default="competitor",
-                        help="Company category (default: competitor)")
+    parser.add_argument("--category", choices=["portfolio", "competitor"], default="portfolio",
+                        help="Company category (default: portfolio)")
+    parser.add_argument("--remove", metavar="DOMAIN", help="Remove a company by domain")
+    parser.add_argument("--hard-delete", action="store_true", help="Permanently delete (with --remove)")
 
+    # Import
     parser.add_argument("--import-file", metavar="FILE", help="Import companies from CSV file")
 
-    parser.add_argument("--list", action="store_true", help="List watched companies")
-    parser.add_argument("--check", action="store_true", help="Check for new signals")
+    # Listing and checking
+    parser.add_argument("--list", action="store_true", help="List watched companies with competitors")
+    parser.add_argument("--check", action="store_true", help="Check for new signals (auto-discovers competitors)")
+    parser.add_argument("--no-competitor-refresh", action="store_true",
+                        help="Skip competitor discovery during --check")
     parser.add_argument("--alerts", action="store_true", help="Show significant alerts only")
     parser.add_argument("--signals", action="store_true", help="Show all stored signals (raw)")
 
+    # Investor management
+    parser.add_argument("--investors", nargs="?", const="list", metavar="ACTION",
+                        help="Manage investors: 'list' (default) or 'add'")
+    parser.add_argument("--investor-name", help="Investor name (for --investors add)")
+    parser.add_argument("--investor-email", help="Investor email (for --investors add)")
+    parser.add_argument("--investor-id", help="Filter by investor ID (for --list, --check, --alerts)")
+
+    # Filtering options
     parser.add_argument("--min-score", type=int, help="Minimum relevance score")
     parser.add_argument("--type", dest="signal_type", help="Filter by signal type")
     parser.add_argument("--limit", type=int, default=50, help="Max signals to show")
@@ -391,13 +595,17 @@ def main():
 
     if args.add:
         name = args.name or args.add.split('.')[0].title()
-        cmd_add(args.add, name, args.category)
+        cmd_add(args.add, name, args.category, investor_id=args.investor_id)
+    elif args.remove:
+        cmd_remove(args.remove, hard_delete=args.hard_delete)
     elif args.import_file:
-        cmd_import_file(args.import_file, args.category)
+        cmd_import_file(args.import_file, args.category, investor_id=args.investor_id)
+    elif args.investors:
+        cmd_investors(args.investors, name=args.investor_name, email=args.investor_email)
     elif args.list:
-        cmd_list()
+        cmd_list(investor_id=args.investor_id)
     elif args.check:
-        cmd_check()
+        cmd_check(investor_id=args.investor_id, refresh_competitors=not args.no_competitor_refresh)
     elif args.alerts:
         cmd_alerts(days=args.days)
     elif args.signals:
