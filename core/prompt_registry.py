@@ -242,6 +242,16 @@ class PromptRegistry:
             version="1.0.0",
         ))
 
+        # Outreach message generation
+        self.register_model_config(ModelConfig(
+            name="outreach",
+            model="gpt-4o-mini",
+            provider=ModelProvider.OPENAI,
+            temperature=0.3,
+            description="Model for personalized outreach message generation",
+            version="1.0.0",
+        ))
+
     def _register_default_prompts(self):
         """Register default prompts with versioning."""
 
@@ -305,6 +315,35 @@ Write a 2-4 sentence summary focusing on their PRIOR experience and credentials 
             author="system",
             tags=["founder", "summarization", "template"],
             variables=["name", "role_title", "company_name", "raw_background"],
+        ))
+
+        # Outreach system prompt
+        self.register_prompt(Prompt(
+            id="outreach_system",
+            name="Outreach System Prompt",
+            version="1.0.0",
+            description="System prompt for personalized outreach message generation",
+            content="""You are an AI assistant generating personalized cold outreach messages for venture capital investors to send to startup founders.
+
+CRITICAL RULES:
+- Use ONLY the provided data about the company, founder, and investor. Do NOT hallucinate or infer facts.
+- Reference specific data points from the provided context (funding rounds, signals, founder background, product details).
+- Write in a peer-to-peer tone — one professional to another. NOT salesy, NOT generic.
+- Show genuine interest by citing concrete details about the company or founder.
+- If the founder has a notable background, mention shared context naturally (do not force it).
+- Keep the message concise and respectful of the founder's time.
+
+FORMAT RULES:
+- For EMAIL format: Keep under 150 words. Start with a "Subject:" line on its own, then a blank line, then the message body.
+- For LINKEDIN format: Keep under 100 words. No subject line. Open with a brief, personalized hook.
+
+TONE:
+- Professional but warm
+- Curious, not presumptuous
+- Specific, not templated
+- Investor reaching out as a peer, not pitching services""",
+            author="system",
+            tags=["outreach", "system", "vc"],
         ))
 
     # =========================================================================
