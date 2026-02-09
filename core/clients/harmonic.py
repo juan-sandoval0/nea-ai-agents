@@ -31,6 +31,13 @@ from urllib.parse import urljoin
 
 import requests
 
+from core.resilience import (
+    retry_with_backoff,
+    is_retryable_error,
+    get_circuit_breaker,
+    RateLimitHandler,
+)
+
 logger = logging.getLogger(__name__)
 
 # =============================================================================
@@ -40,6 +47,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_BASE_URL = "https://api.harmonic.ai"
 DEFAULT_TIMEOUT = 30  # seconds
 RATE_LIMIT_RPS = 10  # requests per second
+MAX_RETRIES = 3  # Maximum retry attempts for transient failures
 
 
 # =============================================================================
@@ -280,10 +288,17 @@ class HarmonicPerson:
 
 class HarmonicAPIError(Exception):
     """Custom exception for Harmonic API errors."""
-    def __init__(self, message: str, status_code: Optional[int] = None, response: Optional[dict] = None):
+    def __init__(
+        self,
+        message: str,
+        status_code: Optional[int] = None,
+        response: Optional[dict] = None,
+        retry_after: Optional[float] = None,
+    ):
         super().__init__(message)
         self.status_code = status_code
         self.response = response
+        self.retry_after = retry_after  # Seconds to wait before retrying (from Retry-After header)
 
 
 class HarmonicClient:
@@ -314,6 +329,7 @@ class HarmonicClient:
         api_key: Optional[str] = None,
         base_url: str = DEFAULT_BASE_URL,
         timeout: int = DEFAULT_TIMEOUT,
+        max_retries: int = MAX_RETRIES,
     ):
         """
         Initialize Harmonic API client.
@@ -322,6 +338,7 @@ class HarmonicClient:
             api_key: Harmonic API key. Falls back to HARMONIC_API_KEY env var.
             base_url: API base URL (default: https://api.harmonic.ai)
             timeout: Request timeout in seconds
+            max_retries: Maximum retry attempts for transient failures
         """
         self.api_key = api_key or os.getenv("HARMONIC_API_KEY")
         if not self.api_key:
@@ -332,7 +349,17 @@ class HarmonicClient:
 
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self.max_retries = max_retries
         self._last_request_time = 0.0
+
+        # Resilience components
+        self._circuit_breaker = get_circuit_breaker(
+            "harmonic",
+            failure_threshold=5,
+            timeout=60.0,
+        )
+        self._rate_limiter = RateLimitHandler(default_rps=RATE_LIMIT_RPS)
+        self._rate_limiter.set_limit("harmonic", RATE_LIMIT_RPS)
 
         self.session = requests.Session()
         self.session.headers.update({
@@ -343,11 +370,18 @@ class HarmonicClient:
 
     def _rate_limit(self):
         """Enforce rate limiting between requests."""
-        elapsed = time.time() - self._last_request_time
-        min_interval = 1.0 / RATE_LIMIT_RPS
-        if elapsed < min_interval:
-            time.sleep(min_interval - elapsed)
-        self._last_request_time = time.time()
+        self._rate_limiter.wait_if_needed("harmonic")
+
+    def _parse_retry_after(self, response: requests.Response) -> Optional[float]:
+        """Parse Retry-After header from response."""
+        retry_after = response.headers.get("Retry-After")
+        if not retry_after:
+            return None
+        try:
+            return float(retry_after)
+        except ValueError:
+            # Could be HTTP-date format, default to 60s
+            return 60.0
 
     def _request(
         self,
@@ -356,9 +390,26 @@ class HarmonicClient:
         params: Optional[dict] = None,
         json_data: Optional[dict] = None,
     ) -> dict:
-        """Make an API request with error handling."""
-        self._rate_limit()
+        """Make an API request with error handling and retries."""
+        return self._request_with_retry(method, endpoint, params, json_data)
 
+    @retry_with_backoff(max_retries=MAX_RETRIES, base_delay=1.0, max_delay=30.0)
+    def _request_with_retry(
+        self,
+        method: str,
+        endpoint: str,
+        params: Optional[dict] = None,
+        json_data: Optional[dict] = None,
+    ) -> dict:
+        """Make an API request with automatic retry on transient failures."""
+        # Check circuit breaker
+        if not self._circuit_breaker.allow_request():
+            raise HarmonicAPIError(
+                "Circuit breaker open - Harmonic API temporarily unavailable",
+                status_code=503,
+            )
+
+        self._rate_limit()
         url = urljoin(self.base_url + "/", endpoint.lstrip("/"))
 
         try:
@@ -373,13 +424,40 @@ class HarmonicClient:
             # Log for debugging
             logger.debug(f"Harmonic API {method} {url} -> {response.status_code}")
 
+            # Record response for rate limiting
+            self._rate_limiter.record_response(
+                "harmonic",
+                response.status_code,
+                dict(response.headers),
+            )
+
             if response.status_code == 401:
+                # Permanent error - don't retry
+                self._circuit_breaker.record_failure()
                 raise HarmonicAPIError("Invalid API key", status_code=401)
             elif response.status_code == 404:
-                raise HarmonicAPIError("Resource not found", status_code=404)
+                # Not found is not a failure, just no data
+                return {}
             elif response.status_code == 429:
-                raise HarmonicAPIError("Rate limit exceeded", status_code=429)
+                # Rate limit - retry with backoff
+                retry_after = self._parse_retry_after(response)
+                self._circuit_breaker.record_failure()
+                raise HarmonicAPIError(
+                    "Rate limit exceeded",
+                    status_code=429,
+                    retry_after=retry_after,
+                )
+            elif response.status_code >= 500:
+                # Server error - transient, retry
+                self._circuit_breaker.record_failure()
+                error_data = response.json() if response.content else {}
+                raise HarmonicAPIError(
+                    f"Server error: {error_data.get('message', response.text)}",
+                    status_code=response.status_code,
+                    response=error_data,
+                )
             elif response.status_code >= 400:
+                # Client error - likely permanent
                 error_data = response.json() if response.content else {}
                 raise HarmonicAPIError(
                     f"API error: {error_data.get('message', response.text)}",
@@ -387,12 +465,22 @@ class HarmonicClient:
                     response=error_data,
                 )
 
+            # Success
+            self._circuit_breaker.record_success()
             return response.json() if response.content else {}
 
         except requests.exceptions.Timeout:
-            raise HarmonicAPIError(f"Request timed out after {self.timeout}s")
+            self._circuit_breaker.record_failure()
+            raise HarmonicAPIError(
+                f"Request timed out after {self.timeout}s",
+                status_code=408,
+            )
         except requests.exceptions.ConnectionError as e:
-            raise HarmonicAPIError(f"Connection error: {e}")
+            self._circuit_breaker.record_failure()
+            raise HarmonicAPIError(
+                f"Connection error: {e}",
+                status_code=503,
+            )
 
     # =========================================================================
     # COMPANY ENDPOINTS

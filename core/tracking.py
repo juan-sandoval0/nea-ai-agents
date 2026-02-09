@@ -145,11 +145,46 @@ class Tracker:
             """)
 
 
+            # LLM calls table - detailed tracking for reproducibility
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS llm_calls (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    call_id TEXT UNIQUE NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    -- Prompt tracking
+                    prompt_id TEXT,
+                    prompt_version TEXT,
+                    prompt_hash TEXT,
+                    system_prompt_hash TEXT,
+                    user_prompt_hash TEXT,
+                    -- Model tracking
+                    model TEXT NOT NULL,
+                    model_config_name TEXT,
+                    temperature REAL DEFAULT 0.0,
+                    max_tokens INTEGER,
+                    -- Metrics
+                    tokens_in INTEGER DEFAULT 0,
+                    tokens_out INTEGER DEFAULT 0,
+                    latency_ms INTEGER DEFAULT 0,
+                    -- Context
+                    company_id TEXT,
+                    operation TEXT,
+                    success INTEGER DEFAULT 1,
+                    error_message TEXT,
+                    -- Full metadata JSON
+                    metadata TEXT DEFAULT '{}'
+                )
+            """)
+
             # Create indexes
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_usage_company ON usage_events(company_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_usage_timestamp ON usage_events(timestamp)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_api_service ON api_calls(service)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_api_timestamp ON api_calls(timestamp)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_llm_timestamp ON llm_calls(timestamp)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_llm_prompt ON llm_calls(prompt_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_llm_model ON llm_calls(model)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_llm_operation ON llm_calls(operation)")
 
             conn.commit()
             logger.debug("Tracking schema initialized")
@@ -281,6 +316,255 @@ class Tracker:
             ))
             conn.commit()
             return cursor.lastrowid
+        finally:
+            conn.close()
+
+    # =========================================================================
+    # LLM CALL TRACKING (for reproducibility)
+    # =========================================================================
+
+    def log_llm_call(
+        self,
+        call_id: str,
+        model: str,
+        operation: str,
+        tokens_in: int = 0,
+        tokens_out: int = 0,
+        latency_ms: int = 0,
+        prompt_id: Optional[str] = None,
+        prompt_version: Optional[str] = None,
+        prompt_hash: Optional[str] = None,
+        system_prompt_hash: Optional[str] = None,
+        user_prompt_hash: Optional[str] = None,
+        model_config_name: Optional[str] = None,
+        temperature: float = 0.0,
+        max_tokens: Optional[int] = None,
+        company_id: Optional[str] = None,
+        success: bool = True,
+        error_message: Optional[str] = None,
+        metadata: Optional[dict] = None,
+    ) -> str:
+        """
+        Log an LLM call with full metadata for reproducibility.
+
+        This captures everything needed to understand and reproduce
+        the generation: prompt version, model config, and context.
+
+        Args:
+            call_id: Unique identifier for this call
+            model: Model used (e.g., "gpt-4o-mini")
+            operation: Operation type (briefing, summarization, etc.)
+            tokens_in: Input tokens
+            tokens_out: Output tokens
+            latency_ms: Call latency in milliseconds
+            prompt_id: Registered prompt identifier
+            prompt_version: Prompt version string
+            prompt_hash: Hash of prompt content
+            system_prompt_hash: Hash of system prompt
+            user_prompt_hash: Hash of user prompt
+            model_config_name: Name of model config used
+            temperature: Temperature setting
+            max_tokens: Max tokens setting
+            company_id: Company being processed
+            success: Whether the call succeeded
+            error_message: Error message if failed
+            metadata: Additional metadata
+
+        Returns:
+            The call_id for reference
+        """
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO llm_calls (
+                    call_id, timestamp, prompt_id, prompt_version, prompt_hash,
+                    system_prompt_hash, user_prompt_hash, model, model_config_name,
+                    temperature, max_tokens, tokens_in, tokens_out, latency_ms,
+                    company_id, operation, success, error_message, metadata
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                call_id,
+                datetime.utcnow().isoformat(),
+                prompt_id,
+                prompt_version,
+                prompt_hash,
+                system_prompt_hash,
+                user_prompt_hash,
+                model,
+                model_config_name,
+                temperature,
+                max_tokens,
+                tokens_in,
+                tokens_out,
+                latency_ms,
+                company_id,
+                operation,
+                1 if success else 0,
+                error_message,
+                json.dumps(metadata or {}),
+            ))
+            conn.commit()
+            logger.debug(
+                f"Logged LLM call: {operation} with {model} "
+                f"(prompt: {prompt_id}@{prompt_version})"
+            )
+            return call_id
+        finally:
+            conn.close()
+
+    def log_llm_call_from_metadata(self, metadata: "LLMCallMetadata") -> str:
+        """
+        Log an LLM call from an LLMCallMetadata object.
+
+        Args:
+            metadata: LLMCallMetadata object with all call details
+
+        Returns:
+            The call_id for reference
+        """
+        # Import here to avoid circular import
+        from core.prompt_registry import LLMCallMetadata
+
+        return self.log_llm_call(
+            call_id=metadata.call_id,
+            model=metadata.model,
+            operation=metadata.operation,
+            tokens_in=metadata.tokens_in,
+            tokens_out=metadata.tokens_out,
+            latency_ms=metadata.latency_ms,
+            prompt_id=metadata.prompt_id,
+            prompt_version=metadata.prompt_version,
+            prompt_hash=metadata.prompt_hash,
+            system_prompt_hash=metadata.system_prompt_hash,
+            user_prompt_hash=metadata.user_prompt_hash,
+            model_config_name=metadata.model_config_name,
+            temperature=metadata.temperature,
+            max_tokens=metadata.max_tokens,
+            company_id=metadata.company_id,
+        )
+
+    def get_llm_call(self, call_id: str) -> Optional[dict]:
+        """Get a specific LLM call by ID."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM llm_calls WHERE call_id = ?", (call_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+    def get_llm_calls_by_prompt(
+        self,
+        prompt_id: str,
+        prompt_version: Optional[str] = None,
+        days: int = 30,
+    ) -> list[dict]:
+        """
+        Get all LLM calls that used a specific prompt.
+
+        Useful for analyzing prompt performance or finding regressions.
+        """
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+
+            query = """
+                SELECT * FROM llm_calls
+                WHERE prompt_id = ? AND timestamp >= ?
+            """
+            params = [prompt_id, cutoff]
+
+            if prompt_version:
+                query += " AND prompt_version = ?"
+                params.append(prompt_version)
+
+            query += " ORDER BY timestamp DESC"
+            cursor.execute(query, params)
+            return [dict(row) for row in cursor.fetchall()]
+        finally:
+            conn.close()
+
+    def get_llm_stats(self, days: int = 30) -> dict:
+        """Get aggregated LLM call statistics."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+
+            # Stats by model
+            cursor.execute("""
+                SELECT
+                    model,
+                    COUNT(*) as total_calls,
+                    SUM(tokens_in) as total_tokens_in,
+                    SUM(tokens_out) as total_tokens_out,
+                    AVG(latency_ms) as avg_latency_ms,
+                    SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as failures
+                FROM llm_calls
+                WHERE timestamp >= ?
+                GROUP BY model
+            """, (cutoff,))
+
+            by_model = {}
+            for row in cursor.fetchall():
+                by_model[row["model"]] = {
+                    "total_calls": row["total_calls"],
+                    "total_tokens_in": row["total_tokens_in"] or 0,
+                    "total_tokens_out": row["total_tokens_out"] or 0,
+                    "avg_latency_ms": round(row["avg_latency_ms"] or 0, 1),
+                    "failure_rate": round(
+                        (row["failures"] or 0) / max(row["total_calls"], 1) * 100, 2
+                    ),
+                }
+
+            # Stats by prompt
+            cursor.execute("""
+                SELECT
+                    prompt_id,
+                    prompt_version,
+                    COUNT(*) as total_calls,
+                    AVG(latency_ms) as avg_latency_ms
+                FROM llm_calls
+                WHERE timestamp >= ? AND prompt_id IS NOT NULL
+                GROUP BY prompt_id, prompt_version
+            """, (cutoff,))
+
+            by_prompt = {}
+            for row in cursor.fetchall():
+                key = f"{row['prompt_id']}@{row['prompt_version']}"
+                by_prompt[key] = {
+                    "total_calls": row["total_calls"],
+                    "avg_latency_ms": round(row["avg_latency_ms"] or 0, 1),
+                }
+
+            # Stats by operation
+            cursor.execute("""
+                SELECT
+                    operation,
+                    COUNT(*) as total_calls,
+                    AVG(latency_ms) as avg_latency_ms
+                FROM llm_calls
+                WHERE timestamp >= ?
+                GROUP BY operation
+            """, (cutoff,))
+
+            by_operation = {}
+            for row in cursor.fetchall():
+                by_operation[row["operation"]] = {
+                    "total_calls": row["total_calls"],
+                    "avg_latency_ms": round(row["avg_latency_ms"] or 0, 1),
+                }
+
+            return {
+                "period_days": days,
+                "by_model": by_model,
+                "by_prompt": by_prompt,
+                "by_operation": by_operation,
+            }
         finally:
             conn.close()
 

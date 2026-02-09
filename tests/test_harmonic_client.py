@@ -314,42 +314,52 @@ class TestHarmonicClientErrors:
         with patch.object(harmonic_client.session, "request") as mock_request:
             mock_response = Mock()
             mock_response.status_code = 401
+            mock_response.headers = {}  # Required by resilience handler
             mock_request.return_value = mock_response
 
             with pytest.raises(HarmonicAPIError, match="Invalid API key"):
                 harmonic_client._request("GET", "/test")
 
-    def test_404_not_found_error(self, harmonic_client):
-        """404 response should raise HarmonicAPIError."""
+    def test_404_returns_empty_dict(self, harmonic_client):
+        """404 response should return empty dict (not found is not an error)."""
         with patch.object(harmonic_client.session, "request") as mock_request:
             mock_response = Mock()
             mock_response.status_code = 404
+            mock_response.headers = {}  # Required by resilience handler
             mock_request.return_value = mock_response
 
-            with pytest.raises(HarmonicAPIError, match="Resource not found"):
-                harmonic_client._request("GET", "/test")
+            result = harmonic_client._request("GET", "/test")
+            assert result == {}
 
     def test_429_rate_limit_error(self, harmonic_client):
-        """429 response should raise HarmonicAPIError."""
-        with patch.object(harmonic_client.session, "request") as mock_request:
+        """429 response should raise HarmonicAPIError after retries."""
+        with patch.object(harmonic_client.session, "request") as mock_request, \
+             patch("time.sleep"):  # Skip retry delays
             mock_response = Mock()
             mock_response.status_code = 429
+            mock_response.headers = {"Retry-After": "60"}  # Required by resilience handler
             mock_request.return_value = mock_response
 
             with pytest.raises(HarmonicAPIError, match="Rate limit exceeded"):
                 harmonic_client._request("GET", "/test")
 
     def test_timeout_error(self, harmonic_client):
-        """Timeout should raise HarmonicAPIError."""
-        with patch.object(harmonic_client.session, "request") as mock_request:
+        """Timeout should raise HarmonicAPIError after retries."""
+        # Reset circuit breaker from previous tests
+        harmonic_client._circuit_breaker.reset()
+        with patch.object(harmonic_client.session, "request") as mock_request, \
+             patch("time.sleep"):  # Skip retry delays
             mock_request.side_effect = requests.exceptions.Timeout()
 
             with pytest.raises(HarmonicAPIError, match="timed out"):
                 harmonic_client._request("GET", "/test")
 
     def test_connection_error(self, harmonic_client):
-        """Connection error should raise HarmonicAPIError."""
-        with patch.object(harmonic_client.session, "request") as mock_request:
+        """Connection error should raise HarmonicAPIError after retries."""
+        # Reset circuit breaker from previous tests
+        harmonic_client._circuit_breaker.reset()
+        with patch.object(harmonic_client.session, "request") as mock_request, \
+             patch("time.sleep"):  # Skip retry delays
             mock_request.side_effect = requests.exceptions.ConnectionError("Network error")
 
             with pytest.raises(HarmonicAPIError, match="Connection error"):
