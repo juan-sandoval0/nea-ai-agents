@@ -54,9 +54,99 @@ from core.clients.parallel_search import (
     ParallelSearchError,
     _classify_signal_type,
 )
+import re
 from core.tracking import get_tracker
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# EXCERPT CLEANING
+# =============================================================================
+
+# Patterns to skip when cleaning excerpts
+BOILERPLATE_PATTERNS = [
+    r"cookie", r"accept all", r"reject all", r"privacy policy", r"terms of service",
+    r"subscribe", r"sign up", r"log in", r"menu", r"navigation", r"toggle",
+    r"share this", r"follow us", r"copyright", r"all rights reserved",
+    r"skip to content", r"skip to main", r"read more", r"learn more", r"click here",
+    r"manage cookies", r"cookie settings", r"we use cookies",
+    r"section title:", r"oops, something went wrong", r"go to hub",
+    r"futures & commodities", r"prediction markets", r"yahoo finance",
+    r"published \w+,", r"updated \w+,",  # Skip date lines like "Published Fri, Feb"
+    r"^\[.*\]\(.*\)$",  # Skip markdown links that are the entire line
+    r"^>\s*",  # Skip blockquotes
+]
+
+def _clean_excerpt(excerpt: str, max_chars: int = 200) -> str:
+    """
+    Clean an excerpt by removing boilerplate content.
+
+    Args:
+        excerpt: Raw excerpt text
+        max_chars: Maximum characters to return
+
+    Returns:
+        Cleaned excerpt or empty string if all content is boilerplate
+    """
+    if not excerpt:
+        return ""
+
+    # Pre-clean: remove common junk patterns
+    excerpt = re.sub(r'\[Skip to [^\]]+\]\([^)]*\)', '', excerpt)  # [Skip to X](url)
+    excerpt = re.sub(r'\[[^\]]*\]\(\s*\)', '', excerpt)  # Empty links [text]()
+    excerpt = re.sub(r'\[?\s*\]\([^)]+\)', '', excerpt)  # [](url) empty text links
+    excerpt = re.sub(r'Section Title:\s*', '', excerpt, flags=re.IGNORECASE)
+    excerpt = re.sub(r'>\s*Content:', '', excerpt)
+    excerpt = re.sub(r'Published \w+, \w+ \d+.*?(?=\.|$)', '', excerpt)
+    excerpt = re.sub(r'Updated \w+, \w+ \d+.*?(?=\.|$)', '', excerpt)
+
+    # Split into sentences/lines
+    lines = excerpt.replace("\n", ". ").split(". ")
+    clean_lines = []
+
+    for line in lines:
+        line = line.strip()
+        if not line or len(line) < 20:
+            continue
+
+        # Skip lines matching boilerplate patterns
+        line_lower = line.lower()
+        if any(re.search(pattern, line_lower) for pattern in BOILERPLATE_PATTERNS):
+            continue
+
+        # Skip lines that are mostly URLs or markdown links
+        if line.count("http") > 1 or line.count("](") > 2:
+            continue
+
+        # Skip lines that start with navigation-like content
+        if re.match(r'^[\[\(]', line) and '](/' in line:
+            continue
+
+        # Clean markdown artifacts
+        clean = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', line)  # [text](url) -> text
+        clean = re.sub(r'[#*_`>\[\]]', '', clean).strip()
+
+        # Skip if mostly punctuation or very short after cleaning
+        if len(clean) < 25:
+            continue
+
+        # Skip if it looks like a nav menu (multiple slashes, pipes)
+        if clean.count('/') > 2 or clean.count('|') > 1:
+            continue
+
+        clean_lines.append(clean)
+
+    if not clean_lines:
+        return ""
+
+    # Join and truncate
+    result = ". ".join(clean_lines)
+    if len(result) > max_chars:
+        result = result[:max_chars].rsplit(" ", 1)[0] + "..."
+
+    return result
+
 
 # =============================================================================
 # CONFIGURATION
@@ -451,6 +541,42 @@ def get_founders(company_id: str) -> list[Founder]:
 # HELPER: Summarize founder background with LLM
 # =============================================================================
 
+def _summarize_website_updates(raw_content: str, company_name: str) -> str:
+    """
+    Use OpenAI to summarize website updates into 1-2 VC-relevant sentences.
+    """
+    import os
+    from langchain_openai import ChatOpenAI
+    from langchain_core.messages import SystemMessage, HumanMessage
+
+    if not os.getenv("OPENAI_API_KEY"):
+        return raw_content[:200]
+
+    system_prompt = """You are a VC research assistant. Summarize website updates into 1-2 sentences.
+Focus on what matters to investors: product launches, partnerships, funding, growth signals, market expansion.
+Skip technical details, API changes, and developer documentation.
+If the content is mostly technical/irrelevant, say "No significant business updates detected."
+Be concise and factual."""
+
+    user_prompt = f"""Summarize these recent website updates for {company_name} in 1-2 sentences for a VC investor:
+
+{raw_content}
+
+Summary:"""
+
+    try:
+        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_prompt),
+        ]
+        response = llm.invoke(messages)
+        return response.content.strip()
+    except Exception as e:
+        logger.warning(f"LLM summarization failed for website updates: {e}")
+        return raw_content[:200]
+
+
 def _summarize_founder_background(
     name: str,
     role_title: str,
@@ -806,8 +932,16 @@ def get_recent_news(company_id: str, days: int = 30) -> list[NewsArticle]:
     # Transform to NewsArticle DB models
     articles: list[NewsArticle] = []
     for r in results:
-        # Join excerpts into single text block for LLM context
-        excerpts_text = "\n".join(r.excerpts) if r.excerpts else None
+        # Clean and join excerpts for LLM context
+        if r.excerpts:
+            cleaned_excerpts = []
+            for excerpt in r.excerpts:
+                cleaned = _clean_excerpt(excerpt, max_chars=500)
+                if cleaned:
+                    cleaned_excerpts.append(cleaned)
+            excerpts_text = "\n".join(cleaned_excerpts) if cleaned_excerpts else None
+        else:
+            excerpts_text = None
         articles.append(NewsArticle(
             company_id=normalized_id,
             article_headline=r.title,
@@ -941,33 +1075,58 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
             url = normalized_id if normalized_id.startswith(("http://", "https://")) else f"https://{normalized_id}"
             intel = tavily.crawl_company_website(url)
 
-            # Map Tavily signal types to our signal_type naming
-            type_map = {
-                "product_update": "website_product",
-                "pricing_change": "website_pricing",
-                "team_change": "website_team",
-                "partnership": "website_news",
-                "funding_news": "website_news",
-                "general_update": "website_update",
-            }
+            # VC-relevant signal types to include
+            vc_relevant_types = {"product_update", "funding_news", "partnership", "team_change"}
 
+            # Collect and filter signals
+            relevant_updates = []
             for sig in intel.signals:
-                signal_type = type_map.get(sig["type"], "website_update")
-                desc = sig["description"]
-                if sig.get("url"):
-                    desc += f" (source: {sig['url']})"
+                desc = sig.get("description", "")
+
+                # Skip non-English content (check for common non-ASCII patterns)
+                if any(ord(c) > 127 for c in desc[:50]):
+                    continue
+
+                # Skip junk content
+                junk_patterns = ["opens in a new tab", "opens in a new window", "Read more",
+                                 "newsletter", "Subscribe", "inbox", "cookie"]
+                if any(p.lower() in desc.lower() for p in junk_patterns):
+                    continue
+
+                # Clean and truncate
+                clean_desc = _clean_excerpt(desc, max_chars=150)
+                if clean_desc and len(clean_desc) > 30:
+                    relevant_updates.append({
+                        "type": sig["type"],
+                        "desc": clean_desc
+                    })
+
+            # Create ONE consolidated website signal for VCs
+            if relevant_updates:
+                # Prioritize: funding > product > partnership > team > general
+                priority_order = ["funding_news", "product_update", "partnership", "team_change", "general_update"]
+                relevant_updates.sort(key=lambda x: priority_order.index(x["type"]) if x["type"] in priority_order else 99)
+
+                # Take top 5 updates for LLM summarization
+                top_updates = relevant_updates[:5]
+                raw_content = "\n".join([f"- {u['desc']}" for u in top_updates])
+
+                # Use LLM to create VC-friendly summary
+                summary = _summarize_website_updates(raw_content, company.name if company else normalized_id)
+
                 signals.append(KeySignal(
                     company_id=normalized_id,
-                    signal_type=signal_type,
-                    description=desc,
+                    signal_type="website_update",
+                    description=summary,
                     observed_at=now,
                     source="tavily",
                 ))
 
+                logger.info(f"Tavily: {len(relevant_updates)} relevant signals for {normalized_id}")
+
             # Update website_update field on CompanyCore
-            if intel.signals:
-                type_labels = list({sig["type"].replace("_", " ") for sig in intel.signals})
-                summary = f"{len(intel.signals)} website changes detected (30d): {', '.join(type_labels[:3])}"
+            if relevant_updates:
+                summary = f"{len(relevant_updates)} website updates detected"
                 conn = db._get_connection()
                 try:
                     conn.execute(
@@ -977,23 +1136,21 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
                     conn.commit()
                 finally:
                     conn.close()
-                logger.info(f"Tavily: {len(intel.signals)} signals for {normalized_id}")
-            elif intel.answer_summary:
-                conn = db._get_connection()
-                try:
-                    conn.execute(
-                        "UPDATE company_core SET website_update = ? WHERE company_id = ?",
-                        (intel.answer_summary[:200], normalized_id),
-                    )
-                    conn.commit()
-                finally:
-                    conn.close()
         except TavilyAPIError as e:
-            logger.warning(f"Tavily analysis failed for {normalized_id}: {e}")
+            logger.error(f"Tavily API error for {normalized_id}: {e}")
             signals.append(KeySignal(
                 company_id=normalized_id,
                 signal_type="website_update",
-                description="Website intelligence temporarily unavailable",
+                description=f"Website intelligence error: {str(e)[:100]}",
+                observed_at=now,
+                source="tavily",
+            ))
+        except Exception as e:
+            logger.error(f"Tavily unexpected error for {normalized_id}: {type(e).__name__}: {e}")
+            signals.append(KeySignal(
+                company_id=normalized_id,
+                signal_type="website_update",
+                description=f"Website intelligence error: {type(e).__name__}",
                 observed_at=now,
                 source="tavily",
             ))
@@ -1006,29 +1163,8 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
             source="pending_tavily",
         ))
 
-    # Signal: News Events (Parallel Search)
-    parallel = get_parallel_client()
-    if parallel is not None:
-        try:
-            company_name = company.name
-            results = parallel.search_company_news(company_name, max_results=10)
-            for r in results:
-                signal_type = _classify_signal_type(r.title, r.excerpts)
-                # Use first excerpt as description (truncated)
-                description = r.excerpts[0][:200] if r.excerpts else r.title
-                if r.url:
-                    description += f" (source: {r.source_domain})"
-                signals.append(KeySignal(
-                    company_id=normalized_id,
-                    signal_type=signal_type,
-                    description=description,
-                    observed_at=r.publish_date or now,
-                    source="parallel",
-                ))
-            if results:
-                logger.info(f"Parallel Search: {len(results)} news signals for {normalized_id}")
-        except ParallelSearchError as e:
-            logger.warning(f"Parallel Search failed for {normalized_id}: {e}")
+    # Note: News from Parallel Search is stored separately in the news table
+    # via get_recent_news(). We don't duplicate it as signals here.
 
     if signals:
         db.upsert_signals(signals)

@@ -186,20 +186,20 @@ class TestTavilyGracefulDegradation:
                         from tools.company_tools import get_key_signals
                         signals = get_key_signals("stripe.com")
 
-        # Should not raise, should have fallback signal
-        unavailable_signals = [
+        # Should not raise, should have error signal
+        error_signals = [
             s for s in signals
-            if "unavailable" in s.description.lower()
+            if "error" in s.description.lower()
         ]
-        assert len(unavailable_signals) >= 1
+        assert len(error_signals) >= 1
 
     def test_tavily_signals_integrated_when_available(self, mock_harmonic_company, mock_db):
         """Should include Tavily signals when API is available."""
         mock_tavily = Mock()
         mock_intel = Mock()
         mock_intel.signals = [
-            {"type": "product_update", "description": "New feature launched", "url": "https://stripe.com/blog/new-feature"},
-            {"type": "pricing_change", "description": "Pricing updated", "url": "https://stripe.com/pricing"},
+            {"type": "product_update", "description": "New feature launched with exciting capabilities for developers", "url": "https://stripe.com/blog/new-feature"},
+            {"type": "pricing_change", "description": "Pricing updated with new enterprise tier for large customers", "url": "https://stripe.com/pricing"},
         ]
         mock_intel.answer_summary = "Website has recent updates"
         mock_tavily.crawl_company_website.return_value = mock_intel
@@ -211,11 +211,13 @@ class TestTavilyGracefulDegradation:
                 mock_client.return_value.lookup_company.return_value = mock_harmonic_company
                 with patch("tools.company_tools.get_tavily_client", return_value=mock_tavily):
                     with patch("tools.company_tools.get_parallel_client", return_value=None):
-                        from tools.company_tools import get_key_signals
-                        signals = get_key_signals("stripe.com")
+                        with patch("tools.company_tools._summarize_website_updates", return_value="Stripe launched new features and updated enterprise pricing."):
+                            from tools.company_tools import get_key_signals
+                            signals = get_key_signals("stripe.com")
 
+        # Tavily signals are now consolidated into 1 signal for VCs
         tavily_signals = [s for s in signals if s.source == "tavily"]
-        assert len(tavily_signals) >= 2
+        assert len(tavily_signals) >= 1
 
 
 # =============================================================================
