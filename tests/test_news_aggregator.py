@@ -349,13 +349,23 @@ class TestSignalDetector:
         # Mock Harmonic client
         mock_harmonic = Mock()
         mock_harmonic.lookup_company.return_value = Mock(id="harmonic_123")
-        mock_harmonic.get_company.return_value = {
-            "similar_companies": [
-                {"domain": "braintree.com", "name": "Braintree", "id": "harmonic_456"},
-                {"domain": "adyen.com", "name": "Adyen", "id": "harmonic_789"},
-                {"domain": "square.com", "name": "Square", "id": "harmonic_012"},  # Extra, should be ignored
+        # _request returns URNs from similar_companies endpoint
+        mock_harmonic._request.return_value = {
+            "results": [
+                "urn:harmonic:company:456",
+                "urn:harmonic:company:789",
+                "urn:harmonic:company:012",  # Extra, should be ignored
             ]
         }
+        # get_company returns company details for each URN
+        # Note: Mock(name=...) is special - use spec or set attribute directly
+        mock_comp1 = Mock(domain="braintree.com")
+        mock_comp1.name = "Braintree"
+        mock_comp2 = Mock(domain="adyen.com")
+        mock_comp2.name = "Adyen"
+        mock_comp3 = Mock(domain="square.com")
+        mock_comp3.name = "Square"
+        mock_harmonic.get_company.side_effect = [mock_comp1, mock_comp2, mock_comp3]
 
         detector = SignalDetector(harmonic_client=mock_harmonic)
         competitors = detector.discover_competitors(company, max_competitors=2)
