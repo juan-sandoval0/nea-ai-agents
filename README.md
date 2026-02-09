@@ -1,6 +1,26 @@
 # NEA AI Agents
 
+![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![Tests](https://img.shields.io/badge/tests-366%20passing-brightgreen.svg)
+
 AI agents for venture capital workflows built with LangChain and LangGraph.
+
+---
+
+## Problem
+
+**VC investors spend 2-4 hours preparing for each meeting** — researching companies, synthesizing signals, and drafting talking points. This is repetitive, error-prone, and doesn't scale.
+
+**NEA AI Agents automates meeting briefing preparation** by:
+- Aggregating company data from Harmonic, Tavily, and Parallel
+- Detecting key signals (funding, hiring, product launches)
+- Generating structured briefings with citations and source attribution
+- Tracking data freshness and highlighting gaps
+
+The result: **meeting prep in minutes, not hours**, with full traceability.
+
+---
 
 ## Quick Start
 
@@ -193,7 +213,7 @@ The system gracefully degrades when API keys are not set:
 |-------------|----------|
 | `HARMONIC_API_KEY` | **Required** - Company profile lookup will fail |
 | `TAVILY_API_KEY` | Website intelligence disabled; placeholder signal added |
-| `NEWS_API_KEY` | News search disabled; empty news results |
+| `PARALLEL_API_KEY` | News search disabled; empty news results |
 | `OPENAI_API_KEY` | **Required** for briefing generation |
 
 ### Data Quality Edge Cases
@@ -220,12 +240,12 @@ Valid signal types and their sources:
 | `website_team` | Tavily | Team page changes |
 | `website_news` | Tavily | News/blog updates |
 | `website_update` | Tavily | General website changes |
-| `funding` | NewsAPI | Funding news articles |
-| `acquisition` | NewsAPI | M&A news |
-| `team_change` | NewsAPI | Executive hiring/departure news |
-| `product_launch` | NewsAPI | Product announcement news |
-| `partnership` | NewsAPI | Partnership news |
-| `news_coverage` | NewsAPI | General news coverage |
+| `funding` | Parallel | Funding news articles |
+| `acquisition` | Parallel | M&A news |
+| `team_change` | Parallel | Executive hiring/departure news |
+| `product_launch` | Parallel | Product announcement news |
+| `partnership` | Parallel | Partnership news |
+| `news_coverage` | Parallel | General news coverage |
 
 ### Citation and Source Tracking
 
@@ -233,14 +253,14 @@ Every data point includes source attribution:
 
 - **CompanyCore**: `source_map` dict maps each field to its source
 - **Founders**: `source` field indicates data origin (harmonic/manual_correction)
-- **KeySignals**: `source` field (harmonic/tavily/news_api/pending_tavily)
-- **NewsArticles**: `source` field (news_api)
+- **KeySignals**: `source` field (harmonic/tavily/parallel/pending_tavily)
+- **NewsArticles**: `source` field (parallel)
 
 ### Error Handling
 
 - **Harmonic API Errors**: 401 (auth), 404 (not found), 429 (rate limit) are caught and logged
 - **Tavily API Errors**: Crawl failures result in fallback "unavailable" signal
-- **NewsAPI Errors**: Search failures are caught; empty results returned
+- **Parallel Errors**: Search failures are caught; empty results returned
 - **LLM Generation Errors**: Captured in `error` field of briefing result
 
 ### Output Validation
@@ -384,7 +404,7 @@ API cost estimates:
 |---------|------|------|
 | Tavily | 2 credits/crawl | ~$0.02/company |
 | OpenAI | tokens | ~$0.02/briefing |
-| NewsAPI | search | ~$0.01/company |
+| Parallel | search | ~$0.01/company |
 | Harmonic | request | Subscription (included) |
 
 ### Unified Evaluation Entrypoint
@@ -515,3 +535,7 @@ from core.failure_analysis import generate_failure_report
 report = generate_failure_report(days=30)
 print(report)
 ```
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.

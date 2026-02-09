@@ -38,9 +38,36 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 from core.database import CompanyBundle, CompanyCore, Founder, KeySignal, NewsArticle
 from core.tracking import get_tracker
+from core.llm_validation import (
+    validate_briefing_content,
+    LLMResponseError,
+    EmptyResponseError,
+    TruncatedResponseError,
+    MissingSectionsError,
+)
+from core.prompt_registry import (
+    get_prompt,
+    get_model_config,
+    LLMCallMetadata,
+)
+from core.security import (
+    sanitize_company_name,
+    sanitize_for_prompt,
+    detect_prompt_injection,
+    log_security_event,
+)
+from core.observability import (
+    get_logger,
+    LogContext,
+    log_llm_interaction,
+    log_audit_event,
+    trace_function,
+    set_request_context,
+    clear_request_context,
+)
 from tools.company_tools import get_company_bundle, normalize_company_id
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # =============================================================================
 # CONFIGURATION
@@ -219,6 +246,7 @@ def format_news_data(news: list[NewsArticle]) -> str:
 # BRIEFING GENERATION
 # =============================================================================
 
+@trace_function(operation="generate_briefing")
 def generate_briefing(company_id: str, model: str = DEFAULT_LLM_MODEL) -> dict:
     """
     Generate a meeting briefing from database tables.
@@ -245,6 +273,10 @@ def generate_briefing(company_id: str, model: str = DEFAULT_LLM_MODEL) -> dict:
     """
     normalized_id = normalize_company_id(company_id)
 
+    # Set up request context for structured logging and tracing
+    # This ensures all logs within this function include company_id and operation
+    set_request_context(company_id=normalized_id, operation="briefing")
+
     result = {
         "company_id": normalized_id,
         "company_name": None,
@@ -265,6 +297,7 @@ def generate_briefing(company_id: str, model: str = DEFAULT_LLM_MODEL) -> dict:
 
     if not bundle.company_core:
         result["error"] = f"Company not found in database. Run ingest_company first."
+        clear_request_context()
         return result
 
     result["company_name"] = bundle.company_core.company_name
@@ -279,22 +312,49 @@ def generate_briefing(company_id: str, model: str = DEFAULT_LLM_MODEL) -> dict:
     signals_data = format_signals_data(bundle.key_signals)
     news_data = format_news_data(bundle.news)
 
+    # Sanitize all external data before inserting into prompt
+    # This prevents prompt injection from malicious data in external APIs
+    safe_company_name = sanitize_company_name(bundle.company_core.company_name)
+    safe_company_data = sanitize_for_prompt(company_data, escape_markdown=False)
+    safe_founders_data = sanitize_for_prompt(founders_data, escape_markdown=False)
+    safe_signals_data = sanitize_for_prompt(signals_data, escape_markdown=False)
+    safe_news_data = sanitize_for_prompt(news_data, escape_markdown=False)
+
+    # Check for prompt injection in the data
+    for field_name, field_data in [
+        ("company_data", company_data),
+        ("founders_data", founders_data),
+        ("signals_data", signals_data),
+        ("news_data", news_data),
+    ]:
+        detection = detect_prompt_injection(field_data)
+        if detection.is_suspicious:
+            log_security_event(
+                "prompt_injection_attempt",
+                {
+                    "company_id": normalized_id,
+                    "field": field_name,
+                    "confidence": detection.confidence,
+                },
+                severity="warning",
+            )
+
     # Build user prompt with exact structure requirements
-    user_prompt = f"""Generate a meeting briefing for **{bundle.company_core.company_name}**.
+    user_prompt = f"""Generate a meeting briefing for **{safe_company_name}**.
 
 ## DATABASE TABLE DATA
 
 ### Table: company_core
-{company_data}
+{safe_company_data}
 
 ### Table: founders
-{founders_data}
+{safe_founders_data}
 
 ### Table: key_signals
-{signals_data}
+{safe_signals_data}
 
 ### Table: news
-{news_data}
+{safe_news_data}
 
 ---
 
@@ -359,10 +419,41 @@ Remember: Use ONLY the data provided above. If something is not in the tables, s
 
     # Generate briefing with LLM
     tracker = get_tracker()
+
+    # Get versioned prompt and model config for reproducibility
     try:
-        llm = ChatOpenAI(model=model, temperature=0)
+        system_prompt_obj = get_prompt("briefing_system")
+        system_prompt_content = system_prompt_obj.content
+    except KeyError:
+        # Fallback to inline prompt if registry not available
+        system_prompt_obj = None
+        system_prompt_content = SYSTEM_PROMPT
+
+    try:
+        model_config = get_model_config("briefing")
+        actual_model = model_config.model if model == DEFAULT_LLM_MODEL else model
+        temperature = model_config.temperature
+    except KeyError:
+        model_config = None
+        actual_model = model
+        temperature = 0
+
+    # Create metadata for this LLM call (for reproducibility tracking)
+    call_metadata = LLMCallMetadata.create(
+        operation="briefing",
+        prompt=system_prompt_obj,
+        model_config=model_config,
+        system_prompt=system_prompt_content,
+        user_prompt=user_prompt,
+        company_id=normalized_id,
+        model=actual_model,
+        temperature=temperature,
+    )
+
+    try:
+        llm = ChatOpenAI(model=actual_model, temperature=temperature)
         messages = [
-            SystemMessage(content=SYSTEM_PROMPT),
+            SystemMessage(content=system_prompt_content),
             HumanMessage(content=user_prompt),
         ]
 
@@ -370,22 +461,78 @@ Remember: Use ONLY the data provided above. If something is not in the tables, s
         response = llm.invoke(messages)
         latency_ms = int((time.time() - start_time) * 1000)
 
-        briefing_content = response.content
+        raw_content = response.content
 
         # Track LLM API call
         tokens_in = response.usage_metadata.get("input_tokens", 0) if hasattr(response, "usage_metadata") else 0
         tokens_out = response.usage_metadata.get("output_tokens", 0) if hasattr(response, "usage_metadata") else 0
 
+        # Update metadata with actual metrics
+        call_metadata.tokens_in = tokens_in
+        call_metadata.tokens_out = tokens_out
+        call_metadata.latency_ms = latency_ms
+
+        # Log to both legacy api_calls table and new llm_calls table
         tracker.log_api_call(
             service="openai",
-            endpoint=f"/chat/completions ({model})",
+            endpoint=f"/chat/completions ({actual_model})",
             method="POST",
             status_code=200,
             tokens_in=tokens_in,
             tokens_out=tokens_out,
             latency_ms=latency_ms,
-            metadata={"company_id": normalized_id}
+            metadata={
+                "company_id": normalized_id,
+                "llm_call_id": call_metadata.call_id,
+                "prompt_id": call_metadata.prompt_id,
+                "prompt_version": call_metadata.prompt_version,
+            }
         )
+
+        # Log detailed LLM call for reproducibility
+        tracker.log_llm_call(
+            call_id=call_metadata.call_id,
+            model=actual_model,
+            operation="briefing",
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            latency_ms=latency_ms,
+            prompt_id=call_metadata.prompt_id,
+            prompt_version=call_metadata.prompt_version,
+            prompt_hash=call_metadata.prompt_hash,
+            system_prompt_hash=call_metadata.system_prompt_hash,
+            user_prompt_hash=call_metadata.user_prompt_hash,
+            model_config_name=call_metadata.model_config_name,
+            temperature=temperature,
+            company_id=normalized_id,
+            success=True,
+        )
+
+        # Validate LLM output before using it
+        # This catches empty, truncated, or malformed responses
+        try:
+            briefing_content = validate_briefing_content(
+                raw_content,
+                company_name=bundle.company_core.company_name,
+                strict=True,  # Raise on missing sections
+            )
+        except MissingSectionsError as e:
+            # Log but continue with partial content - better than nothing
+            logger.warning(
+                f"Briefing for {normalized_id} missing sections: {e.missing_sections}. "
+                "Proceeding with partial content."
+            )
+            briefing_content = raw_content.strip() if raw_content else ""
+            result["data_sources"]["validation_warnings"] = [
+                f"Missing sections: {e.missing_sections}"
+            ]
+        except (EmptyResponseError, TruncatedResponseError) as e:
+            # These are fatal - can't use the response
+            raise LLMResponseError(
+                f"LLM returned unusable response: {e}",
+                response_content=raw_content,
+                error_type=e.error_type,
+            )
 
         # Assemble final markdown
         final_markdown = f"""# {bundle.company_core.company_name} | Meeting Brief
@@ -410,10 +557,106 @@ Remember: Use ONLY the data provided above. If something is not in the tables, s
 
         logger.info(f"Generated briefing for {bundle.company_core.company_name}")
 
+        # Log comprehensive LLM interaction for debugging and auditing
+        log_llm_interaction(
+            operation="briefing",
+            model=actual_model,
+            system_prompt=system_prompt_content,
+            user_prompt=user_prompt,
+            response=raw_content,
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            latency_ms=latency_ms,
+            success=True,
+            temperature=temperature,
+            model_config_name=call_metadata.model_config_name,
+            company_id=normalized_id,
+            validation_passed=True,
+            validation_warnings=result.get("data_sources", {}).get("validation_warnings"),
+        )
+
+        # Log audit event for briefing generation
+        log_audit_event(
+            event_type="briefing",
+            action="create",
+            resource_type="briefing",
+            resource_id=normalized_id,
+            details={
+                "company_name": bundle.company_core.company_name,
+                "model": actual_model,
+                "tokens_total": tokens_in + tokens_out,
+                "latency_ms": latency_ms,
+            },
+        )
+
+    except LLMResponseError as e:
+        # Specific LLM validation error - log the failed call
+        result["error"] = f"LLM output validation failed ({e.error_type}): {str(e)}"
+        logger.error(f"Briefing validation failed for {company_id}: {e}")
+
+        # Log the failed call for debugging/analysis
+        tracker.log_llm_call(
+            call_id=call_metadata.call_id,
+            model=call_metadata.model,
+            operation="briefing",
+            tokens_in=call_metadata.tokens_in,
+            tokens_out=call_metadata.tokens_out,
+            latency_ms=call_metadata.latency_ms,
+            prompt_id=call_metadata.prompt_id,
+            prompt_version=call_metadata.prompt_version,
+            prompt_hash=call_metadata.prompt_hash,
+            system_prompt_hash=call_metadata.system_prompt_hash,
+            user_prompt_hash=call_metadata.user_prompt_hash,
+            company_id=normalized_id,
+            success=False,
+            error_message=str(e),
+        )
+
+        # Log failed LLM interaction for observability
+        log_llm_interaction(
+            operation="briefing",
+            model=call_metadata.model,
+            system_prompt=system_prompt_content,
+            user_prompt=user_prompt,
+            response=getattr(e, 'response_content', None),
+            tokens_in=call_metadata.tokens_in,
+            tokens_out=call_metadata.tokens_out,
+            latency_ms=call_metadata.latency_ms,
+            success=False,
+            error_type=e.error_type,
+            error_message=str(e),
+            temperature=temperature,
+            company_id=normalized_id,
+            validation_passed=False,
+        )
     except Exception as e:
         result["error"] = f"LLM generation failed: {str(e)}"
         logger.error(f"Briefing generation failed for {company_id}: {e}")
 
+        # Log the failed call
+        tracker.log_llm_call(
+            call_id=call_metadata.call_id,
+            model=call_metadata.model,
+            operation="briefing",
+            prompt_id=call_metadata.prompt_id,
+            prompt_version=call_metadata.prompt_version,
+            company_id=normalized_id,
+            success=False,
+            error_message=str(e),
+        )
+
+        # Log failed LLM interaction for observability
+        log_llm_interaction(
+            operation="briefing",
+            model=call_metadata.model,
+            success=False,
+            error_type=type(e).__name__,
+            error_message=str(e),
+            company_id=normalized_id,
+        )
+
+    # Clear request context before returning
+    clear_request_context()
     return result
 
 

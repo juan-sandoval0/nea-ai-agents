@@ -7,7 +7,9 @@ from dataclasses import dataclass
 
 from .database import (
     WatchedCompany, CompanySignal, save_signal, signal_exists,
-    get_latest_employee_snapshot, save_employee_snapshot, update_company_harmonic_id
+    get_latest_employee_snapshot, save_employee_snapshot, update_company_harmonic_id,
+    add_company, link_investor_to_company, update_competitors_refreshed,
+    get_competitors_for_company
 )
 from .scorer import score_signal, format_score_breakdown, detect_seniority
 
@@ -28,6 +30,106 @@ class SignalDetector:
     def __init__(self, harmonic_client: HarmonicClient = None, parallel_client: ParallelSearchClient = None):
         self.harmonic = harmonic_client
         self.parallel = parallel_client
+
+    def discover_competitors(self, portfolio_company: WatchedCompany, investor_id: str = None, max_competitors: int = 2) -> List[WatchedCompany]:
+        """
+        Discover competitors for a portfolio company using Harmonic API.
+
+        Uses Harmonic's similar_companies endpoint to find companies similar
+        to the portfolio company based on industry, tags, and other signals.
+
+        Args:
+            portfolio_company: The portfolio company to find competitors for
+            investor_id: Optional investor ID to link competitors to
+            max_competitors: Maximum number of competitors to discover (default: 2)
+
+        Returns:
+            List of newly created competitor WatchedCompany objects
+        """
+        if not self.harmonic:
+            return []
+
+        created_competitors = []
+
+        # Get Harmonic company ID if not present
+        harmonic_id = portfolio_company.harmonic_id
+        if not harmonic_id:
+            harmonic_company = self.harmonic.lookup_company(domain=portfolio_company.company_id)
+            if harmonic_company:
+                update_company_harmonic_id(portfolio_company.id, harmonic_company.id)
+                harmonic_id = harmonic_company.id
+            else:
+                # Mark as refreshed even if we couldn't find the company
+                update_competitors_refreshed(portfolio_company.id)
+                return []
+
+        # Get existing competitors to avoid duplicates
+        existing_competitors = get_competitors_for_company(portfolio_company.id)
+        existing_domains = {c.company_id for c in existing_competitors}
+
+        # Use Harmonic's similar_companies endpoint
+        # Returns URNs like 'urn:harmonic:company:1858'
+        try:
+            similar_response = self.harmonic._request(
+                'GET',
+                f'/search/similar_companies/{harmonic_id}',
+                params={'page_size': max_competitors * 3}  # Fetch extra to account for filtering
+            )
+            similar_urns = similar_response.get('results', [])
+        except Exception:
+            similar_urns = []
+
+        for urn in similar_urns:
+            if len(created_competitors) >= max_competitors:
+                break
+
+            # Extract company ID from URN (e.g., 'urn:harmonic:company:1858' -> '1858')
+            if isinstance(urn, str) and ':' in urn:
+                comp_harmonic_id = urn.split(':')[-1]
+            else:
+                continue
+
+            # Fetch full company details
+            try:
+                comp_data = self.harmonic.get_company(comp_harmonic_id)
+                if not comp_data:
+                    continue
+            except Exception:
+                continue
+
+            comp_domain = comp_data.domain
+            comp_name = comp_data.name or 'Unknown'
+
+            if not comp_domain or comp_domain in existing_domains:
+                continue
+
+            # Skip if same as portfolio company
+            if comp_domain == portfolio_company.company_id:
+                continue
+
+            # Create competitor entry
+            competitor = add_company(
+                company_id=comp_domain,
+                company_name=comp_name,
+                category="competitor",
+                parent_company_id=portfolio_company.id
+            )
+
+            if competitor:
+                # Update Harmonic ID
+                update_company_harmonic_id(competitor.id, comp_harmonic_id)
+
+                # Link to investor if provided
+                if investor_id:
+                    link_investor_to_company(investor_id, competitor.id)
+
+                created_competitors.append(competitor)
+                existing_domains.add(comp_domain)
+
+        # Update the portfolio company's competitors_refreshed_at timestamp
+        update_competitors_refreshed(portfolio_company.id)
+
+        return created_competitors
 
     def detect_all_signals(self, company: WatchedCompany) -> DetectionResult:
         """Detect all signals for a company from all sources."""

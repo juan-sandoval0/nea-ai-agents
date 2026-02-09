@@ -538,7 +538,33 @@ class TestErrorHandling:
         )
 
         mock_response = Mock()
-        mock_response.content = "Sparse briefing content"
+        # Must be > 500 chars and have required sections to pass validation
+        mock_response.content = """## TL;DR
+SparseCo is a company with minimal available data.
+
+## Why This Meeting Matters
+- Opportunity to learn more about the company
+- Initial due diligence meeting
+
+## Company Snapshot
+- Founded: Not found in table
+- HQ: Not found in table
+- Employees: Not found in table
+
+## Founder Information
+No founder data available
+
+## Key Signals
+No signals found in table.
+
+## In the News
+No recent news available (source not yet implemented)
+
+## For This Meeting
+- Understand the business model
+- Identify key risks
+- Determine next steps
+"""
         mock_response.usage_metadata = {"input_tokens": 100, "output_tokens": 50}
 
         mock_llm = Mock()
@@ -549,6 +575,7 @@ class TestErrorHandling:
                 with patch("agents.meeting_briefing.briefing_generator.get_tracker") as mock_tracker:
                     mock_tracker.return_value.log_api_call = Mock()
                     mock_tracker.return_value.log_usage = Mock()
+                    mock_tracker.return_value.log_llm_call = Mock()
 
                     from agents.meeting_briefing.briefing_generator import generate_briefing
                     result = generate_briefing("sparse.com")

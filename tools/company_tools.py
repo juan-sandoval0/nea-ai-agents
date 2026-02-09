@@ -598,6 +598,7 @@ def _summarize_founder_background(
     import os
     from langchain_openai import ChatOpenAI
     from langchain_core.messages import SystemMessage, HumanMessage
+    from core.llm_validation import validate_founder_summary, LLMResponseError
 
     # Skip if no OpenAI key
     if not os.getenv("OPENAI_API_KEY"):
@@ -633,7 +634,23 @@ Write a 2-4 sentence summary focusing on their PRIOR experience and credentials 
             HumanMessage(content=user_prompt),
         ]
         response = llm.invoke(messages)
-        return response.content.strip()
+
+        # Validate the LLM output before returning
+        # This catches empty, echoed, or error responses
+        validated_summary = validate_founder_summary(
+            response.content,
+            founder_name=name,
+            raw_background=raw_background,
+        )
+        return validated_summary
+
+    except LLMResponseError as e:
+        # Validation failed - fall back to raw background
+        logger.warning(
+            f"LLM summary validation failed for {name} ({e.error_type}): {e}. "
+            "Using raw background."
+        )
+        return raw_background
     except Exception as e:
         logger.warning(f"LLM summarization failed for {name}: {e}")
         return raw_background
@@ -673,12 +690,19 @@ def enrich_founder_backgrounds(company_id: str, summarize: bool = True) -> dict:
             ]
         }
 
-    Raises:
-        ValueError: If Swarm API key is not set
+    Returns early with zero counts if SWARM_API_KEY is not set (no error raised).
     """
     swarm = get_swarm_client()
     if swarm is None:
-        raise ValueError("SWARM_API_KEY not set - founder background enrichment unavailable")
+        logger.info("SWARM_API_KEY not set - skipping founder background enrichment")
+        return {
+            "company_id": normalize_company_id(company_id),
+            "enriched_count": 0,
+            "skipped_count": 0,
+            "failed_count": 0,
+            "founders": [],
+            "skipped_reason": "SWARM_API_KEY not set",
+        }
 
     db = get_db()
     normalized_id = normalize_company_id(company_id)
@@ -1156,7 +1180,7 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
 def ingest_company(
     company_id: str,
     user: Optional[str] = None,
-    enrich_backgrounds: bool = False,
+    enrich_backgrounds: bool = True,
 ) -> dict:
     """
     Single entrypoint for company data ingestion.
@@ -1167,7 +1191,7 @@ def ingest_company(
     Args:
         company_id: Company URL or domain
         user: Optional user identifier for tracking
-        enrich_backgrounds: If True, enrich founder backgrounds using Swarm API
+        enrich_backgrounds: If True (default), enrich founder backgrounds using Swarm API
 
     Returns:
         Dict with ingestion results
