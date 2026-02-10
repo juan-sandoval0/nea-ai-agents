@@ -6,6 +6,7 @@ Endpoints:
 - GET /api/briefings - List past briefings
 - GET /api/briefings/{id} - Get a specific briefing
 - DELETE /api/briefings/{id} - Delete a briefing
+- GET /api/digest/weekly - Generate weekly signal digest
 
 Run with:
     uvicorn services.api:app --reload --port 8000
@@ -34,6 +35,11 @@ from services.models import (
     Signal,
     NewsItem,
     ErrorResponse,
+    WeeklyDigestResponse,
+    DigestArticleResponse,
+    SentimentRollup,
+    IndustryHighlight,
+    DigestStats,
 )
 from services.history import BriefingHistoryDB, BriefingRecord
 
@@ -334,6 +340,141 @@ async def delete_briefing(briefing_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Briefing not found")
     return {"status": "deleted", "id": briefing_id}
+
+
+# =============================================================================
+# DIGEST ENDPOINTS
+# =============================================================================
+
+@app.get("/api/digest/weekly", response_model=WeeklyDigestResponse)
+async def get_weekly_digest(
+    days: int = Query(7, ge=1, le=30, description="Number of days to look back"),
+    featured_count: int = Query(3, ge=1, le=5, description="Number of featured articles"),
+    summary_count: int = Query(8, ge=1, le=15, description="Number of summary articles"),
+    investor_id: Optional[str] = Query(None, description="Filter to specific investor"),
+    include_markdown: bool = Query(True, description="Include markdown export"),
+):
+    """
+    Generate a weekly digest of company signals.
+
+    Returns a tiered article display:
+    - Top 2-3 featured articles with full details
+    - 7-8 summarized articles in condensed format
+    - Sentiment rollup across all articles
+    - Industry trend highlights
+    """
+    from agents.news_aggregator.digest import generate_weekly_digest
+
+    try:
+        logger.info(f"Generating weekly digest (days={days}, featured={featured_count}, summary={summary_count})")
+
+        # Generate digest using the digest module
+        digest = generate_weekly_digest(
+            days=days,
+            featured_count=featured_count,
+            summary_count=summary_count,
+            investor_id=investor_id,
+            include_industry_highlights=True,
+            use_llm_summaries=False,  # Can be enabled for enhanced summaries
+        )
+
+        # Convert featured articles
+        featured = [
+            DigestArticleResponse(
+                headline=a.signal.headline,
+                company=a.company_name,
+                category=a.company_category,
+                signal_type=a.signal.signal_type,
+                source=a.signal.source_name,
+                url=a.signal.source_url,
+                published_date=a.signal.published_date,
+                relevance_score=a.signal.relevance_score or 0,
+                rank_score=a.rank_score,
+                sentiment=a.signal.sentiment,
+                synopsis=a.signal.synopsis or a.signal.description,
+            )
+            for a in digest.featured_articles
+        ]
+
+        # Convert summary articles
+        summary = [
+            DigestArticleResponse(
+                headline=a.signal.headline,
+                company=a.company_name,
+                category=a.company_category,
+                signal_type=a.signal.signal_type,
+                source=a.signal.source_name,
+                url=a.signal.source_url,
+                published_date=a.signal.published_date,
+                relevance_score=a.signal.relevance_score or 0,
+                rank_score=a.rank_score,
+                sentiment=a.signal.sentiment,
+                synopsis=a.signal.synopsis,
+            )
+            for a in digest.summary_articles
+        ]
+
+        # Calculate sentiment rollup
+        all_articles = digest.featured_articles + digest.summary_articles
+        sentiment_counts = {"positive": 0, "negative": 0, "neutral": 0}
+        for article in all_articles:
+            sentiment = article.signal.sentiment or "neutral"
+            if sentiment in sentiment_counts:
+                sentiment_counts[sentiment] += 1
+            else:
+                sentiment_counts["neutral"] += 1
+
+        sentiment_rollup = SentimentRollup(
+            positive=sentiment_counts["positive"],
+            negative=sentiment_counts["negative"],
+            neutral=sentiment_counts["neutral"],
+            total=len(all_articles),
+        )
+
+        # Convert industry highlights
+        industry_highlights = [
+            IndustryHighlight(
+                industry=industry,
+                total_signals=data.get("total_signals", 0),
+                company_count=data.get("company_count", 0),
+                top_types=data.get("top_types", {}),
+            )
+            for industry, data in digest.industry_highlights.items()
+        ]
+
+        # Build stats
+        stats = DigestStats(
+            total_signals=digest.stats.get("total_signals", 0),
+            companies_covered=digest.stats.get("companies_covered", 0),
+            portfolio_signals=digest.stats.get("portfolio_signals", 0),
+            competitor_signals=digest.stats.get("competitor_signals", 0),
+            featured_count=len(featured),
+            summary_count=len(summary),
+        )
+
+        # Build response
+        response = WeeklyDigestResponse(
+            start_date=digest.start_date,
+            end_date=digest.end_date,
+            generated_at=datetime.fromisoformat(digest.generated_at),
+            featured_articles=featured,
+            summary_articles=summary,
+            sentiment_rollup=sentiment_rollup,
+            industry_highlights=industry_highlights,
+            stats=stats,
+            markdown=digest.to_markdown() if include_markdown else None,
+        )
+
+        logger.info(
+            f"Digest generated: {len(featured)} featured, {len(summary)} summary, "
+            f"sentiment: +{sentiment_rollup.positive}/-{sentiment_rollup.negative}"
+        )
+
+        return response
+
+    except Exception as e:
+        logger.exception(f"Error generating weekly digest: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # =============================================================================

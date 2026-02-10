@@ -103,3 +103,86 @@ class ErrorResponse(BaseModel):
     """Error response."""
     error: str
     detail: Optional[str] = None
+
+
+# =============================================================================
+# DIGEST MODELS
+# =============================================================================
+
+class DigestArticleResponse(BaseModel):
+    """Article in the weekly digest."""
+    headline: str
+    company: str
+    category: str  # "portfolio" or "competitor"
+    signal_type: str
+    source: Optional[str] = None
+    url: Optional[str] = None
+    published_date: Optional[str] = None
+    relevance_score: int = 0
+    rank_score: float = 0.0
+    sentiment: Optional[str] = None  # "positive", "negative", "neutral"
+    synopsis: Optional[str] = None  # 1-2 sentence summary
+
+
+class SentimentRollup(BaseModel):
+    """Aggregated sentiment statistics."""
+    positive: int = 0
+    negative: int = 0
+    neutral: int = 0
+    total: int = 0
+
+    @property
+    def positive_pct(self) -> float:
+        return (self.positive / self.total * 100) if self.total > 0 else 0.0
+
+    @property
+    def negative_pct(self) -> float:
+        return (self.negative / self.total * 100) if self.total > 0 else 0.0
+
+
+class IndustryHighlight(BaseModel):
+    """Industry trend summary."""
+    industry: str
+    total_signals: int = 0
+    company_count: int = 0
+    top_types: dict = {}
+
+
+class DigestStats(BaseModel):
+    """Digest statistics."""
+    total_signals: int = 0
+    companies_covered: int = 0
+    portfolio_signals: int = 0
+    competitor_signals: int = 0
+    featured_count: int = 0
+    summary_count: int = 0
+
+
+class WeeklyDigestResponse(BaseModel):
+    """Weekly digest response with tiered articles and sentiment rollup."""
+    start_date: str
+    end_date: str
+    generated_at: datetime
+
+    # Tiered article display
+    featured_articles: list[DigestArticleResponse] = Field(
+        default=[],
+        description="Top 2-3 most significant articles with full details"
+    )
+    summary_articles: list[DigestArticleResponse] = Field(
+        default=[],
+        description="Additional 7-8 notable articles in condensed format"
+    )
+
+    # Sentiment rollup
+    sentiment_rollup: SentimentRollup = Field(
+        default_factory=SentimentRollup,
+        description="Aggregated sentiment across all articles"
+    )
+
+    # Additional context
+    industry_highlights: list[IndustryHighlight] = []
+    stats: DigestStats = Field(default_factory=DigestStats)
+
+    # Markdown export
+    markdown: Optional[str] = None
