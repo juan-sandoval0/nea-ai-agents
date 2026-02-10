@@ -15,7 +15,7 @@ from .scorer import score_signal, format_score_breakdown, detect_seniority
 
 # Use existing clients from core
 from core.clients.harmonic import HarmonicClient
-from core.clients.parallel_search import ParallelSearchClient
+from core.clients.parallel_search import ParallelSearchClient, _analyze_sentiment
 
 
 @dataclass
@@ -249,11 +249,15 @@ class SignalDetector:
 
         for result in results:
             title = result.title or ""
-            summary = " ".join(result.excerpts)[:500] if result.excerpts else ""
+            excerpts = result.excerpts or []
+            summary = " ".join(excerpts)[:500] if excerpts else ""
             url = result.url or ""
             source = result.source_domain or "Web"
             published = result.publish_date
             signal_type = self.parallel.classify_result(result)
+
+            # Analyze sentiment using keyword matching
+            sentiment = _analyze_sentiment(title, excerpts)
 
             headline = title[:200] if len(title) > 200 else title
 
@@ -278,7 +282,8 @@ class SignalDetector:
                 published_date=published,
                 relevance_score=score,
                 score_breakdown=format_score_breakdown(breakdown),
-                raw_data=json.dumps(raw_data)
+                raw_data=json.dumps(raw_data),
+                sentiment=sentiment,
             )
             save_signal(signal)
             signals.append(signal)
