@@ -5,6 +5,7 @@ Available clients:
 - TavilyClient: Tavily website intelligence API
 - SwarmClient: The Swarm profile intelligence API
 - ParallelSearchClient: Parallel Search API for news research
+- HackerNewsClient: Hacker News Algolia API for community mentions
 """
 
 from core.clients.harmonic import (
@@ -34,6 +35,12 @@ from core.clients.parallel_search import (
     ParallelSearchResult,
     ParallelSearchError,
 )
+from core.clients.hackernews import (
+    HackerNewsClient,
+    HNStory,
+    HNSearchResult,
+    HackerNewsAPIError,
+)
 
 __all__ = [
     "HarmonicClient",
@@ -55,4 +62,8 @@ __all__ = [
     "ParallelSearchClient",
     "ParallelSearchResult",
     "ParallelSearchError",
+    "HackerNewsClient",
+    "HNStory",
+    "HNSearchResult",
+    "HackerNewsAPIError",
 ]

@@ -54,6 +54,9 @@ class NewsItem(BaseModel):
     url: Optional[str] = None
     published_date: Optional[str] = None
     takeaway: Optional[str] = None
+    synopsis: Optional[str] = None  # 1-2 sentence VC-relevant summary
+    sentiment: Optional[str] = None  # "positive", "negative", or "neutral"
+    news_type: Optional[str] = None  # Signal type: funding, acquisition, executive_change, etc.
 
 
 class BriefingResponse(BaseModel):

@@ -108,6 +108,9 @@ class NewsArticle:
     url: Optional[str] = None
     published_date: Optional[str] = None
     excerpts: Optional[str] = None  # Article content/excerpts for LLM context
+    synopsis: Optional[str] = None  # 1-2 sentence VC-relevant summary
+    sentiment: Optional[str] = None  # "positive", "negative", or "neutral"
+    news_type: Optional[str] = None  # Signal type: funding, acquisition, executive_change, etc.
     observed_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
     source: str = "news_api"  # or "pending_news_api"
 
@@ -120,6 +123,10 @@ class NewsArticle:
         """Create from database row."""
         d = dict(row)
         d.pop('id', None)  # Remove autoincrement id
+        # Handle columns that may not exist in older DBs
+        for col in ('synopsis', 'sentiment', 'news_type'):
+            if col not in d:
+                d[col] = None
         return cls(**d)
 
 
@@ -248,6 +255,9 @@ class Database:
                     url TEXT,
                     published_date TEXT,
                     excerpts TEXT,
+                    synopsis TEXT,
+                    sentiment TEXT,
+                    news_type TEXT,
                     observed_at TEXT NOT NULL,
                     source TEXT DEFAULT 'news_api',
                     FOREIGN KEY (company_id) REFERENCES company_core(company_id),
@@ -255,11 +265,12 @@ class Database:
                 )
             """)
 
-            # Add excerpts column if it doesn't exist (migration for existing DBs)
-            try:
-                cursor.execute("ALTER TABLE news ADD COLUMN excerpts TEXT")
-            except sqlite3.OperationalError:
-                pass  # Column already exists
+            # Add columns if they don't exist (migration for existing DBs)
+            for column in ['excerpts', 'synopsis', 'sentiment', 'news_type']:
+                try:
+                    cursor.execute(f"ALTER TABLE news ADD COLUMN {column} TEXT")
+                except sqlite3.OperationalError:
+                    pass  # Column already exists
 
             # Key signals table
             cursor.execute("""
@@ -426,10 +437,12 @@ class Database:
                 cursor.execute("""
                     INSERT OR IGNORE INTO news (
                         company_id, article_headline, outlet, url,
-                        published_date, excerpts, observed_at, source
+                        published_date, excerpts, synopsis, sentiment, news_type,
+                        observed_at, source
                     ) VALUES (
                         :company_id, :article_headline, :outlet, :url,
-                        :published_date, :excerpts, :observed_at, :source
+                        :published_date, :excerpts, :synopsis, :sentiment, :news_type,
+                        :observed_at, :source
                     )
                 """, data)
 

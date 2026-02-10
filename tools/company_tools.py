@@ -577,6 +577,59 @@ Summary:"""
         return raw_content[:200]
 
 
+def _summarize_news_article(
+    headline: str,
+    excerpts: str,
+    outlet: str,
+    company_name: str,
+) -> str:
+    """
+    Use OpenAI to summarize a news article into 1-2 VC-relevant sentences.
+
+    Args:
+        headline: Article headline
+        excerpts: Article excerpts/content
+        outlet: News outlet name
+        company_name: Company the article is about
+
+    Returns:
+        1-2 sentence VC-relevant summary
+    """
+    import os
+    from langchain_openai import ChatOpenAI
+    from langchain_core.messages import SystemMessage, HumanMessage
+
+    if not os.getenv("OPENAI_API_KEY"):
+        return headline[:200] if headline else excerpts[:200]
+
+    system_prompt = """You are a VC research assistant. Summarize news articles into 1-2 sentences.
+Focus on what matters to investors: funding, acquisitions, product launches, partnerships, executive changes, market expansion, competitive moves.
+Skip generic company descriptions and boilerplate content.
+Be concise and factual. Start with the key news, not the company name."""
+
+    user_prompt = f"""Summarize this news article about {company_name} in 1-2 sentences for a VC investor:
+
+Headline: {headline}
+Source: {outlet}
+
+Content:
+{excerpts}
+
+Summary:"""
+
+    try:
+        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_prompt),
+        ]
+        response = llm.invoke(messages)
+        return response.content.strip()
+    except Exception as e:
+        logger.warning(f"LLM summarization failed for news article: {e}")
+        return headline[:200] if headline else excerpts[:200]
+
+
 def _summarize_founder_background(
     name: str,
     role_title: str,
