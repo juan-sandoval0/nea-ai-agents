@@ -291,10 +291,10 @@ def cmd_check(investor_id: str = None, refresh_competitors: bool = True):
     print()
 
 
-def cmd_signals(min_score: int = None, signal_type: str = None, limit: int = 50):
+def cmd_signals(min_score: int = None, signal_type: str = None, limit: int = 50, company_filter: str = None):
     """Display stored signals."""
     # Fetch more signals to account for noise filtering
-    signals = get_signals(min_score=min_score, signal_type=signal_type, limit=limit * 2)
+    signals = get_signals(min_score=min_score, signal_type=signal_type, limit=limit * 3)
 
     if not signals:
         print("No signals found. Run --check to detect signals.")
@@ -302,53 +302,84 @@ def cmd_signals(min_score: int = None, signal_type: str = None, limit: int = 50)
 
     companies = {c.id: c for c in get_companies(active_only=False)}
 
-    print(f"\n{'='*80}")
-    print(f"  SIGNALS")
-    print(f"{'='*80}")
-
-    shown = 0
+    # Group signals by company
+    by_company = {}
     for s in signals:
-        if shown >= limit:
-            break
-
-        # Filter out noise
         if is_noise(s.headline, s.source_url or ""):
             continue
-
         company = companies.get(s.company_id)
-        company_name = company.company_name if company else "Unknown"
-        category = company.category if company else "unknown"
-        headline = s.headline[:70] + "..." if len(s.headline) > 70 else s.headline
+        if not company:
+            continue
+        # Apply company filter if specified
+        if company_filter and company_filter.lower() not in company.company_name.lower():
+            continue
+        if company.company_name not in by_company:
+            by_company[company.company_name] = {'category': company.category, 'signals': []}
+        by_company[company.company_name]['signals'].append(s)
 
-        type_icon = {
-            'funding': '💰', 'acquisition': '🤝', 'product_launch': '🚀',
-            'executive_change': '👤', 'news_coverage': '📰', 'partnership': '🔗'
-        }.get(s.signal_type, '📌')
+    if not by_company:
+        print(f"No signals found" + (f" for '{company_filter}'" if company_filter else "") + ".")
+        return
 
-        sentiment_icon = {
-            'positive': '📈', 'negative': '📉', 'neutral': '➖'
-        }.get(s.sentiment or 'neutral', '➖')
+    print(f"\n{'='*90}")
+    print(f"  NEWS AGGREGATOR - SIGNALS")
+    print(f"{'='*90}")
 
-        # Build metadata line
-        meta_parts = []
-        if s.published_date:
-            meta_parts.append(s.published_date)
-        if s.source_name:
-            meta_parts.append(s.source_name)
-        meta_parts.append(f"score: {s.relevance_score}")
-        meta_str = " | ".join(meta_parts)
+    total_shown = 0
+    # Sort: portfolio first, then alphabetically
+    for company_name in sorted(by_company.keys(), key=lambda x: (by_company[x]['category'] != 'portfolio', x)):
+        data = by_company[company_name]
+        category = data['category']
+        company_signals = data['signals']
 
-        print(f"\n{type_icon} {company_name} ({category}) {sentiment_icon}")
-        print(f"   {headline}")
-        print(f"   {meta_str}")
-        if s.source_url:
-            print(f"   → {s.source_url}")
+        # Limit per company
+        max_per_company = limit // len(by_company) + 5 if not company_filter else limit
+        company_signals = company_signals[:max_per_company]
 
-        shown += 1
+        icon = '📊' if category == 'portfolio' else '📌'
+        print(f"\n{icon} {company_name.upper()} ({category})")
+        print("-" * 70)
 
-    print(f"\n{'='*80}")
-    print(f"Showing {shown} signals" + (f" (min score: {min_score})" if min_score else ""))
-    print()
+        for s in company_signals:
+            if total_shown >= limit:
+                break
+
+            # Signal type with icon
+            type_label = {
+                'funding': '💰 Funding',
+                'acquisition': '🤝 Acquisition',
+                'product_launch': '🚀 Product Launch',
+                'executive_change': '👤 Executive Change',
+                'news_coverage': '📰 News',
+                'partnership': '🔗 Partnership',
+                'hiring_expansion': '👥 Hiring'
+            }.get(s.signal_type, '📌 Signal')
+
+            # Sentiment with icon
+            sentiment_label = {
+                'positive': '📈 POSITIVE',
+                'negative': '📉 NEGATIVE',
+                'neutral': '➖ NEUTRAL'
+            }.get(s.sentiment or 'neutral', '➖ NEUTRAL')
+
+            headline = s.headline[:75] + "..." if len(s.headline) > 75 else s.headline
+            date = s.published_date or "N/A"
+            source = s.source_name or "Unknown"
+
+            print(f"\n  {type_label} | {sentiment_label}")
+            print(f"  {headline}")
+            print(f"  📅 {date} | 🔗 {source}")
+            if s.source_url:
+                print(f"  → {s.source_url}")
+
+            total_shown += 1
+
+        if total_shown >= limit:
+            break
+
+    print(f"\n{'='*90}")
+    print(f"Showing {total_shown} signals across {len(by_company)} companies")
+    print(f"{'='*90}\n")
 
 
 def cmd_import_file(filepath: str, category: str, investor_id: str = None):
@@ -645,6 +676,7 @@ Examples:
     # Filtering options
     parser.add_argument("--min-score", type=int, help="Minimum relevance score")
     parser.add_argument("--type", dest="signal_type", help="Filter by signal type")
+    parser.add_argument("--company", help="Filter signals by company name (e.g., --company Databricks)")
     parser.add_argument("--limit", type=int, default=50, help="Max signals to show")
     parser.add_argument("--days", type=int, default=7, help="Days to look back for alerts")
 
@@ -668,7 +700,7 @@ Examples:
     elif args.alerts:
         cmd_alerts(days=args.days)
     elif args.signals:
-        cmd_signals(min_score=args.min_score, signal_type=args.signal_type, limit=args.limit)
+        cmd_signals(min_score=args.min_score, signal_type=args.signal_type, limit=args.limit, company_filter=args.company)
     else:
         parser.print_help()
 
