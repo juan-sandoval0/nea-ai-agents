@@ -186,3 +186,35 @@ class WeeklyDigestResponse(BaseModel):
 
     # Markdown export
     markdown: Optional[str] = None
+
+
+# =============================================================================
+# WATCHLIST MODELS
+# =============================================================================
+
+class WatchlistAddRequest(BaseModel):
+    """Request to add a company to the watchlist."""
+    domain: str = Field(..., description="Company domain (e.g., 'stripe.com')")
+    name: str = Field(..., description="Company name (e.g., 'Stripe')")
+    category: str = Field(
+        default="portfolio",
+        description="Category: 'portfolio' or 'competitor'"
+    )
+
+
+class WatchlistCompanyResponse(BaseModel):
+    """Company in the watchlist."""
+    id: str
+    domain: str
+    name: str
+    category: str
+    is_active: bool = True
+    competitors: list[str] = []  # List of competitor names
+    created_at: Optional[datetime] = None
+
+
+class WatchlistResponse(BaseModel):
+    """Response for listing watchlist companies."""
+    companies: list[WatchlistCompanyResponse]
+    total_portfolio: int
+    total_competitors: int

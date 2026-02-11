@@ -76,6 +76,30 @@ NOISE_PATTERNS = [
     r'merge labs.*bci',     # Filter out wrong Merge (brain computer interface)
     r'altman.*merge',       # Sam Altman's Merge Labs
     r'brains and computers',
+    # Generic M&A noise (not about company "Merge")
+    r'mergers\s*(and|&)\s*acquisitions',
+    r'm&a\s*(deals|data|news)',
+    r'post-?merger',
+    r'executive transitions.*m&a',
+    r'navigating leadership.*merger',
+    r'when firms merge',
+    r'merger integration',
+    r'merger.*breaking news',
+    r'largest.*merger',
+    r'managing.*after.*merger',
+    r'partnerships.*evolve.*mergers',
+    r'mnacommunity\.com',
+    r'intellizence\.com.*merger',
+    r'businesswire\.com/newsroom/subject/merger',
+    r'spglobal\.com.*mergers-and-acquisitions',
+    r'reuters\.com/legal/mergers-acquisitions',
+    r'bain\.com.*merger',
+    r'bluprintx\.com.*merger',
+    r'insidepublicaccounting\.com.*merge',
+    r'jrgpartners\.com.*merger',
+    r'tworld\.com.*merger',
+    r'unifyr\.com.*merger',
+    r'mergeworld\.com',  # Different company named Merge
 ]
 
 
@@ -269,7 +293,8 @@ def cmd_check(investor_id: str = None, refresh_competitors: bool = True):
 
 def cmd_signals(min_score: int = None, signal_type: str = None, limit: int = 50):
     """Display stored signals."""
-    signals = get_signals(min_score=min_score, signal_type=signal_type, limit=limit)
+    # Fetch more signals to account for noise filtering
+    signals = get_signals(min_score=min_score, signal_type=signal_type, limit=limit * 2)
 
     if not signals:
         print("No signals found. Run --check to detect signals.")
@@ -278,17 +303,51 @@ def cmd_signals(min_score: int = None, signal_type: str = None, limit: int = 50)
     companies = {c.id: c for c in get_companies(active_only=False)}
 
     print(f"\n{'='*80}")
-    print(f"{'Score':<6} {'Type':<15} {'Company':<20} {'Headline':<35}")
+    print(f"  SIGNALS")
     print(f"{'='*80}")
 
+    shown = 0
     for s in signals:
+        if shown >= limit:
+            break
+
+        # Filter out noise
+        if is_noise(s.headline, s.source_url or ""):
+            continue
+
         company = companies.get(s.company_id)
         company_name = company.company_name if company else "Unknown"
-        headline = s.headline[:33] + ".." if len(s.headline) > 35 else s.headline
-        print(f"{s.relevance_score:<6} {s.signal_type:<15} {company_name:<20} {headline:<35}")
+        category = company.category if company else "unknown"
+        headline = s.headline[:70] + "..." if len(s.headline) > 70 else s.headline
 
-    print(f"{'='*80}")
-    print(f"Showing {len(signals)} signals" + (f" (min score: {min_score})" if min_score else ""))
+        type_icon = {
+            'funding': '💰', 'acquisition': '🤝', 'product_launch': '🚀',
+            'executive_change': '👤', 'news_coverage': '📰', 'partnership': '🔗'
+        }.get(s.signal_type, '📌')
+
+        sentiment_icon = {
+            'positive': '📈', 'negative': '📉', 'neutral': '➖'
+        }.get(s.sentiment or 'neutral', '➖')
+
+        # Build metadata line
+        meta_parts = []
+        if s.published_date:
+            meta_parts.append(s.published_date)
+        if s.source_name:
+            meta_parts.append(s.source_name)
+        meta_parts.append(f"score: {s.relevance_score}")
+        meta_str = " | ".join(meta_parts)
+
+        print(f"\n{type_icon} {company_name} ({category}) {sentiment_icon}")
+        print(f"   {headline}")
+        print(f"   {meta_str}")
+        if s.source_url:
+            print(f"   → {s.source_url}")
+
+        shown += 1
+
+    print(f"\n{'='*80}")
+    print(f"Showing {shown} signals" + (f" (min score: {min_score})" if min_score else ""))
     print()
 
 

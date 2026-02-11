@@ -40,6 +40,9 @@ from services.models import (
     SentimentRollup,
     IndustryHighlight,
     DigestStats,
+    WatchlistAddRequest,
+    WatchlistCompanyResponse,
+    WatchlistResponse,
 )
 from services.history import BriefingHistoryDB, BriefingRecord
 
@@ -474,6 +477,176 @@ async def get_weekly_digest(
 
     except Exception as e:
         logger.exception(f"Error generating weekly digest: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# WATCHLIST ENDPOINTS
+# =============================================================================
+
+@app.get("/api/watchlist", response_model=WatchlistResponse)
+async def get_watchlist():
+    """
+    Get all companies in the watchlist.
+
+    Returns portfolio companies with their discovered competitors.
+    """
+    from agents.news_aggregator.database import (
+        init_db, get_companies, get_portfolio_companies,
+        get_competitors_for_company
+    )
+
+    try:
+        init_db()
+
+        portfolio = get_portfolio_companies()
+        all_companies = get_companies()
+
+        companies = []
+
+        # Add portfolio companies with their competitors
+        for p in portfolio:
+            competitors = get_competitors_for_company(p.id)
+            competitor_names = [c.company_name for c in competitors]
+
+            companies.append(WatchlistCompanyResponse(
+                id=p.id,
+                domain=p.company_id,
+                name=p.company_name,
+                category="portfolio",
+                is_active=p.is_active,
+                competitors=competitor_names,
+                created_at=None,
+            ))
+
+        # Add standalone competitors (those without a parent)
+        for c in all_companies:
+            if c.category == "competitor" and not c.parent_company_id:
+                companies.append(WatchlistCompanyResponse(
+                    id=c.id,
+                    domain=c.company_id,
+                    name=c.company_name,
+                    category="competitor",
+                    is_active=c.is_active,
+                    competitors=[],
+                    created_at=None,
+                ))
+
+        portfolio_count = len([c for c in companies if c.category == "portfolio"])
+        competitor_count = len([c for c in all_companies if c.category == "competitor"])
+
+        return WatchlistResponse(
+            companies=companies,
+            total_portfolio=portfolio_count,
+            total_competitors=competitor_count,
+        )
+
+    except Exception as e:
+        logger.exception(f"Error fetching watchlist: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/watchlist", response_model=WatchlistCompanyResponse)
+async def add_to_watchlist(request: WatchlistAddRequest):
+    """
+    Add a company to the watchlist.
+
+    - domain: Company domain (e.g., "stripe.com")
+    - name: Company name (e.g., "Stripe")
+    - category: "portfolio" or "competitor"
+    """
+    from agents.news_aggregator.database import (
+        init_db, add_company, get_or_create_default_investor,
+        link_investor_to_company, get_company_by_domain
+    )
+
+    try:
+        init_db()
+
+        # Validate category
+        if request.category not in ["portfolio", "competitor"]:
+            raise HTTPException(
+                status_code=400,
+                detail="Category must be 'portfolio' or 'competitor'"
+            )
+
+        # Check if company already exists
+        existing = get_company_by_domain(request.domain)
+        if existing:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Company '{request.domain}' already exists in watchlist"
+            )
+
+        # Get default investor
+        investor = get_or_create_default_investor()
+
+        # Add company
+        company = add_company(
+            company_id=request.domain,
+            company_name=request.name,
+            category=request.category,
+        )
+
+        # Link to investor
+        link_investor_to_company(investor.id, company.id)
+
+        logger.info(f"Added {request.name} ({request.domain}) to watchlist as {request.category}")
+
+        return WatchlistCompanyResponse(
+            id=company.id,
+            domain=company.company_id,
+            name=company.company_name,
+            category=company.category,
+            is_active=company.is_active,
+            competitors=[],
+            created_at=None,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error adding to watchlist: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/watchlist/{domain}")
+async def remove_from_watchlist(domain: str, hard_delete: bool = False):
+    """
+    Remove a company from the watchlist.
+
+    - domain: Company domain to remove
+    - hard_delete: If true, permanently delete. Otherwise just deactivate.
+    """
+    from agents.news_aggregator.database import (
+        init_db, get_company_by_domain, remove_company, deactivate_company
+    )
+
+    try:
+        init_db()
+
+        company = get_company_by_domain(domain)
+        if not company:
+            raise HTTPException(status_code=404, detail=f"Company '{domain}' not found")
+
+        if hard_delete:
+            success = remove_company(company.id, hard_delete=True)
+            action = "deleted"
+        else:
+            success = deactivate_company(company.id)
+            action = "deactivated"
+
+        if not success:
+            raise HTTPException(status_code=500, detail=f"Failed to {action} company")
+
+        logger.info(f"{action.capitalize()} {company.company_name} ({domain}) from watchlist")
+
+        return {"status": action, "domain": domain, "name": company.company_name}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error removing from watchlist: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
