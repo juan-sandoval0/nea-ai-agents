@@ -73,6 +73,14 @@ SOURCE_PRIORITY = {
     'pitchbook.com': 55,
 }
 
+# Industry search configuration (to limit API calls)
+INDUSTRY_SEARCH_CONFIG = {
+    'max_industries': 3,          # Max industries to search
+    'max_results_per_industry': 5,  # Max results per industry search
+    'min_priority_score': 45.0,   # Min score to include industry stories
+    'industry_priority_boost': -10,  # Score adjustment for non-tracked companies
+}
+
 # Classification rules (order matters - first match wins)
 CLASSIFICATION_RULES = [
     # FUNDING - most specific first
@@ -305,6 +313,10 @@ class StoryStore:
     def get_competitor_stories(self) -> List[Story]:
         """Get stories for competitor companies."""
         return [s for s in self.stories if s.company_category == 'competitor']
+
+    def get_industry_stories(self) -> List[Story]:
+        """Get stories from industry-wide search (not tracked companies)."""
+        return [s for s in self.stories if s.company_category == 'industry']
 
     def get_stories_by_industry(self, industry: str) -> List[Story]:
         """Get stories for a specific industry."""
@@ -736,13 +748,18 @@ def calculate_priority_score(story: Story) -> Tuple[float, List[str]]:
     if class_score >= 25:
         reasons.append(f"High-impact: {story.classification}")
 
-    # Entity relevance (0-20)
+    # Entity relevance (0-20, or penalty for industry-wide)
     if story.company_category == 'portfolio':
         score += 20
         reasons.append("Portfolio company")
     elif story.company_category == 'competitor':
         score += 10
         reasons.append("Competitor")
+    elif story.company_category == 'industry':
+        # Industry stories get a penalty since they're not from tracked companies
+        # But high-impact classifications can still make them relevant
+        score += INDUSTRY_SEARCH_CONFIG.get('industry_priority_boost', -10)
+        reasons.append("Industry news")
 
     # Source credibility (0-15)
     if story.articles:
@@ -853,7 +870,7 @@ def render_digest_markdown(digest: InvestorDigest) -> str:
         lines.append("")
 
     # Industry Trends section (only if not already filtered by industry)
-    # Deduplicate: only show stories NOT already shown in Portfolio/Competitors
+    # Shows: 1) Industry-wide news (beyond tracked companies), 2) Tracked company stories by industry
     lines.append("## 🏭 Industry Trends\n")
 
     if digest.industry_filter:
@@ -867,20 +884,36 @@ def render_digest_markdown(digest: InvestorDigest) -> str:
         for s in competitor_stories:
             shown_story_ids.add(s.story_id)
 
+        industry_section_has_stories = False
+
+        # Part 1: Industry-wide news (from search, not tracked companies)
+        industry_wide_stories = sorted(
+            digest.store.get_industry_stories(),
+            key=lambda s: s.priority_score,
+            reverse=True
+        )[:10]  # Top 10 industry-wide stories
+
+        if industry_wide_stories:
+            industry_section_has_stories = True
+            lines.append("### Industry-Wide News\n")
+            lines.append("*Top stories from your portfolio's industries (beyond tracked companies)*\n")
+            lines.extend(_render_story_table(industry_wide_stories))
+            lines.append("")
+
+            # Mark as shown
+            for s in industry_wide_stories:
+                shown_story_ids.add(s.story_id)
+
+        # Part 2: Additional stories from tracked companies, grouped by industry
         industry_summary = digest.get_industry_summary()
 
-        if not industry_summary:
-            lines.append("*No industry tags assigned to companies. Run `--refresh-industries` to fetch tags from Harmonic.*")
-            lines.append("")
-        else:
+        if industry_summary:
             # Sort by story count descending, get top industries
             sorted_industries = sorted(
                 industry_summary.items(),
                 key=lambda x: x[1]['story_count'],
                 reverse=True
             )[:5]  # Top 5 industries
-
-            industry_section_has_stories = False
 
             for industry, data in sorted_industries:
                 # Get stories for this industry, excluding already shown
@@ -907,10 +940,13 @@ def render_digest_markdown(digest: InvestorDigest) -> str:
                     for s in industry_stories:
                         shown_story_ids.add(s.story_id)
 
-            if not industry_section_has_stories:
-                total_shown = len(shown_story_ids)
+        if not industry_section_has_stories:
+            total_shown = len(shown_story_ids)
+            if total_shown > 0:
                 lines.append(f"*All {total_shown} stories were already shown in Portfolio Companies and Competitors sections above.*")
-                lines.append("")
+            else:
+                lines.append("*No industry tags assigned to companies. Run `--refresh-industries` to fetch tags from Harmonic.*")
+            lines.append("")
 
     # Footer
     lines.append("---")
@@ -919,21 +955,107 @@ def render_digest_markdown(digest: InvestorDigest) -> str:
     return '\n'.join(lines)
 
 
-def _render_story_table(stories: List[Story]) -> List[str]:
-    """Render stories as markdown table."""
+def _render_story_table(stories: List[Story], include_company: bool = True) -> List[str]:
+    """Render stories as a formatted table using pandas."""
+    if not stories:
+        return ["*No stories*"]
+
+    try:
+        import pandas as pd
+
+        # Build data for DataFrame
+        data = []
+        for story in stories:
+            # Truncate title
+            title = story.primary_title[:55]
+            if len(story.primary_title) > 55:
+                title += "..."
+
+            # Sentiment with icon
+            sent = story.sentiment
+            sent_icon = {'Positive': '📈', 'Negative': '📉', 'Neutral': '➖', 'Mixed': '⚖️'}.get(sent.label, '➖')
+            sent_str = f"{sent_icon} {sent.score:+d}"
+
+            # Synopsis (truncate)
+            synopsis = story.synopsis[:120]
+            if len(story.synopsis) > 120:
+                synopsis += "..."
+
+            # Sources indicator
+            sources = f"+{len(story.other_urls)}" if story.other_urls else ""
+
+            row = {
+                'Company': story.company_name,
+                'Title': title,
+                'Type': story.classification,
+                'Sent': sent_str,
+                'Sources': sources,
+                'Synopsis': synopsis,
+                'URL': story.primary_url,
+            }
+            data.append(row)
+
+        df = pd.DataFrame(data)
+
+        # Select columns based on include_company flag
+        if include_company:
+            cols = ['Company', 'Title', 'Type', 'Sent', 'Sources', 'Synopsis']
+        else:
+            cols = ['Title', 'Type', 'Sent', 'Sources', 'Synopsis']
+
+        # Use tabulate for nicer output if available, otherwise pandas
+        try:
+            from tabulate import tabulate
+            table = tabulate(
+                df[cols],
+                headers='keys',
+                tablefmt='simple',
+                showindex=False,
+                maxcolwidths=[15, 40, 10, 6, 4, 60] if include_company else [45, 10, 6, 4, 60]
+            )
+        except ImportError:
+            # Fall back to pandas to_string
+            table = df[cols].to_string(index=False)
+
+        lines = ["```"]
+        lines.append(table)
+        lines.append("```")
+
+        # Add URLs as footnotes
+        lines.append("")
+        lines.append("**Links:**")
+        for i, story in enumerate(stories, 1):
+            short_title = story.primary_title[:50]
+            if len(story.primary_title) > 50:
+                short_title += "..."
+            lines.append(f"{i}. [{short_title}]({story.primary_url})")
+
+        return lines
+
+    except ImportError:
+        # Fallback to simple markdown table if pandas not available
+        return _render_story_table_markdown(stories, include_company)
+
+
+def _render_story_table_markdown(stories: List[Story], include_company: bool = True) -> List[str]:
+    """Fallback markdown table renderer."""
     if not stories:
         return ["*No stories*"]
 
     lines = []
 
     # Table header
-    lines.append("| # | Title | Type | Sentiment | Synopsis |")
-    lines.append("|---|-------|------|-----------|----------|")
+    if include_company:
+        lines.append("| Company | Title | Type | Sent | Synopsis |")
+        lines.append("|---------|-------|------|------|----------|")
+    else:
+        lines.append("| Title | Type | Sent | Synopsis |")
+        lines.append("|-------|------|------|----------|")
 
-    for i, story in enumerate(stories, 1):
+    for story in stories:
         # Truncate title
-        title = story.primary_title[:60]
-        if len(story.primary_title) > 60:
+        title = story.primary_title[:50]
+        if len(story.primary_title) > 50:
             title += "..."
 
         # Format title as link
@@ -942,20 +1064,161 @@ def _render_story_table(stories: List[Story]) -> List[str]:
         # Sentiment with icon
         sent = story.sentiment
         sent_icon = {'Positive': '📈', 'Negative': '📉', 'Neutral': '➖', 'Mixed': '⚖️'}.get(sent.label, '➖')
-        sent_cell = f"{sent_icon} {sent.score:+d}"
+        sent_cell = f"{sent_icon}{sent.score:+d}"
 
         # Synopsis (truncate)
-        synopsis = story.synopsis[:150]
-        if len(story.synopsis) > 150:
+        synopsis = story.synopsis[:100]
+        if len(story.synopsis) > 100:
             synopsis += "..."
-
-        # Other URLs indicator
         if story.other_urls:
-            synopsis += f" *+{len(story.other_urls)} sources*"
+            synopsis += f" *+{len(story.other_urls)}*"
 
-        lines.append(f"| {i} | {title_cell} | {story.classification} | {sent_cell} | {synopsis} |")
+        if include_company:
+            lines.append(f"| {story.company_name} | {title_cell} | {story.classification} | {sent_cell} | {synopsis} |")
+        else:
+            lines.append(f"| {title_cell} | {story.classification} | {sent_cell} | {synopsis} |")
 
     return lines
+
+
+# =============================================================================
+# INDUSTRY NEWS SEARCH
+# =============================================================================
+
+def get_portfolio_industries(investor_id: str = None) -> List[str]:
+    """Get unique industries from portfolio companies, sorted by frequency."""
+    portfolio = get_portfolio_companies(investor_id)
+    industry_counts: Dict[str, int] = {}
+
+    for company in portfolio:
+        for tag in company.industries:
+            # Normalize tag
+            tag_lower = tag.lower().strip()
+            industry_counts[tag_lower] = industry_counts.get(tag_lower, 0) + 1
+
+    # Sort by count (most common first) and return
+    sorted_industries = sorted(industry_counts.items(), key=lambda x: x[1], reverse=True)
+    return [industry for industry, _ in sorted_industries]
+
+
+def search_industry_news(industries: List[str], days: int = 7) -> List[ArticleRef]:
+    """
+    Search for news across industries using ParallelSearchClient.
+
+    Args:
+        industries: List of industry tags to search
+        days: Days to look back
+
+    Returns:
+        List of ArticleRef objects from industry searches
+    """
+    try:
+        from core.clients.parallel_search import ParallelSearchClient
+    except ImportError:
+        logger.warning("ParallelSearchClient not available for industry search")
+        return []
+
+    config = INDUSTRY_SEARCH_CONFIG
+    max_industries = config['max_industries']
+    max_results = config['max_results_per_industry']
+
+    articles: List[ArticleRef] = []
+    searched_urls = set()  # Deduplicate across industries
+
+    try:
+        client = ParallelSearchClient()
+    except Exception as e:
+        logger.warning(f"Failed to initialize ParallelSearchClient: {e}")
+        return []
+
+    # Search top N industries
+    for industry in industries[:max_industries]:
+        # Build search query for the industry
+        search_terms = _get_industry_search_terms(industry)
+        if not search_terms:
+            continue
+
+        logger.info(f"Searching industry news for: {industry}")
+
+        try:
+            # Search for industry news
+            results = client.search_company_news(
+                search_terms,
+                max_results=max_results
+            )
+
+            for result in results:
+                url = result.url or ""
+                if not url or url in searched_urls:
+                    continue
+                searched_urls.add(url)
+
+                # Create ArticleRef for industry story
+                article = ArticleRef(
+                    url=url,
+                    title=result.title or "",
+                    source_domain=result.source_domain or extract_domain(url),
+                    published_date=result.publish_date,
+                    snippet=" ".join(result.excerpts or [])[:500] if result.excerpts else "",
+                    engagement_score=0,
+                    company_id="",  # No specific company
+                    company_name=f"[{industry.title()}]",  # Show industry as "company"
+                    company_category="industry",  # Special category
+                    parent_company_name=None,
+                    industry_tags=[industry],
+                    signal_id="",
+                )
+
+                # Filter noise
+                if not is_noise(article):
+                    articles.append(article)
+
+        except Exception as e:
+            logger.warning(f"Industry search failed for {industry}: {e}")
+            continue
+
+    logger.info(f"Found {len(articles)} industry news articles")
+    return articles
+
+
+def _get_industry_search_terms(industry: str) -> str:
+    """Convert industry tag to search terms."""
+    # Map common industry tags to search-friendly terms
+    industry_search_map = {
+        'financial services': 'fintech funding startup',
+        'fintech': 'fintech funding startup',
+        'artificial intelligence': 'AI startup funding',
+        'ai_ml': 'AI machine learning startup',
+        'healthcare': 'healthtech startup funding',
+        'cybersecurity': 'cybersecurity startup funding',
+        'enterprise': 'enterprise software startup',
+        'saas': 'SaaS startup funding',
+        'developer': 'developer tools startup',
+        'data': 'data analytics startup',
+        'analytics': 'analytics startup funding',
+        'cloud': 'cloud infrastructure startup',
+        'payments': 'payments fintech startup',
+        'ai': 'AI startup funding news',
+        'b2b': 'B2B startup funding',
+        'software': 'software startup funding',
+        'media': 'media tech startup',
+        'edtech': 'edtech startup funding',
+        'communications': 'communications tech startup',
+    }
+
+    industry_lower = industry.lower()
+
+    # Check for exact match
+    if industry_lower in industry_search_map:
+        return industry_search_map[industry_lower]
+
+    # Check for partial match
+    for key, terms in industry_search_map.items():
+        if key in industry_lower or industry_lower in key:
+            return terms
+
+    # Fallback: use the industry name directly
+    return f"{industry} startup funding news"
 
 
 # =============================================================================
@@ -968,6 +1231,8 @@ def generate_investor_digest(
     max_stories_per_section: int = 15,
     investor_id: str = None,
     industry_filter: str = None,
+    fast_mode: bool = False,
+    include_industry_search: bool = True,
 ) -> InvestorDigest:
     """
     Generate unified investor digest.
@@ -980,6 +1245,8 @@ def generate_investor_digest(
         max_stories_per_section: Max stories per section (default 15)
         investor_id: Optional investor filter
         industry_filter: Optional industry tag to filter by (e.g., "fintech", "ai_ml")
+        fast_mode: Skip LLM synopsis and HN enrichment for faster generation
+        include_industry_search: Search for industry-wide news (adds API calls)
 
     Returns:
         InvestorDigest with all stories and markdown output
@@ -1055,6 +1322,17 @@ def generate_investor_digest(
             continue
 
         articles.append(article)
+
+    # Step 1b: Fetch industry-wide news (beyond tracked companies)
+    if not industry_filter:  # Only if not already filtering by industry
+        portfolio_industries = get_portfolio_industries(investor_id)
+        if portfolio_industries:
+            logger.info(f"Searching industry news for top industries: {portfolio_industries[:3]}")
+            industry_articles = search_industry_news(portfolio_industries, days=days)
+
+            # Add industry articles (they'll be processed through same pipeline)
+            articles.extend(industry_articles)
+            logger.info(f"Added {len(industry_articles)} industry articles to pipeline")
 
     # Step 2: Enrich with engagement data from HN
     articles = _enrich_with_hn_engagement(articles)
