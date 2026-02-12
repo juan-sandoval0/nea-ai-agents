@@ -15,7 +15,7 @@ from .scorer import score_signal, format_score_breakdown, detect_seniority
 
 # Use existing clients from core
 from core.clients.harmonic import HarmonicClient
-from core.clients.parallel_search import ParallelSearchClient, _analyze_sentiment
+from core.clients.parallel_search import ParallelSearchClient, _analyze_sentiment, get_sentiment_label_simple
 
 
 @dataclass
@@ -273,23 +273,44 @@ class SignalDetector:
             raw_data=json.dumps(raw_data)
         )
 
-    def _detect_parallel_signals(self, company: WatchedCompany) -> List[CompanySignal]:
-        """Detect signals from Parallel Search (news)."""
+    def _detect_parallel_signals(self, company: WatchedCompany, days: int = 7) -> List[CompanySignal]:
+        """
+        Detect signals from Parallel Search (news).
+
+        Filters applied:
+        1. Only articles from the last N days
+        2. Excludes homepage/non-article URLs
+        3. Company name must appear in title or excerpts
+        """
         signals = []
 
         results = self.parallel.search_company_news(company.company_name)
 
         for result in results:
+            url = result.url or ""
+
+            # Filter: Skip homepage/non-article URLs
+            if self._is_homepage_url(url):
+                continue
+
+            # Filter: Skip articles older than N days
+            if not self._is_within_date_range(result.publish_date, days=days):
+                continue
+
             title = result.title or ""
             excerpts = result.excerpts or []
+
+            # Filter: Company name must appear in title or excerpts
+            if not self._mentions_company(company.company_name, title, excerpts):
+                continue
             summary = " ".join(excerpts)[:500] if excerpts else ""
-            url = result.url or ""
             source = result.source_domain or "Web"
             published = result.publish_date
             signal_type = self.parallel.classify_result(result)
 
-            # Analyze sentiment using keyword matching
-            sentiment = _analyze_sentiment(title, excerpts)
+            # Analyze sentiment using weighted keyword matching
+            sentiment_score = _analyze_sentiment(title, excerpts)
+            sentiment = get_sentiment_label_simple(sentiment_score)
 
             headline = title[:200] if len(title) > 200 else title
 
@@ -321,3 +342,86 @@ class SignalDetector:
             signals.append(signal)
 
         return signals
+
+    def _is_homepage_url(self, url: str) -> bool:
+        """Check if URL is a homepage or non-article page."""
+        if not url:
+            return True
+
+        import re
+        from urllib.parse import urlparse
+
+        # Homepage patterns
+        homepage_patterns = [
+            r'^https?://[^/]+/?$',  # Just domain
+            r'^https?://[^/]+/(?:category|tag|topic|author|page)/[^/]*/?$',
+            r'^https?://[^/]+/(?:ai|tech|business|news|blog)/?$',
+        ]
+
+        for pattern in homepage_patterns:
+            if re.match(pattern, url, re.IGNORECASE):
+                return True
+
+        try:
+            parsed = urlparse(url)
+            path = parsed.path.strip('/')
+            if not path:
+                return True
+            # Short path without numbers = likely not an article
+            if len(path) < 20 and not re.search(r'\d', path) and path.count('/') == 0:
+                return True
+        except Exception:
+            pass
+
+        return False
+
+    def _is_within_date_range(self, publish_date: str, days: int = 7) -> bool:
+        """Check if publish date is within range."""
+        if not publish_date:
+            return True  # Permissive if no date
+
+        from datetime import datetime, timedelta, timezone
+
+        try:
+            date_str = publish_date.replace('Z', '+00:00')
+            if 'T' not in date_str:
+                date_str = f"{date_str}T00:00:00+00:00"
+            pub_date = datetime.fromisoformat(date_str)
+            cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+            return pub_date >= cutoff
+        except (ValueError, TypeError):
+            return True
+
+    def _mentions_company(self, company_name: str, title: str, excerpts: List[str]) -> bool:
+        """
+        Check if the company name is mentioned in the article.
+
+        This prevents misattribution when search APIs return articles about
+        similar companies in the same industry.
+        """
+        if not company_name:
+            return True  # Permissive if no company name
+
+        # Normalize company name for matching
+        company_lower = company_name.lower().strip()
+
+        # Check title
+        if company_lower in title.lower():
+            return True
+
+        # Check excerpts
+        combined_excerpts = " ".join(excerpts).lower()
+        if company_lower in combined_excerpts:
+            return True
+
+        # Handle multi-word company names - check if all significant words appear
+        # e.g., "Eleven Labs" should match "ElevenLabs"
+        words = [w for w in company_lower.split() if len(w) > 2]
+        if len(words) > 1:
+            all_text = f"{title} {combined_excerpts}".lower()
+            # Check if concatenated version appears (ElevenLabs vs Eleven Labs)
+            no_space = company_lower.replace(" ", "")
+            if no_space in all_text.replace(" ", ""):
+                return True
+
+        return False

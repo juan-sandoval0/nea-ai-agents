@@ -31,10 +31,136 @@ logger = logging.getLogger(__name__)
 # CONFIGURATION
 # =============================================================================
 
-# Sentiment analysis keywords
-SENTIMENT_KEYWORDS = {
-    "positive": ["growth", "raised", "launch", "expansion", "milestone", "success", "partner"],
-    "negative": ["layoff", "decline", "lawsuit", "investigation", "loss", "cut", "delay", "fail"],
+# Weighted sentiment keywords: keyword -> score (-5 to +5)
+# Phrases should come before single words to match first
+SENTIMENT_WEIGHTS = {
+    # ==========================================================================
+    # STRONG POSITIVE (+4 to +5) - High-impact value-creating events
+    # ==========================================================================
+    # Funding / liquidity
+    'oversubscribed': 5,
+    'unicorn': 5,
+    'record revenue': 5,
+    'record growth': 5,
+    'raises': 4,
+    'raised': 4,
+    'ipo': 4,
+    'public debut': 4,
+    'spac merger': 3,
+    'acquired for': 4,
+    'exit': 4,
+    # Financial performance
+    'profitable': 4,
+    'profitability': 4,
+    'beats estimates': 4,
+    'exceeds expectations': 4,
+    'cash flow positive': 4,
+    # Growth acceleration
+    'hypergrowth': 5,
+    'triples': 5,
+    'surges': 4,
+    'soars': 4,
+    'doubles': 4,
+    'rapid growth': 4,
+    'accelerates': 3,
+    # Market validation
+    'major contract': 4,
+    'enterprise deal': 4,
+    'breakthrough': 4,
+    'regulatory approval': 5,
+    'fda approval': 5,
+    'expands internationally': 4,
+    'strategic partnership': 3,
+
+    # ==========================================================================
+    # MODERATE POSITIVE (+1 to +3) - Forward momentum
+    # ==========================================================================
+    # Hiring & expansion
+    'extends runway': 3,
+    'expands': 3,
+    'hires': 2,
+    'appoints': 2,
+    'new office': 2,
+    'launches': 2,
+    'product launch': 2,
+    'rollout': 2,
+    'introduces': 1,
+    # Customer traction
+    'new customers': 2,
+    'lands': 2,
+    'signs': 2,
+    'partnership': 2,
+    'integrates with': 2,
+    # Capital efficiency
+    'cost reduction': 2,
+    'efficiency gains': 2,
+    # Recognition
+    'award': 2,
+    'ranked': 2,
+    'featured': 1,
+    # General positive
+    'growth': 2,
+    'milestone': 2,
+    'success': 2,
+    'expansion': 2,
+
+    # ==========================================================================
+    # STRONG NEGATIVE (-4 to -5) - Existential or major damage
+    # ==========================================================================
+    # Financial distress
+    'bankrupt': -5,
+    'bankruptcy': -5,
+    'insolvent': -5,
+    'liquidation': -5,
+    'default': -5,
+    'ceases operations': -5,
+    # Security / compliance
+    'data breach': -5,
+    'breach': -5,
+    'hack': -5,
+    'cyberattack': -5,
+    'fraud': -5,
+    'embezzlement': -5,
+    # Legal exposure
+    'charged': -5,
+    'indicted': -5,
+    'lawsuit': -4,
+    'sued': -4,
+    'regulatory probe': -4,
+    # Major contraction
+    'layoffs': -4,
+    'layoff': -4,
+    'cuts workforce': -4,
+    'shutdown': -4,
+    'crash': -4,
+    'plunges': -4,
+    'misses estimates': -4,
+    'revenue decline': -4,
+    'guidance cut': -4,
+    'down round': -4,
+    'valuation cut': -4,
+    # Restructuring
+    'restructuring': -3,
+    'investigation': -3,
+
+    # ==========================================================================
+    # MODERATE NEGATIVE (-1 to -3) - Concerning but not terminal
+    # ==========================================================================
+    'leadership departure': -3,
+    'ceo steps down': -3,
+    'customer churn': -3,
+    'delays': -2,
+    'warning': -2,
+    'decline': -2,
+    'slows': -2,
+    'headwinds': -2,
+    'competition intensifies': -2,
+    'cash burn': -2,
+    'concern': -1,
+    'risk': -1,
+    'cut': -2,
+    'fail': -2,
+    'loss': -2,
 }
 
 # Tier-1 tech publications for targeted searches
@@ -132,25 +258,84 @@ def _classify_signal_type(title: str, excerpts: list[str]) -> str:
     return "news_coverage"  # Default fallback
 
 
-def _analyze_sentiment(title: str, excerpts: list[str]) -> str:
+def _analyze_sentiment(title: str, excerpts: list[str]) -> int:
     """
-    Analyze sentiment of news content using keyword matching.
+    Analyze sentiment of news content using weighted keyword matching.
+
+    Scoring methodology:
+    - Strong positive (+4 to +5): High-impact value-creating events
+      (funding, profitability, hypergrowth, regulatory approval)
+    - Moderate positive (+1 to +3): Forward momentum
+      (hiring, product launches, partnerships, customer wins)
+    - Moderate negative (-1 to -3): Concerning but not terminal
+      (delays, leadership changes, competition, cash burn)
+    - Strong negative (-4 to -5): Existential or major damage
+      (bankruptcy, breaches, lawsuits, layoffs, shutdown)
 
     Args:
         title: Article title
         excerpts: List of article excerpts
 
     Returns:
-        "positive", "negative", or "neutral"
+        Integer sentiment score from -5 to +5
     """
     combined = (title + " " + " ".join(excerpts)).lower()
 
-    positive_count = sum(1 for kw in SENTIMENT_KEYWORDS["positive"] if kw in combined)
-    negative_count = sum(1 for kw in SENTIMENT_KEYWORDS["negative"] if kw in combined)
+    # Track matched keywords to avoid double-counting overlapping phrases
+    matched_positions: set[int] = set()
+    total_score = 0
 
-    if positive_count > negative_count:
+    # Sort keywords by length (longest first) to match phrases before words
+    sorted_keywords = sorted(SENTIMENT_WEIGHTS.keys(), key=len, reverse=True)
+
+    for keyword in sorted_keywords:
+        pos = combined.find(keyword)
+        if pos != -1:
+            # Check if this position range is already matched
+            keyword_range = set(range(pos, pos + len(keyword)))
+            if not keyword_range & matched_positions:
+                total_score += SENTIMENT_WEIGHTS[keyword]
+                matched_positions.update(keyword_range)
+
+    # Clamp to -5 to +5 range
+    return max(-5, min(5, total_score))
+
+
+def sentiment_score_to_label(score: int) -> str:
+    """
+    Convert numeric sentiment score to display label.
+
+    Args:
+        score: Integer from -5 to +5
+
+    Returns:
+        Label with emoji indicator
+    """
+    if score >= 4:
+        return f"📈 +{score}"
+    elif score >= 1:
+        return f"📈 +{score}"
+    elif score <= -4:
+        return f"📉 {score}"
+    elif score <= -1:
+        return f"📉 {score}"
+    else:
+        return "➖ +0"
+
+
+def get_sentiment_label_simple(score: int) -> str:
+    """
+    Convert numeric sentiment score to simple label for database storage.
+
+    Args:
+        score: Integer from -5 to +5
+
+    Returns:
+        "positive", "negative", or "neutral"
+    """
+    if score >= 1:
         return "positive"
-    elif negative_count > positive_count:
+    elif score <= -1:
         return "negative"
     return "neutral"
 
@@ -464,4 +649,189 @@ class ParallelSearchClient:
             f"Tier-1 search: found {len(results)} articles for '{company_name}' "
             f"from {len(publications)} publications"
         )
+        return results
+
+    def search_industry_news(
+        self,
+        industry: str,
+        exclude_companies: list[str] | None = None,
+        max_results: int = 10,
+        max_chars_per_result: int = 500,  # Reduced for metadata-only
+    ) -> list[ParallelSearchResult]:
+        """
+        Search for industry-wide news, excluding specific company names.
+
+        Args:
+            industry: Industry/category to search (e.g., "fintech", "cybersecurity")
+            exclude_companies: Company names to exclude from results
+            max_results: Maximum results to return (default 10)
+            max_chars_per_result: Excerpt length limit (default 500 - metadata only)
+
+        Returns:
+            List of ParallelSearchResult for industry news
+
+        Raises:
+            ParallelSearchError: If API request fails
+        """
+        # Build exclusion string for queries
+        exclusions = ""
+        if exclude_companies:
+            # Limit exclusions to avoid query length issues
+            top_excludes = exclude_companies[:10]
+            exclusions = " ".join(f'-"{name}"' for name in top_excludes)
+
+        # Industry-focused search queries
+        search_queries = [
+            f'"{industry}" industry trends {exclusions}'.strip(),
+            f'"{industry}" market news {exclusions}'.strip(),
+            f'"{industry}" sector analysis {exclusions}'.strip(),
+            f'"{industry}" regulation OR policy {exclusions}'.strip(),
+        ]
+
+        industry_objective = (
+            f"Find recent news articles about the {industry} industry and market. "
+            f"Focus on: industry trends, market analysis, regulatory changes, sector reports, "
+            f"and macro developments. Exclude articles about specific company announcements. "
+            f"Prioritize reputable business and tech news sources."
+        )
+
+        start = time.time()
+        try:
+            response = self._client.beta.search(
+                objective=industry_objective,
+                search_queries=search_queries,
+                max_results=max_results,
+                excerpts={"max_chars_per_result": max_chars_per_result},
+            )
+            latency = int((time.time() - start) * 1000)
+
+            self._tracker.log_api_call(
+                service="parallel",
+                endpoint="/search",
+                method="POST",
+                status_code=200,
+                latency_ms=latency,
+            )
+
+        except Exception as e:
+            latency = int((time.time() - start) * 1000)
+            self._tracker.log_api_call(
+                service="parallel",
+                endpoint="/search",
+                method="POST",
+                status_code=500,
+                latency_ms=latency,
+            )
+            logger.error(f"Industry search error for '{industry}': {e}")
+            raise ParallelSearchError(f"API request failed: {e}")
+
+        # Filter results to exclude company mentions
+        exclude_lower = {name.lower() for name in (exclude_companies or [])}
+        results = []
+
+        for item in response.results or []:
+            url = getattr(item, "url", "") or ""
+            title = getattr(item, "title", "") or ""
+            excerpts = getattr(item, "excerpts", []) or []
+
+            # Post-filter: skip if title/excerpts mention excluded companies
+            combined_text = f"{title} {' '.join(excerpts)}".lower()
+            if any(exc in combined_text for exc in exclude_lower):
+                continue
+
+            result = ParallelSearchResult(
+                url=url,
+                title=title,
+                publish_date=getattr(item, "publish_date", None),
+                excerpts=excerpts,
+                source_domain=_extract_source_domain(url),
+            )
+            results.append(result)
+
+        logger.info(
+            f"Industry search: found {len(results)} articles for '{industry}' "
+            f"(excluded {len(exclude_companies or [])} company names)"
+        )
+        return results
+
+    def search_metadata_only(
+        self,
+        company_name: str,
+        max_results: int = 10,
+        max_chars_per_result: int = 500,  # Reduced for metadata
+    ) -> list[ParallelSearchResult]:
+        """
+        Search for company news with minimal excerpt length (metadata-focused).
+
+        This reduces token usage by returning shorter excerpts while still
+        providing enough context for classification and synopsis generation.
+
+        Args:
+            company_name: Company name to search for
+            max_results: Maximum results to return (default 10)
+            max_chars_per_result: Excerpt length limit (default 500)
+
+        Returns:
+            List of ParallelSearchResult with shorter excerpts
+
+        Raises:
+            ParallelSearchError: If API request fails
+        """
+        # Same queries but shorter excerpts
+        search_queries = [
+            f'"{company_name}" funding announcement',
+            f'"{company_name}" product launch',
+            f'"{company_name}" news',
+            f'"{company_name}" TechCrunch OR VentureBeat OR Bloomberg',
+        ]
+
+        metadata_objective = (
+            "Find recent news about this company. Return key headlines and brief "
+            "summaries focusing on: funding, products, executives, partnerships, "
+            "acquisitions. Prioritize authoritative tech and business sources."
+        )
+
+        start = time.time()
+        try:
+            response = self._client.beta.search(
+                objective=metadata_objective,
+                search_queries=search_queries,
+                max_results=max_results,
+                excerpts={"max_chars_per_result": max_chars_per_result},
+            )
+            latency = int((time.time() - start) * 1000)
+
+            self._tracker.log_api_call(
+                service="parallel",
+                endpoint="/search",
+                method="POST",
+                status_code=200,
+                latency_ms=latency,
+            )
+
+        except Exception as e:
+            latency = int((time.time() - start) * 1000)
+            self._tracker.log_api_call(
+                service="parallel",
+                endpoint="/search",
+                method="POST",
+                status_code=500,
+                latency_ms=latency,
+            )
+            logger.error(f"Metadata search error for '{company_name}': {e}")
+            raise ParallelSearchError(f"API request failed: {e}")
+
+        results = []
+        for item in response.results or []:
+            url = getattr(item, "url", "") or ""
+            result = ParallelSearchResult(
+                url=url,
+                title=getattr(item, "title", "") or "",
+                publish_date=getattr(item, "publish_date", None),
+                excerpts=getattr(item, "excerpts", []) or [],
+                source_domain=_extract_source_domain(url),
+            )
+            results.append(result)
+
+        logger.info(f"Metadata search: fetched {len(results)} results for '{company_name}'")
         return results

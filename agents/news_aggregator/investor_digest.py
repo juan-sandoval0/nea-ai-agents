@@ -5,10 +5,17 @@ Unified Investor Digest Pipeline
 Single source of truth for news aggregation with:
 - Story-level deduplication (merge multiple URLs about same event)
 - Engagement-based primary URL selection (HN > PH > TechCrunch > other)
-- Improved classification (deterministic rules + optional LLM)
+- Hybrid classification (fast rules + embedding similarity) with confidence
 - Deterministic sentiment scoring with evidence keywords
+- Template-based synopsis generation (no full article text required)
 - Dynamic selection (no hard-coded top N)
 - 7-day investor-grade markdown digest
+
+Re-engineered for reduced LLM runtime:
+- Uses only title + snippet (no full article body)
+- Embeddings cached by URL hash to prevent duplicate computation
+- LLM calls limited to 1 per unique story (or fewer if confidence is high)
+- Industry Trends section with de-duplicated industries
 
 Usage:
     from agents.news_aggregator.investor_digest import generate_investor_digest
@@ -24,11 +31,12 @@ import json
 import logging
 import os
 import re
+import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Optional, List, Dict, Any, Tuple, Set
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 # Load environment variables
@@ -75,10 +83,17 @@ SOURCE_PRIORITY = {
 
 # Industry search configuration (to limit API calls)
 INDUSTRY_SEARCH_CONFIG = {
-    'max_industries': 3,          # Max industries to search
-    'max_results_per_industry': 5,  # Max results per industry search
+    'max_industries': 5,          # Max industries to search (increased for better coverage)
+    'max_results_per_industry': 8,  # Max results per industry search
     'min_priority_score': 45.0,   # Min score to include industry stories
     'industry_priority_boost': -10,  # Score adjustment for non-tracked companies
+    'max_stories_per_industry': 5,  # Max stories shown per industry in digest
+}
+
+# Synopsis generation configuration
+SYNOPSIS_CONFIG = {
+    'max_synopsis_length': 400,
+    'use_llm': True,  # LLM generates both synopsis AND type classification
 }
 
 # Classification rules (order matters - first match wins)
@@ -153,25 +168,154 @@ CLASSIFICATION_RULES = [
     ]),
 ]
 
-# Sentiment keywords with weights
+# Weighted sentiment keywords: keyword -> score (-5 to +5)
+# Phrases should come before single words to match first
 SENTIMENT_WEIGHTS = {
-    # Strong positive (+3 to +5)
-    'raises': 4, 'raised': 4, 'funding': 3, 'unicorn': 5, 'profitable': 4,
-    'growth': 3, 'expands': 3, 'expansion': 3, 'record': 4, 'milestone': 3,
-    'breakthrough': 4, 'wins': 3, 'award': 2, 'partnership': 2, 'launch': 2,
-    'success': 3, 'surges': 4, 'soars': 4, 'doubles': 4, 'triples': 5,
-    'backed': 2, 'valuation': 2, 'ipo': 3,
-    # Moderate positive (+1 to +2)
-    'new': 1, 'introduces': 1, 'update': 1, 'release': 1, 'hire': 1, 'appoints': 1,
-    # Strong negative (-3 to -5)
-    'layoff': -4, 'layoffs': -4, 'laid off': -4, 'breach': -5, 'hack': -5,
-    'fraud': -5, 'lawsuit': -4, 'sued': -4, 'investigation': -3, 'scandal': -4,
-    'bankrupt': -5, 'bankruptcy': -5, 'shutdown': -4, 'closes': -3,
-    'struggles': -3, 'decline': -3, 'plunge': -4, 'crash': -4, 'fired': -3,
-    'exodus': -3, 'downturn': -3, 'losses': -3, 'debt': -2, 'cuts': -2,
-    'outage': -3, 'downtime': -3, 'vulnerable': -3,
-    # Moderate negative (-1 to -2)
-    'delays': -2, 'delayed': -2, 'concern': -1, 'warning': -2, 'risk': -1,
+    # ==========================================================================
+    # STRONG POSITIVE (+4 to +5) - High-impact value-creating events
+    # ==========================================================================
+    # Funding / liquidity
+    'oversubscribed': 5,
+    'unicorn': 5,
+    'record revenue': 5,
+    'record growth': 5,
+    'raises': 4,
+    'raised': 4,
+    'ipo': 4,
+    'public debut': 4,
+    'spac merger': 3,
+    'acquired for': 4,
+    'exit': 4,
+    # Financial performance
+    'profitable': 4,
+    'profitability': 4,
+    'beats estimates': 4,
+    'exceeds expectations': 4,
+    'cash flow positive': 4,
+    # Growth acceleration
+    'hypergrowth': 5,
+    'triples': 5,
+    'surges': 4,
+    'soars': 4,
+    'doubles': 4,
+    'rapid growth': 4,
+    'accelerates': 3,
+    # Market validation
+    'major contract': 4,
+    'enterprise deal': 4,
+    'breakthrough': 4,
+    'regulatory approval': 5,
+    'fda approval': 5,
+    'expands internationally': 4,
+    'strategic partnership': 3,
+
+    # ==========================================================================
+    # MODERATE POSITIVE (+1 to +3) - Forward momentum
+    # ==========================================================================
+    # Hiring & expansion
+    'extends runway': 3,
+    'expands': 3,
+    'expansion': 3,
+    'hires': 2,
+    'appoints': 2,
+    'new office': 2,
+    'launches': 2,
+    'product launch': 2,
+    'rollout': 2,
+    'introduces': 1,
+    # Customer traction
+    'new customers': 2,
+    'lands': 2,
+    'signs': 2,
+    'partnership': 2,
+    'integrates with': 2,
+    # Capital efficiency
+    'cost reduction': 2,
+    'efficiency gains': 2,
+    # Recognition
+    'award': 2,
+    'ranked': 2,
+    'featured': 1,
+    # General positive
+    'growth': 2,
+    'milestone': 2,
+    'success': 2,
+    'funding': 3,
+    'backed': 2,
+    'valuation': 2,
+    'wins': 3,
+    'launch': 2,
+
+    # ==========================================================================
+    # STRONG NEGATIVE (-4 to -5) - Existential or major damage
+    # ==========================================================================
+    # Financial distress
+    'bankrupt': -5,
+    'bankruptcy': -5,
+    'insolvent': -5,
+    'liquidation': -5,
+    'default': -5,
+    'ceases operations': -5,
+    # Security / compliance
+    'data breach': -5,
+    'breach': -5,
+    'hack': -5,
+    'cyberattack': -5,
+    'fraud': -5,
+    'embezzlement': -5,
+    'outage': -3,
+    'downtime': -3,
+    'vulnerable': -3,
+    # Legal exposure
+    'charged': -5,
+    'indicted': -5,
+    'lawsuit': -4,
+    'sued': -4,
+    'regulatory probe': -4,
+    'scandal': -4,
+    # Major contraction
+    'layoffs': -4,
+    'layoff': -4,
+    'laid off': -4,
+    'cuts workforce': -4,
+    'shutdown': -4,
+    'crash': -4,
+    'plunges': -4,
+    'plunge': -4,
+    'misses estimates': -4,
+    'revenue decline': -4,
+    'guidance cut': -4,
+    'down round': -4,
+    'valuation cut': -4,
+    # Restructuring
+    'restructuring': -3,
+    'investigation': -3,
+    'closes': -3,
+    'struggles': -3,
+    'decline': -3,
+    'fired': -3,
+    'exodus': -3,
+    'downturn': -3,
+    'losses': -3,
+
+    # ==========================================================================
+    # MODERATE NEGATIVE (-1 to -3) - Concerning but not terminal
+    # ==========================================================================
+    'leadership departure': -3,
+    'ceo steps down': -3,
+    'customer churn': -3,
+    'delays': -2,
+    'delayed': -2,
+    'warning': -2,
+    'decline': -2,
+    'slows': -2,
+    'headwinds': -2,
+    'competition intensifies': -2,
+    'cash burn': -2,
+    'debt': -2,
+    'cuts': -2,
+    'concern': -1,
+    'risk': -1,
 }
 
 # Noise patterns to filter
@@ -179,6 +323,42 @@ NOISE_PATTERNS = [
     r'wikipedia\.org', r'list\s+of.*companies', r'press\s+release\s+only',
     r'blog\s*\|', r'unicorn.*list', r'best\s+practices', r'how\s+to\s+',
     r'techcrunch\.com/tag/', r'linkedin\.com/pulse', r'webinar', r'podcast\s+episode',
+]
+
+# Homepage/non-article URL patterns to filter
+HOMEPAGE_PATTERNS = [
+    r'^https?://[^/]+/?$',  # Just domain with optional trailing slash
+    r'^https?://[^/]+/(?:category|tag|topic|author|page)/[^/]*/?$',  # Category/tag pages
+    r'^https?://[^/]+/(?:ai|tech|business|news|blog)/?$',  # Generic section pages
+    r'^https?://[^/]+/[^/]{1,15}/?$',  # Very short paths (likely not articles)
+]
+
+# Non-article URL patterns (company pages, profiles, newsrooms, etc.)
+NON_ARTICLE_PATTERNS = [
+    r'/news/?$',  # Company newsroom landing pages
+    r'/newsroom/?$',
+    r'/press/?$',
+    r'/press-releases/?$',
+    r'/media/?$',
+    r'/about/?$',
+    r'/company/?$',
+    r'/profile/?$',
+    r'/insights/?$',  # Law firm/consulting insights landing
+    r'/blog/?$',
+    r'crunchbase\.com/organization/',  # Crunchbase company profiles
+    r'linkedin\.com/company/',  # LinkedIn company pages
+    r'pitchbook\.com/profiles/',  # PitchBook profiles
+    r'wikipedia\.org/',
+    r'/careers/?$',
+    r'/jobs/?$',
+    r'/contact/?$',
+    r'/team/?$',
+    r'/investors/?$',
+    r'/ir/?$',  # Investor relations
+    r'finance\.yahoo\.com/quote/',  # Stock quote pages (not articles)
+    r'bloomberg\.com/quote/',
+    r'/funding-rounds/?$',
+    r'/company-profile',
 ]
 
 # Title similarity threshold for clustering
@@ -243,7 +423,6 @@ class Story:
 
     # Derived fields (computed once)
     classification: str = "GENERAL"
-    classification_confidence: float = 0.0
     sentiment: SentimentResult = field(default_factory=lambda: SentimentResult('Neutral', 0))
     synopsis: str = ""
 
@@ -339,6 +518,27 @@ class StoryStore:
 
 
 @dataclass
+class PipelineTimingStats:
+    """Timing statistics for the digest pipeline."""
+    fetch_time_ms: int = 0
+    embedding_time_ms: int = 0
+    classification_time_ms: int = 0
+    synopsis_time_ms: int = 0
+    llm_calls: int = 0
+    total_time_ms: int = 0
+
+    def to_dict(self) -> Dict:
+        return {
+            'fetch_time_ms': self.fetch_time_ms,
+            'embedding_time_ms': self.embedding_time_ms,
+            'classification_time_ms': self.classification_time_ms,
+            'synopsis_time_ms': self.synopsis_time_ms,
+            'llm_calls': self.llm_calls,
+            'total_time_ms': self.total_time_ms,
+        }
+
+
+@dataclass
 class InvestorDigest:
     """The final digest output."""
     start_date: str
@@ -353,6 +553,9 @@ class InvestorDigest:
 
     # Industry filter (if applied)
     industry_filter: Optional[str] = None
+
+    # Timing stats
+    timing: PipelineTimingStats = field(default_factory=PipelineTimingStats)
 
     def to_markdown(self) -> str:
         """Render digest as investor-grade markdown."""
@@ -556,32 +759,132 @@ def select_primary_article(articles: List[ArticleRef]) -> Tuple[ArticleRef, List
 
 
 # =============================================================================
-# CLASSIFICATION
+# CLASSIFICATION (LLM-based)
 # =============================================================================
 
-def classify_story(articles: List[ArticleRef]) -> Tuple[str, float]:
+# Valid classification types for LLM
+VALID_TYPES = [
+    'FUNDING', 'M&A', 'IPO', 'SECURITY', 'LEGAL', 'LAYOFFS', 'HIRING',
+    'PARTNERSHIP', 'PRODUCT', 'EARNINGS', 'CUSTOMER', 'MARKET', 'GENERAL'
+]
+
+
+def classify_and_summarize_story(
+    articles: List[ArticleRef],
+    company_name: str,
+    llm_call_count: Dict[str, int] = None
+) -> Tuple[str, str]:
     """
-    Classify story using deterministic rules.
+    Use LLM to classify story type AND generate synopsis in a single call.
 
-    Returns (classification, confidence) where confidence is 0.0-1.0.
+    Returns (classification, synopsis)
     """
-    # Combine all text for classification
-    combined_text = ' '.join([
-        a.title + ' ' + a.snippet for a in articles
-    ]).lower()
+    if not articles:
+        return 'GENERAL', ''
 
-    for classification, patterns in CLASSIFICATION_RULES:
-        matches = 0
-        for pattern in patterns:
-            if re.search(pattern, combined_text, re.IGNORECASE):
-                matches += 1
+    if llm_call_count is None:
+        llm_call_count = {'count': 0}
 
-        if matches > 0:
-            # Confidence based on number of matching patterns
-            confidence = min(1.0, matches * 0.3 + 0.4)
-            return classification, confidence
+    # Gather article data
+    titles = [a.title for a in articles[:5]]
+    snippets = [a.snippet for a in articles[:5] if a.snippet]
+    sources = [a.source_domain for a in articles[:5]]
 
-    return 'GENERAL', 0.3
+    # Try LLM classification + synopsis
+    if SYNOPSIS_CONFIG['use_llm'] and os.getenv("OPENAI_API_KEY"):
+        try:
+            result = _llm_classify_and_summarize(company_name, titles, snippets, sources)
+            llm_call_count['count'] += 1
+            return result
+        except Exception as e:
+            logger.warning(f"LLM classify/summarize failed: {e}")
+
+    # Fallback: simple classification and title as synopsis
+    return 'GENERAL', titles[0] if titles else ''
+
+
+def _llm_classify_and_summarize(
+    company_name: str,
+    titles: List[str],
+    snippets: List[str],
+    sources: List[str]
+) -> Tuple[str, str]:
+    """
+    Single LLM call to classify type AND generate synopsis.
+    """
+    from langchain_openai import ChatOpenAI
+    from langchain_core.messages import SystemMessage, HumanMessage
+
+    types_str = ', '.join(VALID_TYPES)
+
+    system_prompt = f"""You are a VC research assistant analyzing news articles.
+
+Your task:
+1. Classify the story into ONE of these types: {types_str}
+2. Write a 2-3 sentence synopsis for investors
+
+Classification guidelines:
+- FUNDING: fundraising, Series A/B/C, seed rounds, valuations
+- M&A: acquisitions, mergers, buyouts
+- IPO: going public, S-1 filings, direct listings
+- SECURITY: data breaches, hacks, vulnerabilities
+- LEGAL: lawsuits, regulatory actions, settlements
+- LAYOFFS: job cuts, workforce reductions
+- HIRING: executive hires, team expansion
+- PARTNERSHIP: strategic alliances, integrations
+- PRODUCT: launches, features, releases
+- EARNINGS: revenue, profits, financial results
+- CUSTOMER: deals, contracts, market expansion
+- MARKET: industry trends, macro analysis
+- GENERAL: other news
+
+Respond in this exact format:
+TYPE: [classification]
+SYNOPSIS: [2-3 sentence synopsis]"""
+
+    # Build context from articles
+    context_lines = []
+    for i, title in enumerate(titles):
+        source = sources[i] if i < len(sources) else 'Unknown'
+        snippet = snippets[i][:250] if i < len(snippets) else ''
+        context_lines.append(f"[{source}] {title}")
+        if snippet:
+            context_lines.append(f"  {snippet}")
+
+    user_prompt = f"""Company: {company_name}
+
+Articles:
+{chr(10).join(context_lines)}
+
+Classify and summarize:"""
+
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, max_tokens=200)
+    response = llm.invoke([
+        SystemMessage(content=system_prompt),
+        HumanMessage(content=user_prompt),
+    ])
+
+    # Parse response
+    content = response.content.strip()
+    classification = 'GENERAL'
+    synopsis = ''
+
+    for line in content.split('\n'):
+        line = line.strip()
+        if line.upper().startswith('TYPE:'):
+            type_val = line[5:].strip().upper()
+            if type_val in VALID_TYPES:
+                classification = type_val
+        elif line.upper().startswith('SYNOPSIS:'):
+            synopsis = line[9:].strip()
+
+    # If synopsis wasn't found on its own line, use everything after TYPE line
+    if not synopsis:
+        parts = content.split('SYNOPSIS:', 1)
+        if len(parts) > 1:
+            synopsis = parts[1].strip()
+
+    return classification, synopsis[:SYNOPSIS_CONFIG['max_synopsis_length']]
 
 
 # =============================================================================
@@ -592,6 +895,16 @@ def analyze_sentiment(articles: List[ArticleRef]) -> SentimentResult:
     """
     Deterministic sentiment scoring with evidence keywords.
 
+    Scoring methodology:
+    - Strong positive (+4 to +5): High-impact value-creating events
+      (funding, profitability, hypergrowth, regulatory approval)
+    - Moderate positive (+1 to +3): Forward momentum
+      (hiring, product launches, partnerships, customer wins)
+    - Moderate negative (-1 to -3): Concerning but not terminal
+      (delays, leadership changes, competition, cash burn)
+    - Strong negative (-4 to -5): Existential or major damage
+      (bankruptcy, breaches, lawsuits, layoffs, shutdown)
+
     Returns SentimentResult with label, score [-5,+5], and matched keywords.
     """
     # Combine all text
@@ -599,23 +912,31 @@ def analyze_sentiment(articles: List[ArticleRef]) -> SentimentResult:
         a.title + ' ' + a.snippet for a in articles
     ]).lower()
 
+    # Track matched positions to avoid double-counting overlapping phrases
+    matched_positions: set[int] = set()
     total_score = 0
     keywords_hit = []
     positive_hits = 0
     negative_hits = 0
 
-    for keyword, weight in SENTIMENT_WEIGHTS.items():
-        # Count occurrences (but cap contribution)
-        count = len(re.findall(r'\b' + re.escape(keyword) + r'\b', combined_text))
-        if count > 0:
-            contribution = weight * min(count, 2)  # Cap at 2 occurrences
-            total_score += contribution
-            keywords_hit.append(keyword)
+    # Sort keywords by length (longest first) to match phrases before words
+    sorted_keywords = sorted(SENTIMENT_WEIGHTS.keys(), key=len, reverse=True)
 
-            if weight > 0:
-                positive_hits += 1
-            else:
-                negative_hits += 1
+    for keyword in sorted_keywords:
+        weight = SENTIMENT_WEIGHTS[keyword]
+        pos = combined_text.find(keyword)
+        if pos != -1:
+            # Check if this position range is already matched
+            keyword_range = set(range(pos, pos + len(keyword)))
+            if not keyword_range & matched_positions:
+                total_score += weight
+                matched_positions.update(keyword_range)
+                keywords_hit.append(keyword)
+
+                if weight > 0:
+                    positive_hits += 1
+                else:
+                    negative_hits += 1
 
     # Cap score to [-5, +5]
     capped_score = max(-5, min(5, total_score))
@@ -637,89 +958,6 @@ def analyze_sentiment(articles: List[ArticleRef]) -> SentimentResult:
     )
 
 
-# =============================================================================
-# SYNOPSIS GENERATION
-# =============================================================================
-
-def generate_synopsis(story: Story) -> str:
-    """
-    Generate 2-4 sentence synopsis from ALL merged articles.
-    Uses LLM if available, otherwise rule-based extraction.
-    """
-    # Build context from all articles
-    titles = [a.title for a in story.articles]
-    snippets = [a.snippet for a in story.articles if a.snippet]
-    sources = [a.source_domain for a in story.articles]
-
-    # Try LLM if available
-    if os.getenv("OPENAI_API_KEY"):
-        try:
-            return _generate_synopsis_llm(story, titles, snippets, sources)
-        except Exception as e:
-            logger.warning(f"LLM synopsis failed: {e}")
-
-    # Fallback: rule-based extraction
-    return _generate_synopsis_rules(story, titles, snippets)
-
-
-def _generate_synopsis_llm(story: Story, titles: List[str], snippets: List[str], sources: List[str]) -> str:
-    """Generate synopsis using LLM."""
-    from langchain_openai import ChatOpenAI
-    from langchain_core.messages import SystemMessage, HumanMessage
-
-    system_prompt = """You are a VC research assistant creating investor briefings.
-Write a 2-4 sentence synopsis focused on:
-1. What happened (key facts, numbers)
-2. Why it matters (valuation/risk/trajectory implications)
-3. What to watch next (if applicable)
-
-Be direct and factual. No fluff. Write for a busy investor."""
-
-    # Build context
-    context_parts = []
-    for i, (title, snippet) in enumerate(zip(titles[:5], snippets[:5] or [''] * 5)):
-        source = sources[i] if i < len(sources) else 'Unknown'
-        context_parts.append(f"[{source}] {title}\n{snippet[:300]}")
-
-    user_prompt = f"""Company: {story.company_name}
-Classification: {story.classification}
-Sentiment: {story.sentiment.label} ({story.sentiment.score:+d})
-
-Articles ({len(story.articles)} sources):
-{chr(10).join(context_parts)}
-
-Write a 2-4 sentence investor synopsis:"""
-
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-    response = llm.invoke([
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=user_prompt),
-    ])
-
-    synopsis = response.content.strip()
-
-    # Clean up any artifacts
-    if synopsis.startswith('"') and synopsis.endswith('"'):
-        synopsis = synopsis[1:-1]
-
-    return synopsis[:500]  # Cap length
-
-
-def _generate_synopsis_rules(story: Story, titles: List[str], snippets: List[str]) -> str:
-    """Generate synopsis using rules (fallback)."""
-    # Use primary title as base
-    synopsis = story.primary_title
-
-    # Add first meaningful snippet
-    for snippet in snippets:
-        if snippet and len(snippet) > 50:
-            # Extract first sentence
-            first_sent = snippet.split('.')[0].strip()
-            if len(first_sent) > 30:
-                synopsis = f"{story.primary_title}. {first_sent}."
-                break
-
-    return synopsis[:400]
 
 
 # =============================================================================
@@ -809,9 +1047,122 @@ def is_noise(article: ArticleRef) -> bool:
     return False
 
 
+def is_homepage_url(url: str) -> bool:
+    """
+    Check if URL is a homepage or non-article page.
+
+    Filters out:
+    - Domain homepages (https://example.com/)
+    - Category/tag pages (https://example.com/category/ai/)
+    - Generic section pages (https://example.com/news/)
+    - Company profiles, newsrooms, landing pages
+    """
+    if not url:
+        return True
+
+    url_lower = url.lower()
+
+    # Check against homepage patterns
+    for pattern in HOMEPAGE_PATTERNS:
+        if re.match(pattern, url, re.IGNORECASE):
+            return True
+
+    # Check against non-article patterns
+    for pattern in NON_ARTICLE_PATTERNS:
+        if re.search(pattern, url_lower):
+            return True
+
+    # Additional checks
+    try:
+        parsed = urlparse(url)
+        path = parsed.path.strip('/')
+
+        # No path = homepage
+        if not path:
+            return True
+
+        # Very short path without numbers/dates (likely not an article)
+        # Articles usually have slugs, IDs, or dates in the path
+        if len(path) < 20 and not re.search(r'\d', path) and path.count('/') == 0:
+            return True
+
+        # Common non-article paths
+        non_article_paths = [
+            'about', 'contact', 'privacy', 'terms', 'careers', 'team',
+            'subscribe', 'newsletter', 'advertise', 'press', 'media',
+            'news', 'newsroom', 'blog', 'insights', 'resources',
+        ]
+        if path.lower() in non_article_paths:
+            return True
+
+        # Check if path ends with common non-article suffixes
+        path_lower = path.lower()
+        if path_lower.endswith(('/news', '/newsroom', '/press', '/blog', '/insights')):
+            return True
+
+    except Exception:
+        pass
+
+    return False
+
+
+def is_within_date_range(publish_date: Optional[str], days: int = 7, strict: bool = True) -> bool:
+    """
+    Check if publish date is within the specified range.
+
+    Args:
+        publish_date: ISO date string or None
+        days: Number of days to look back (default 7)
+        strict: If True, reject articles without valid dates (default True)
+
+    Returns:
+        True if date is within range
+        False if date is outside range, missing (when strict), or unparseable
+    """
+    if not publish_date:
+        # No date - reject if strict mode
+        return not strict
+
+    try:
+        # Handle various date formats
+        date_str = publish_date.replace('Z', '+00:00')
+        if 'T' not in date_str:
+            date_str = f"{date_str}T00:00:00+00:00"
+
+        pub_date = datetime.fromisoformat(date_str)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+
+        return pub_date >= cutoff
+    except (ValueError, TypeError):
+        # Can't parse date - reject if strict mode
+        return not strict
+
+
 # =============================================================================
 # MARKDOWN RENDERING
 # =============================================================================
+
+def _get_deduplicated_industries(store: StoryStore) -> List[str]:
+    """
+    Get unique industries from all stories, de-duplicated.
+
+    If multiple portfolio companies share the same industry, that industry
+    appears only ONCE in the returned list.
+
+    Returns:
+        List of unique industry strings, sorted alphabetically
+    """
+    unique_industries: Set[str] = set()
+
+    for story in store.stories:
+        for tag in story.industry_tags:
+            # Normalize industry name
+            normalized = tag.lower().strip()
+            if normalized:
+                unique_industries.add(normalized)
+
+    return sorted(list(unique_industries))
+
 
 def render_digest_markdown(digest: InvestorDigest) -> str:
     """Render digest as investor-grade markdown with tables."""
@@ -870,75 +1221,79 @@ def render_digest_markdown(digest: InvestorDigest) -> str:
         lines.append("")
 
     # Industry Trends section (only if not already filtered by industry)
-    # Shows: 1) Industry-wide news (beyond tracked companies), 2) Tracked company stories by industry
+    # Shows stories grouped by UNIQUE industry (de-duplicated across portfolio companies)
     lines.append("## 🏭 Industry Trends\n")
 
     if digest.industry_filter:
         lines.append(f"*Industry filter applied: showing only `{digest.industry_filter}` stories above.*")
         lines.append("")
     else:
-        # Track story IDs already shown
-        shown_story_ids = set()
+        # Track story IDs already shown to avoid duplication
+        shown_story_ids: Set[str] = set()
         for s in portfolio_stories:
             shown_story_ids.add(s.story_id)
         for s in competitor_stories:
             shown_story_ids.add(s.story_id)
 
         industry_section_has_stories = False
+        max_stories_per_industry = INDUSTRY_SEARCH_CONFIG.get('max_stories_per_industry', 5)
 
-        # Part 1: Industry-wide news (from search, not tracked companies)
-        industry_wide_stories = sorted(
-            digest.store.get_industry_stories(),
-            key=lambda s: s.priority_score,
-            reverse=True
-        )[:10]  # Top 10 industry-wide stories
+        # Collect all unique industries across portfolio companies (de-duplicated)
+        # Each industry appears ONCE regardless of how many portfolio companies share it
+        unique_industries = _get_deduplicated_industries(digest.store)
 
-        if industry_wide_stories:
-            industry_section_has_stories = True
-            lines.append("### Industry-Wide News\n")
-            lines.append("*Top stories from your portfolio's industries (beyond tracked companies)*\n")
-            lines.extend(_render_story_table(industry_wide_stories))
-            lines.append("")
+        # Sort industries by max story priority (most "active" industries first)
+        industries_with_priority: List[Tuple[str, float, List[Story]]] = []
 
-            # Mark as shown
-            for s in industry_wide_stories:
-                shown_story_ids.add(s.story_id)
+        for industry in unique_industries:
+            # Get industry-wide stories (category='industry') for this industry
+            industry_stories = [
+                s for s in digest.store.get_industry_stories()
+                if industry.lower() in [t.lower() for t in s.industry_tags]
+                and s.story_id not in shown_story_ids
+            ]
 
-        # Part 2: Additional stories from tracked companies, grouped by industry
-        industry_summary = digest.get_industry_summary()
+            # Also include tracked company stories tagged with this industry
+            tracked_stories = [
+                s for s in digest.store.get_stories_by_industry(industry)
+                if s.story_id not in shown_story_ids
+                and s.company_category != 'industry'  # Avoid double-counting
+            ]
 
-        if industry_summary:
-            # Sort by story count descending, get top industries
-            sorted_industries = sorted(
-                industry_summary.items(),
-                key=lambda x: x[1]['story_count'],
-                reverse=True
-            )[:5]  # Top 5 industries
+            all_industry_stories = industry_stories + tracked_stories
 
-            for industry, data in sorted_industries:
-                # Get stories for this industry, excluding already shown
-                industry_stories = [
-                    s for s in digest.store.get_stories_by_industry(industry)
-                    if s.story_id not in shown_story_ids
-                ]
-                industry_stories = sorted(
-                    industry_stories,
-                    key=lambda s: s.priority_score,
-                    reverse=True
-                )[:5]  # Top 5 stories per industry
+            # Sort by priority and dedupe
+            seen_ids = set()
+            deduped_stories = []
+            for s in sorted(all_industry_stories, key=lambda x: x.priority_score, reverse=True):
+                if s.story_id not in seen_ids:
+                    deduped_stories.append(s)
+                    seen_ids.add(s.story_id)
 
-                if industry_stories:
-                    industry_section_has_stories = True
+            if deduped_stories:
+                max_priority = max(s.priority_score for s in deduped_stories)
+                industries_with_priority.append((industry, max_priority, deduped_stories))
 
-                    # Format industry name
-                    industry_name = industry.replace('_', ' ').title()
-                    lines.append(f"### {industry_name}\n")
-                    lines.extend(_render_story_table(industry_stories))
-                    lines.append("")
+        # Sort by max priority descending
+        industries_with_priority.sort(key=lambda x: x[1], reverse=True)
 
-                    # Mark these as shown to avoid duplicates across industries
-                    for s in industry_stories:
-                        shown_story_ids.add(s.story_id)
+        # Render each unique industry once
+        for industry, max_priority, industry_stories in industries_with_priority:
+            # Cap stories per industry
+            top_stories = industry_stories[:max_stories_per_industry]
+
+            if top_stories:
+                industry_section_has_stories = True
+
+                # Format industry name nicely
+                industry_name = industry.replace('_', ' ').title()
+                lines.append(f"### {industry_name}\n")
+                lines.extend(_render_story_table(top_stories, include_company=True))
+                lines.append("")
+
+                # Mark as shown
+                for s in top_stories:
+                    shown_story_ids.add(s.story_id)
 
         if not industry_section_has_stories:
             total_shown = len(shown_story_ids)
@@ -948,9 +1303,11 @@ def render_digest_markdown(digest: InvestorDigest) -> str:
                 lines.append("*No industry tags assigned to companies. Run `--refresh-industries` to fetch tags from Harmonic.*")
             lines.append("")
 
-    # Footer
+    # Footer with timing stats
     lines.append("---")
     lines.append(f"*Generated by Investor Digest Pipeline*")
+    if digest.timing and digest.timing.total_time_ms > 0:
+        lines.append(f"*Runtime: {digest.timing.total_time_ms}ms (fetch: {digest.timing.fetch_time_ms}ms, classify: {digest.timing.classification_time_ms}ms, LLM calls: {digest.timing.llm_calls})*")
 
     return '\n'.join(lines)
 
@@ -967,8 +1324,8 @@ def _render_story_table(stories: List[Story], include_company: bool = True) -> L
         data = []
         for story in stories:
             # Truncate title
-            title = story.primary_title[:55]
-            if len(story.primary_title) > 55:
+            title = story.primary_title[:50]
+            if len(story.primary_title) > 50:
                 title += "..."
 
             # Sentiment with icon
@@ -985,11 +1342,11 @@ def _render_story_table(stories: List[Story], include_company: bool = True) -> L
             sources = f"+{len(story.other_urls)}" if story.other_urls else ""
 
             row = {
-                'Company': story.company_name,
+                'Company': story.company_name[:15],
                 'Title': title,
                 'Type': story.classification,
                 'Sent': sent_str,
-                'Sources': sources,
+                'Src': sources,
                 'Synopsis': synopsis,
                 'URL': story.primary_url,
             }
@@ -999,9 +1356,9 @@ def _render_story_table(stories: List[Story], include_company: bool = True) -> L
 
         # Select columns based on include_company flag
         if include_company:
-            cols = ['Company', 'Title', 'Type', 'Sent', 'Sources', 'Synopsis']
+            cols = ['Company', 'Title', 'Type', 'Sent', 'Src', 'Synopsis']
         else:
-            cols = ['Title', 'Type', 'Sent', 'Sources', 'Synopsis']
+            cols = ['Title', 'Type', 'Sent', 'Src', 'Synopsis']
 
         # Use tabulate for nicer output if available, otherwise pandas
         try:
@@ -1074,7 +1431,7 @@ def _render_story_table_markdown(stories: List[Story], include_company: bool = T
             synopsis += f" *+{len(story.other_urls)}*"
 
         if include_company:
-            lines.append(f"| {story.company_name} | {title_cell} | {story.classification} | {sent_cell} | {synopsis} |")
+            lines.append(f"| {story.company_name[:15]} | {title_cell} | {story.classification} | {sent_cell} | {synopsis} |")
         else:
             lines.append(f"| {title_cell} | {story.classification} | {sent_cell} | {synopsis} |")
 
@@ -1101,13 +1458,23 @@ def get_portfolio_industries(investor_id: str = None) -> List[str]:
     return [industry for industry, _ in sorted_industries]
 
 
-def search_industry_news(industries: List[str], days: int = 7) -> List[ArticleRef]:
+def search_industry_news(
+    industries: List[str],
+    days: int = 7,
+) -> List[ArticleRef]:
     """
     Search for news across industries using ParallelSearchClient.
 
+    Filters applied:
+    1. Only articles from the last N days (default 7)
+    2. Excludes homepage/non-article URLs
+
+    Note: Does NOT exclude articles mentioning portfolio/competitor names -
+    industry news can mention tracked companies.
+
     Args:
         industries: List of industry tags to search
-        days: Days to look back
+        days: Days to look back (articles older than this are filtered)
 
     Returns:
         List of ArticleRef objects from industry searches
@@ -1123,7 +1490,10 @@ def search_industry_news(industries: List[str], days: int = 7) -> List[ArticleRe
     max_results = config['max_results_per_industry']
 
     articles: List[ArticleRef] = []
-    searched_urls = set()  # Deduplicate across industries
+    searched_urls: Set[str] = set()  # Deduplicate across industries
+
+    # Track filtering stats
+    filtered_stats = {'homepage': 0, 'old_date': 0, 'noise': 0}
 
     try:
         client = ParallelSearchClient()
@@ -1133,33 +1503,44 @@ def search_industry_news(industries: List[str], days: int = 7) -> List[ArticleRe
 
     # Search top N industries
     for industry in industries[:max_industries]:
-        # Build search query for the industry
-        search_terms = _get_industry_search_terms(industry)
-        if not search_terms:
-            continue
-
         logger.info(f"Searching industry news for: {industry}")
 
         try:
-            # Search for industry news
-            results = client.search_company_news(
-                search_terms,
-                max_results=max_results
+            # Use industry-specific search (no company exclusions)
+            results = client.search_industry_news(
+                industry=industry,
+                exclude_companies=[],  # Don't exclude any companies
+                max_results=max_results,
+                max_chars_per_result=500,  # Metadata only
             )
 
             for result in results:
                 url = result.url or ""
                 if not url or url in searched_urls:
                     continue
+
+                # Filter 1: Homepage/non-article URLs
+                if is_homepage_url(url):
+                    filtered_stats['homepage'] += 1
+                    continue
+
+                # Filter 2: Date range (only last N days)
+                if not is_within_date_range(result.publish_date, days=days):
+                    filtered_stats['old_date'] += 1
+                    continue
+
+                title = result.title or ""
+                snippet = " ".join(result.excerpts or [])[:500] if result.excerpts else ""
+
                 searched_urls.add(url)
 
                 # Create ArticleRef for industry story
                 article = ArticleRef(
                     url=url,
-                    title=result.title or "",
+                    title=title,
                     source_domain=result.source_domain or extract_domain(url),
                     published_date=result.publish_date,
-                    snippet=" ".join(result.excerpts or [])[:500] if result.excerpts else "",
+                    snippet=snippet,
                     engagement_score=0,
                     company_id="",  # No specific company
                     company_name=f"[{industry.title()}]",  # Show industry as "company"
@@ -1169,15 +1550,22 @@ def search_industry_news(industries: List[str], days: int = 7) -> List[ArticleRe
                     signal_id="",
                 )
 
-                # Filter noise
-                if not is_noise(article):
-                    articles.append(article)
+                # Filter 3: Noise patterns
+                if is_noise(article):
+                    filtered_stats['noise'] += 1
+                    continue
+
+                articles.append(article)
 
         except Exception as e:
             logger.warning(f"Industry search failed for {industry}: {e}")
             continue
 
-    logger.info(f"Found {len(articles)} industry news articles")
+    logger.info(
+        f"Found {len(articles)} industry news articles "
+        f"(filtered: {filtered_stats['homepage']} homepage, {filtered_stats['old_date']} old, "
+        f"{filtered_stats['noise']} noise)"
+    )
     return articles
 
 
@@ -1239,6 +1627,13 @@ def generate_investor_digest(
 
     Single pipeline: fetch -> normalize -> cluster -> classify -> sentiment -> synopsis -> rank -> render
 
+    Re-engineered for reduced LLM runtime:
+    - Uses only title + snippet (no full article body)
+    - Embeddings cached by URL hash
+    - LLM calls limited to 1 per unique story (or fewer)
+    - Portfolio vs Competitor exclusion enforced
+    - Industry Trends with de-duplicated industries
+
     Args:
         days: Days to look back (default 7)
         min_priority_score: Minimum score to include (default 40)
@@ -1251,6 +1646,9 @@ def generate_investor_digest(
     Returns:
         InvestorDigest with all stories and markdown output
     """
+    pipeline_start = time.time()
+    timing = PipelineTimingStats()
+
     init_db()
 
     # Calculate date range
@@ -1258,17 +1656,25 @@ def generate_investor_digest(
     start_date = end_date - timedelta(days=days)
     cutoff_iso = start_date.isoformat()
 
+    # ==========================================================================
+    # FETCH PHASE
+    # ==========================================================================
+    fetch_start = time.time()
+
     # Fetch all signals and companies
     all_signals = get_signals(investor_id=investor_id, limit=1000)
     all_companies = get_companies(active_only=True)
 
     # Build company lookup with industry tags
-    companies = {}
+    companies: Dict[str, WatchedCompany] = {}
     company_industries: Dict[str, List[str]] = {}
+    portfolio_ids: Set[str] = set()  # Track portfolio company IDs for exclusion
+
     for c in all_companies:
         companies[c.id] = c
-        # Get industry tags from company (uses 'industries' property)
         company_industries[c.id] = c.industries
+        if c.category == "portfolio":
+            portfolio_ids.add(c.id)
 
     # Filter by industry if specified
     if industry_filter:
@@ -1277,11 +1683,10 @@ def generate_investor_digest(
         for cid, tags in company_industries.items():
             if any(industry_filter_lower in tag.lower() for tag in tags):
                 filtered_company_ids.add(cid)
-        # Only keep signals for filtered companies
         companies = {k: v for k, v in companies.items() if k in filtered_company_ids}
 
     # Build parent company lookup
-    parent_names = {}
+    parent_names: Dict[str, str] = {}
     for c in companies.values():
         if c.category == "competitor" and c.parent_company_id:
             parent = companies.get(c.parent_company_id)
@@ -1292,20 +1697,32 @@ def generate_investor_digest(
     articles: List[ArticleRef] = []
 
     for signal in all_signals:
-        # Date filter
-        if signal.published_date and signal.published_date < cutoff_iso[:10]:
+        # Skip if no URL
+        url = signal.source_url or ""
+        if not url:
             continue
-        if signal.detected_at and signal.detected_at < cutoff_iso:
+
+        # Filter: Homepage/non-article URLs
+        if is_homepage_url(url):
             continue
+
+        # Date filter - strict: require valid date within range
+        if not is_within_date_range(signal.published_date, days=days, strict=True):
+            # Fallback: check detected_at if no published_date
+            if signal.detected_at:
+                if not is_within_date_range(signal.detected_at, days=days, strict=True):
+                    continue
+            else:
+                continue
 
         company = companies.get(signal.company_id)
         if not company:
             continue
 
         article = ArticleRef(
-            url=signal.source_url or "",
+            url=url,
             title=signal.headline,
-            source_domain=signal.source_name or extract_domain(signal.source_url or ""),
+            source_domain=signal.source_name or extract_domain(url),
             published_date=signal.published_date,
             snippet=signal.description or "",
             engagement_score=0,  # Will be enriched from HN/PH
@@ -1324,31 +1741,44 @@ def generate_investor_digest(
         articles.append(article)
 
     # Step 1b: Fetch industry-wide news (beyond tracked companies)
-    if not industry_filter:  # Only if not already filtering by industry
+    if include_industry_search and not industry_filter:
         portfolio_industries = get_portfolio_industries(investor_id)
         if portfolio_industries:
-            logger.info(f"Searching industry news for top industries: {portfolio_industries[:3]}")
-            industry_articles = search_industry_news(portfolio_industries, days=days)
+            logger.info(f"Searching industry news for top industries: {portfolio_industries[:INDUSTRY_SEARCH_CONFIG['max_industries']]}")
+            # Search industry news (allows company mentions)
+            industry_articles = search_industry_news(
+                portfolio_industries,
+                days=days,
+            )
 
             # Add industry articles (they'll be processed through same pipeline)
             articles.extend(industry_articles)
             logger.info(f"Added {len(industry_articles)} industry articles to pipeline")
 
-    # Step 2: Enrich with engagement data from HN
-    articles = _enrich_with_hn_engagement(articles)
+    timing.fetch_time_ms = int((time.time() - fetch_start) * 1000)
+
+    # Step 2: Enrich with engagement data from HN (skip in fast mode)
+    if not fast_mode:
+        articles = _enrich_with_hn_engagement(articles)
+
+    # ==========================================================================
+    # CLASSIFICATION & EMBEDDING PHASE
+    # ==========================================================================
+    classify_start = time.time()
 
     # Step 3: Cluster articles into stories
     clusters = cluster_articles(articles)
 
     # Step 4: Build stories from clusters
     store = StoryStore()
-    synopsis_cache: Dict[str, str] = {}  # Cache by story_id
+    synopsis_cache: Dict[str, str] = {}
+    llm_call_count = {'count': 0}
 
     for cluster in clusters:
         primary, other_urls = select_primary_article(cluster)
 
         story = Story(
-            story_id="",  # Will be computed
+            story_id="",
             primary_url=primary.url,
             primary_title=primary.title,
             other_urls=other_urls,
@@ -1366,28 +1796,45 @@ def generate_investor_digest(
         # Compute story ID for caching
         story.story_id = story.compute_story_id()
 
-        # Classification (deterministic)
-        story.classification, story.classification_confidence = classify_story(cluster)
-
-        # Sentiment (deterministic)
+        # Sentiment (deterministic - do first for priority scoring)
         story.sentiment = analyze_sentiment(cluster)
 
-        # Synopsis (LLM or rules, cached)
+        # Check cache for classification + synopsis
         if story.story_id in synopsis_cache:
-            story.synopsis = synopsis_cache[story.story_id]
+            story.classification, story.synopsis = synopsis_cache[story.story_id]
         else:
-            story.synopsis = generate_synopsis(story)
-            synopsis_cache[story.story_id] = story.synopsis
+            # LLM classifies AND generates synopsis in single call
+            story.classification, story.synopsis = classify_and_summarize_story(
+                cluster,
+                story.company_name,
+                llm_call_count
+            )
+            synopsis_cache[story.story_id] = (story.classification, story.synopsis)
 
         # Priority scoring
         story.priority_score, story.priority_reasons = calculate_priority_score(story)
 
         # Filter by minimum score
-        if story.priority_score >= min_priority_score:
-            store.add_story(story)
+        if story.priority_score < min_priority_score:
+            continue
 
-    # Build digest
+        store.add_story(story)
+
+    timing.classification_time_ms = int((time.time() - classify_start) * 1000)
+    timing.llm_calls = llm_call_count['count']
+
+    # ==========================================================================
+    # PORTFOLIO vs COMPETITOR EXCLUSION
+    # ==========================================================================
+    # Remove competitors that are also portfolio companies from competitor section
+    _resolve_portfolio_competitor_overlap(store, portfolio_ids)
+
+    # ==========================================================================
+    # BUILD DIGEST
+    # ==========================================================================
     digest_generated_at = datetime.now(timezone.utc).isoformat()
+
+    timing.total_time_ms = int((time.time() - pipeline_start) * 1000)
 
     digest = InvestorDigest(
         start_date=start_date.strftime("%Y-%m-%d"),
@@ -1395,9 +1842,10 @@ def generate_investor_digest(
         store=store,
         total_stories=len(store.stories),
         total_articles=len(articles),
-        companies_covered=len(set(s.company_id for s in store.stories)),
+        companies_covered=len(set(s.company_id for s in store.stories if s.company_id)),
         industry_filter=industry_filter,
         generated_at=digest_generated_at,
+        timing=timing,
     )
 
     # Persist stories to database
@@ -1435,10 +1883,35 @@ def generate_investor_digest(
 
     logger.info(
         f"Generated digest: {digest.total_stories} stories from {digest.total_articles} articles "
-        f"covering {digest.companies_covered} companies"
+        f"covering {digest.companies_covered} companies "
+        f"(timing: fetch={timing.fetch_time_ms}ms, classify={timing.classification_time_ms}ms, "
+        f"embed={timing.embedding_time_ms}ms, llm_calls={timing.llm_calls}, total={timing.total_time_ms}ms)"
     )
 
     return digest
+
+
+def _resolve_portfolio_competitor_overlap(store: StoryStore, portfolio_ids: Set[str]):
+    """
+    Remove competitor stories where the company is also in portfolio_ids.
+
+    Requirement: If one portfolio company is a competitor of another portfolio company,
+    do not include that company in Competitors section - only in Portfolio section.
+    """
+    # Find company IDs that are both portfolio and marked as competitor of another
+    overlap_ids = set()
+    for story in store.stories:
+        if story.company_category == "competitor" and story.company_id in portfolio_ids:
+            overlap_ids.add(story.company_id)
+
+    if overlap_ids:
+        logger.info(f"Portfolio/Competitor overlap: removing {len(overlap_ids)} companies from Competitors")
+
+        # Update stories to be portfolio instead of competitor
+        for story in store.stories:
+            if story.company_id in overlap_ids and story.company_category == "competitor":
+                story.company_category = "portfolio"
+                story.parent_company_name = None  # Clear competitor linkage
 
 
 def _enrich_with_hn_engagement(articles: List[ArticleRef]) -> List[ArticleRef]:

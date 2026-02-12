@@ -36,6 +36,12 @@ agents/meeting_briefing/chroma_db/
 # Environment variables
 .env
 .env.local
+.history/
+
+# Database files
+*.db
+*.db.backup
+data/nea_agents.db
 
 # IDE
 .vscode/

@@ -268,6 +268,21 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_investor_companies ON investor_companies(investor_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_company_parent ON watched_companies(parent_company_id)")
 
+    # Embedding cache table - stores embeddings by URL hash to avoid recomputation
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS embedding_cache (
+            url_hash TEXT PRIMARY KEY,
+            embedding BLOB NOT NULL,
+            title TEXT,
+            snippet TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_embedding_cache_created
+        ON embedding_cache(created_at)
+    """)
+
     conn.commit()
     conn.close()
 
@@ -1097,6 +1112,118 @@ def delete_old_stories(keep_days: int = 30) -> int:
     conn.close()
 
     return deleted
+
+
+# =============================================================================
+# EMBEDDING CACHE OPERATIONS
+# =============================================================================
+
+def get_cached_embedding(url_hash: str) -> Optional[bytes]:
+    """
+    Get cached embedding by URL hash.
+
+    Args:
+        url_hash: MD5 hash of the URL
+
+    Returns:
+        Embedding bytes if cached, None otherwise
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT embedding FROM embedding_cache WHERE url_hash = ?",
+        (url_hash,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+
+def save_embedding(
+    url_hash: str,
+    embedding: bytes,
+    title: str = None,
+    snippet: str = None
+) -> bool:
+    """
+    Save embedding to cache.
+
+    Args:
+        url_hash: MD5 hash of the URL
+        embedding: Embedding as bytes (numpy tobytes())
+        title: Optional title for debugging
+        snippet: Optional snippet for debugging
+
+    Returns:
+        True if saved successfully
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT OR REPLACE INTO embedding_cache
+            (url_hash, embedding, title, snippet, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            url_hash,
+            embedding,
+            title[:200] if title else None,
+            snippet[:500] if snippet else None,
+            datetime.utcnow().isoformat(),
+        ))
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def delete_old_embeddings(keep_days: int = 30) -> int:
+    """
+    Delete embeddings older than N days.
+
+    Args:
+        keep_days: Days to keep (default 30)
+
+    Returns:
+        Number of deleted embeddings
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cutoff = (datetime.utcnow() - timedelta(days=keep_days)).isoformat()
+    cursor.execute("DELETE FROM embedding_cache WHERE created_at < ?", (cutoff,))
+    deleted = cursor.rowcount
+    conn.commit()
+    conn.close()
+
+    return deleted
+
+
+def get_embedding_cache_stats() -> dict:
+    """Get embedding cache statistics."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM embedding_cache")
+    count = cursor.fetchone()[0]
+
+    cursor.execute(
+        "SELECT MIN(created_at), MAX(created_at) FROM embedding_cache"
+    )
+    row = cursor.fetchone()
+    oldest = row[0] if row else None
+    newest = row[1] if row else None
+
+    conn.close()
+
+    return {
+        'count': count,
+        'oldest': oldest,
+        'newest': newest,
+    }
 
 
 # Initialize on import
