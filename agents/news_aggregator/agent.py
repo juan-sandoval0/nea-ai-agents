@@ -40,6 +40,7 @@ from .database import (
     get_company_by_id, get_company_by_domain
 )
 from .detector import SignalDetector
+from .investor_digest import generate_investor_digest
 
 # Quality news sources (higher trust)
 QUALITY_SOURCES = [
@@ -231,11 +232,12 @@ def cmd_remove(domain: str, hard_delete: bool = False):
             print(f"Error: Failed to deactivate {domain}")
 
 
-def cmd_check(investor_id: str = None, refresh_competitors: bool = True):
+def cmd_check(investor_id: str = None, refresh_competitors: bool = True, quiet: bool = False):
     """Check for new signals across all companies."""
     companies = get_companies(investor_id=investor_id)
     if not companies:
-        print("No companies to check. Use --add first.")
+        if not quiet:
+            print("No companies to check. Use --add first.")
         return
 
     detector = get_detector()
@@ -246,49 +248,62 @@ def cmd_check(investor_id: str = None, refresh_competitors: bool = True):
     # First, refresh competitors for portfolio companies if needed
     if refresh_competitors and detector.harmonic:
         portfolio = get_portfolio_companies(investor_id)
-        print(f"\nChecking competitor discovery for {len(portfolio)} portfolio companies...")
+        if not quiet:
+            print(f"\nChecking competitor discovery for {len(portfolio)} portfolio companies...")
 
         for p in portfolio:
             if p.competitors_need_refresh():
-                print(f"[*] Discovering competitors for {p.company_name}...")
+                if not quiet:
+                    print(f"[*] Discovering competitors for {p.company_name}...")
                 try:
                     discovered = detector.discover_competitors(p, investor_id=investor_id)
                     if discovered:
                         new_competitors.extend(discovered)
-                        for comp in discovered:
-                            print(f"    [+] Found competitor: {comp.company_name} ({comp.company_id})")
+                        if not quiet:
+                            for comp in discovered:
+                                print(f"    [+] Found competitor: {comp.company_name} ({comp.company_id})")
                 except Exception as e:
                     all_errors.append(f"Competitor discovery error for {p.company_name}: {str(e)}")
 
         if new_competitors:
-            print(f"\n[+] Discovered {len(new_competitors)} new competitors")
+            if not quiet:
+                print(f"\n[+] Discovered {len(new_competitors)} new competitors")
             # Refresh companies list to include new competitors
             companies = get_companies(investor_id=investor_id)
 
-    print(f"\nChecking {len(companies)} companies for signals...\n")
+    if not quiet:
+        print(f"\nChecking {len(companies)} companies for signals...\n")
+    else:
+        print(f"Checking {len(companies)} companies for signals...", end=" ", flush=True)
 
     for company in companies:
-        print(f"[*] Checking {company.company_name}...")
+        if not quiet:
+            print(f"[*] Checking {company.company_name}...")
         result = detector.detect_all_signals(company)
 
         if result.signals:
-            print(f"    Found {len(result.signals)} new signals")
+            if not quiet:
+                print(f"    Found {len(result.signals)} new signals")
+                for signal in result.signals:
+                    print(f"      - [{signal.signal_type}] {signal.headline[:50]}... (score: {signal.relevance_score})")
             total_signals += len(result.signals)
-            for signal in result.signals:
-                print(f"      - [{signal.signal_type}] {signal.headline[:50]}... (score: {signal.relevance_score})")
 
         if result.errors:
             all_errors.extend(result.errors)
-            for err in result.errors:
-                print(f"    [!] {err}")
+            if not quiet:
+                for err in result.errors:
+                    print(f"    [!] {err}")
 
-    print(f"\n{'='*60}")
-    print(f"Scan complete. Found {total_signals} new signals.")
-    if new_competitors:
-        print(f"Discovered {len(new_competitors)} new competitors.")
-    if all_errors:
-        print(f"Encountered {len(all_errors)} errors.")
-    print()
+    if quiet:
+        print(f"found {total_signals} new signals.")
+    else:
+        print(f"\n{'='*60}")
+        print(f"Scan complete. Found {total_signals} new signals.")
+        if new_competitors:
+            print(f"Discovered {len(new_competitors)} new competitors.")
+        if all_errors:
+            print(f"Encountered {len(all_errors)} errors.")
+        print()
 
 
 def cmd_signals(min_score: int = None, signal_type: str = None, limit: int = 50, company_filter: str = None):
@@ -620,6 +635,38 @@ def cmd_alerts(days: int = 7, max_per_company: int = 4):
     print("=" * 60 + "\n")
 
 
+def cmd_refresh_industries(investor_id: str = None):
+    """Refresh industry tags for all companies from Harmonic API."""
+    companies = get_companies(investor_id=investor_id)
+    if not companies:
+        print("No companies to refresh. Use --add first.")
+        return
+
+    detector = get_detector()
+    if not detector.harmonic:
+        print("Error: Harmonic API client not available. Set HARMONIC_API_KEY.")
+        return
+
+    print(f"\nRefreshing industry tags for {len(companies)} companies...\n")
+
+    updated = 0
+    for company in companies:
+        print(f"[*] {company.company_name}...", end=" ")
+        try:
+            tags = detector.refresh_industry_tags(company)
+            if tags:
+                print(f"✓ {', '.join(tags[:3])}" + ("..." if len(tags) > 3 else ""))
+                updated += 1
+            else:
+                print("(no tags found)")
+        except Exception as e:
+            print(f"✗ {e}")
+
+    print(f"\n{'='*60}")
+    print(f"Updated industry tags for {updated}/{len(companies)} companies")
+    print(f"{'='*60}\n")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="News Aggregator - Track company signals",
@@ -663,8 +710,18 @@ Examples:
     parser.add_argument("--check", action="store_true", help="Check for new signals (auto-discovers competitors)")
     parser.add_argument("--no-competitor-refresh", action="store_true",
                         help="Skip competitor discovery during --check")
-    parser.add_argument("--alerts", action="store_true", help="Show significant alerts only")
-    parser.add_argument("--signals", action="store_true", help="Show all stored signals (raw)")
+    parser.add_argument("--alerts", action="store_true", help="Show significant alerts only (deprecated: use --digest)")
+    parser.add_argument("--signals", action="store_true", help="Show all stored signals (deprecated: use --digest)")
+    parser.add_argument("--digest", action="store_true",
+                        help="Generate unified investor digest (auto-fetches new signals)")
+    parser.add_argument("--no-fetch", action="store_true",
+                        help="Skip fetching new signals (use cached data only)")
+    parser.add_argument("--min-priority", type=float, default=40.0,
+                        help="Minimum priority score for digest (default: 40)")
+    parser.add_argument("--industry", metavar="TAG",
+                        help="Filter by industry tag (e.g., fintech, ai_ml, healthcare)")
+    parser.add_argument("--refresh-industries", action="store_true",
+                        help="Refresh industry tags for all companies from Harmonic API")
 
     # Investor management
     parser.add_argument("--investors", nargs="?", const="list", metavar="ACTION",
@@ -701,6 +758,22 @@ Examples:
         cmd_alerts(days=args.days)
     elif args.signals:
         cmd_signals(min_score=args.min_score, signal_type=args.signal_type, limit=args.limit, company_filter=args.company)
+    elif args.digest:
+        # Auto-fetch new signals unless --no-fetch is specified
+        if not args.no_fetch:
+            print("Fetching latest signals...\n")
+            cmd_check(investor_id=args.investor_id, refresh_competitors=True, quiet=True)
+            print("")
+
+        digest = generate_investor_digest(
+            days=args.days,
+            min_priority_score=args.min_priority,
+            investor_id=args.investor_id,
+            industry_filter=args.industry
+        )
+        print(digest.to_markdown())
+    elif args.refresh_industries:
+        cmd_refresh_industries(investor_id=args.investor_id)
     else:
         parser.print_help()
 

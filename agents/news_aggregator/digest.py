@@ -20,7 +20,16 @@ import os
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional, List, Dict, Any
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    env_path = Path(__file__).parent.parent.parent / ".env"
+    load_dotenv(env_path)
+except ImportError:
+    pass  # dotenv not installed, rely on environment variables
 
 from .database import (
     get_signals,
@@ -151,7 +160,9 @@ class WeeklyDigest:
                 lines.append(f"### {i}. {article.signal.headline}")
                 lines.append(f"**{article.company_name}** ({article.company_category}) | {article.signal.signal_type}")
 
-                if article.signal.synopsis:
+                if article.formatted_summary:
+                    lines.append(f"\n{article.formatted_summary}")
+                elif article.signal.synopsis:
                     lines.append(f"\n{article.signal.synopsis}")
                 elif article.signal.description:
                     lines.append(f"\n{article.signal.description[:200]}...")

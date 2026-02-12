@@ -9,7 +9,7 @@ from .database import (
     WatchedCompany, CompanySignal, save_signal, signal_exists,
     get_latest_employee_snapshot, save_employee_snapshot, update_company_harmonic_id,
     add_company, link_investor_to_company, update_competitors_refreshed,
-    get_competitors_for_company
+    get_competitors_for_company, update_company_industries
 )
 from .scorer import score_signal, format_score_breakdown, detect_seniority
 
@@ -154,16 +154,48 @@ class SignalDetector:
 
         return DetectionResult(signals=signals, errors=errors)
 
+    def refresh_industry_tags(self, company: WatchedCompany) -> List[str]:
+        """
+        Refresh industry tags for a company from Harmonic API.
+
+        Args:
+            company: The company to refresh tags for
+
+        Returns:
+            List of industry tags assigned to the company
+        """
+        if not self.harmonic:
+            return []
+
+        # Get Harmonic company data
+        harmonic_company = None
+        if company.harmonic_id:
+            harmonic_company = self.harmonic.get_company(company.harmonic_id)
+        else:
+            harmonic_company = self.harmonic.lookup_company(domain=company.company_id)
+            if harmonic_company:
+                update_company_harmonic_id(company.id, harmonic_company.id)
+
+        if not harmonic_company or not harmonic_company.tags:
+            return []
+
+        # Update industry tags in database
+        update_company_industries(company.id, harmonic_company.tags)
+        return harmonic_company.tags
+
     def _detect_harmonic_signals(self, company: WatchedCompany) -> List[CompanySignal]:
         """Detect signals from Harmonic (employee changes, funding)."""
         signals = []
 
-        # Get or update Harmonic company ID
+        # Get or update Harmonic company ID and industry tags
         if not company.harmonic_id:
             harmonic_company = self.harmonic.lookup_company(domain=company.company_id)
             if harmonic_company:
                 update_company_harmonic_id(company.id, harmonic_company.id)
                 company.harmonic_id = harmonic_company.id
+                # Also update industry tags if available
+                if harmonic_company.tags:
+                    update_company_industries(company.id, harmonic_company.tags)
             else:
                 return signals
 

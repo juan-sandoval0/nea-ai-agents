@@ -218,6 +218,50 @@ def init_db():
         except sqlite3.OperationalError:
             pass  # Column already exists
 
+    # Stories table - cached clustered/merged view from digest generation
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS stories (
+            id TEXT PRIMARY KEY,
+            story_id TEXT NOT NULL UNIQUE,
+            primary_url TEXT NOT NULL,
+            primary_title TEXT NOT NULL,
+            other_urls TEXT,
+            classification TEXT,
+            sentiment_label TEXT,
+            sentiment_score INTEGER,
+            sentiment_keywords TEXT,
+            synopsis TEXT,
+            company_id TEXT,
+            company_name TEXT,
+            company_category TEXT,
+            parent_company_name TEXT,
+            industry_tags TEXT,
+            priority_score REAL,
+            priority_reasons TEXT,
+            published_date TEXT,
+            max_engagement INTEGER,
+            source_count INTEGER,
+            article_signal_ids TEXT,
+            digest_generated_at TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (company_id) REFERENCES watched_companies(id)
+        )
+    """)
+
+    # Index for faster lookups
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_stories_digest_generated_at
+        ON stories(digest_generated_at)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_stories_company_id
+        ON stories(company_id)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_stories_classification
+        ON stories(classification)
+    """)
+
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_signals_company ON company_signals(company_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_signals_type ON company_signals(signal_type)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_signals_score ON company_signals(relevance_score)")
@@ -835,6 +879,224 @@ def get_latest_employee_snapshot(company_id: str) -> Optional[EmployeeSnapshot]:
     row = cursor.fetchone()
     conn.close()
     return EmployeeSnapshot(**dict(row)) if row else None
+
+
+# =============================================================================
+# STORY CACHE OPERATIONS
+# =============================================================================
+
+@dataclass
+class CachedStory:
+    """A cached story from digest generation."""
+    id: str
+    story_id: str  # Hash-based ID for deduplication
+    primary_url: str
+    primary_title: str
+    other_urls: List[str] = field(default_factory=list)
+    classification: str = "GENERAL"
+    sentiment_label: str = "Neutral"
+    sentiment_score: int = 0
+    sentiment_keywords: List[str] = field(default_factory=list)
+    synopsis: str = ""
+    company_id: str = ""
+    company_name: str = ""
+    company_category: str = ""
+    parent_company_name: Optional[str] = None
+    industry_tags: List[str] = field(default_factory=list)
+    priority_score: float = 0.0
+    priority_reasons: List[str] = field(default_factory=list)
+    published_date: Optional[str] = None
+    max_engagement: int = 0
+    source_count: int = 0
+    article_signal_ids: List[str] = field(default_factory=list)
+    digest_generated_at: str = ""
+    created_at: str = None
+
+    def __post_init__(self):
+        if self.created_at is None:
+            self.created_at = datetime.utcnow().isoformat()
+
+    @classmethod
+    def from_row(cls, row: sqlite3.Row) -> "CachedStory":
+        """Create CachedStory from database row."""
+        data = dict(row)
+        # Parse JSON fields
+        data['other_urls'] = json.loads(data.get('other_urls') or '[]')
+        data['sentiment_keywords'] = json.loads(data.get('sentiment_keywords') or '[]')
+        data['industry_tags'] = json.loads(data.get('industry_tags') or '[]')
+        data['priority_reasons'] = json.loads(data.get('priority_reasons') or '[]')
+        data['article_signal_ids'] = json.loads(data.get('article_signal_ids') or '[]')
+        return cls(**data)
+
+
+def save_story(story: "CachedStory") -> bool:
+    """Save or update a cached story."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            INSERT OR REPLACE INTO stories (
+                id, story_id, primary_url, primary_title, other_urls,
+                classification, sentiment_label, sentiment_score, sentiment_keywords,
+                synopsis, company_id, company_name, company_category, parent_company_name,
+                industry_tags, priority_score, priority_reasons, published_date,
+                max_engagement, source_count, article_signal_ids,
+                digest_generated_at, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            story.id,
+            story.story_id,
+            story.primary_url,
+            story.primary_title,
+            json.dumps(story.other_urls),
+            story.classification,
+            story.sentiment_label,
+            story.sentiment_score,
+            json.dumps(story.sentiment_keywords),
+            story.synopsis,
+            story.company_id,
+            story.company_name,
+            story.company_category,
+            story.parent_company_name,
+            json.dumps(story.industry_tags),
+            story.priority_score,
+            json.dumps(story.priority_reasons),
+            story.published_date,
+            story.max_engagement,
+            story.source_count,
+            json.dumps(story.article_signal_ids),
+            story.digest_generated_at,
+            story.created_at,
+        ))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+
+def save_stories_batch(stories: List["CachedStory"], digest_generated_at: str) -> int:
+    """Save multiple stories in a single transaction."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    saved_count = 0
+    try:
+        for story in stories:
+            story.digest_generated_at = digest_generated_at
+            cursor.execute("""
+                INSERT OR REPLACE INTO stories (
+                    id, story_id, primary_url, primary_title, other_urls,
+                    classification, sentiment_label, sentiment_score, sentiment_keywords,
+                    synopsis, company_id, company_name, company_category, parent_company_name,
+                    industry_tags, priority_score, priority_reasons, published_date,
+                    max_engagement, source_count, article_signal_ids,
+                    digest_generated_at, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                story.id,
+                story.story_id,
+                story.primary_url,
+                story.primary_title,
+                json.dumps(story.other_urls),
+                story.classification,
+                story.sentiment_label,
+                story.sentiment_score,
+                json.dumps(story.sentiment_keywords),
+                story.synopsis,
+                story.company_id,
+                story.company_name,
+                story.company_category,
+                story.parent_company_name,
+                json.dumps(story.industry_tags),
+                story.priority_score,
+                json.dumps(story.priority_reasons),
+                story.published_date,
+                story.max_engagement,
+                story.source_count,
+                json.dumps(story.article_signal_ids),
+                story.digest_generated_at,
+                story.created_at,
+            ))
+            saved_count += 1
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+    return saved_count
+
+
+def get_stories(
+    digest_generated_at: str = None,
+    company_id: str = None,
+    classification: str = None,
+    limit: int = 100
+) -> List[CachedStory]:
+    """Get cached stories with optional filters."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = "SELECT * FROM stories WHERE 1=1"
+    params = []
+
+    if digest_generated_at:
+        query += " AND digest_generated_at = ?"
+        params.append(digest_generated_at)
+
+    if company_id:
+        query += " AND company_id = ?"
+        params.append(company_id)
+
+    if classification:
+        query += " AND classification = ?"
+        params.append(classification)
+
+    query += " ORDER BY priority_score DESC LIMIT ?"
+    params.append(limit)
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [CachedStory.from_row(row) for row in rows]
+
+
+def get_latest_digest_timestamp() -> Optional[str]:
+    """Get the timestamp of the most recent digest generation."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT digest_generated_at FROM stories
+        ORDER BY digest_generated_at DESC LIMIT 1
+    """)
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+
+def get_stories_by_digest(digest_generated_at: str) -> List[CachedStory]:
+    """Get all stories from a specific digest run."""
+    return get_stories(digest_generated_at=digest_generated_at, limit=1000)
+
+
+def delete_old_stories(keep_days: int = 30) -> int:
+    """Delete stories older than N days."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cutoff = (datetime.utcnow() - timedelta(days=keep_days)).isoformat()
+    cursor.execute("DELETE FROM stories WHERE created_at < ?", (cutoff,))
+    deleted = cursor.rowcount
+    conn.commit()
+    conn.close()
+
+    return deleted
 
 
 # Initialize on import
