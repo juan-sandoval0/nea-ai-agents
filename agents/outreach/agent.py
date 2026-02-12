@@ -119,6 +119,13 @@ def cmd_generate(args):
     print(f"Generating {args.format} outreach for: {args.company}")
     print("-" * 60)
 
+    # Resolve samples_file: --no-samples → "" (disabled), --samples PATH → path, else None (auto)
+    samples_file = None
+    if args.no_samples:
+        samples_file = ""
+    elif args.samples:
+        samples_file = args.samples
+
     result = generate_outreach(
         company_id=args.company,
         output_format=args.format,
@@ -126,6 +133,7 @@ def cmd_generate(args):
         investor_name=args.investor_name,
         firm_name=args.firm_name,
         skip_ingest=args.skip_ingest,
+        samples_file=samples_file,
     )
 
     if result["success"]:
@@ -216,6 +224,16 @@ Examples:
         "--skip-ingest",
         action="store_true",
         help="Use cached DB data only (skip API re-ingestion)",
+    )
+    parser.add_argument(
+        "--samples",
+        default=None,
+        help="Path to style samples file (default: auto-detect from docs/)",
+    )
+    parser.add_argument(
+        "--no-samples",
+        action="store_true",
+        help="Disable style examples (use generic tone)",
     )
     parser.add_argument(
         "--preview",

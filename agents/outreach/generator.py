@@ -73,7 +73,8 @@ TONE:
 - Professional but warm
 - Curious, not presumptuous
 - Specific, not templated
-- Investor reaching out as a peer, not pitching services"""
+- Investor reaching out as a peer, not pitching services
+- If style examples are provided, match their tone and structure closely."""
 
 
 # =============================================================================
@@ -214,6 +215,7 @@ def generate_outreach(
     firm_name: Optional[str] = None,
     model: str = DEFAULT_LLM_MODEL,
     skip_ingest: bool = False,
+    samples_file: Optional[str] = None,
 ) -> dict:
     """
     Generate a personalized outreach message for a founder at a target company.
@@ -236,6 +238,7 @@ def generate_outreach(
         firm_name: Optional firm name for the message
         model: LLM model to use
         skip_ingest: If True, use cached DB data only
+        samples_file: Path to style samples file (None=auto-detect, ""=disabled)
 
     Returns:
         Dict with message, metadata, and success/error status
@@ -294,6 +297,7 @@ def generate_outreach(
         investor_ctx = get_investor_context(
             investor_name=investor_name,
             firm_name=firm_name,
+            samples_file=samples_file,
         )
 
         # Step 5: Sanitize all data
@@ -324,7 +328,23 @@ def generate_outreach(
                     severity="warning",
                 )
 
-        # Step 6: Build user prompt
+        # Step 6: Build style examples section
+        style_section = ""
+        if investor_ctx.style_examples:
+            sanitized_examples = []
+            for i, ex in enumerate(investor_ctx.style_examples, 1):
+                safe_ex = sanitize_for_prompt(ex, escape_markdown=False)
+                sanitized_examples.append(f"### Example {i}\n{safe_ex}")
+            examples_block = "\n\n".join(sanitized_examples)
+            style_section = f"""
+
+## STYLE EXAMPLES
+Match the tone, structure, and voice of these real emails. Do NOT copy them — use them as inspiration for the writing style.
+
+{examples_block}
+"""
+
+        # Step 7: Build user prompt
         format_label = "EMAIL" if output_format == "email" else "LINKEDIN"
         user_prompt = f"""Generate a personalized {format_label} outreach message for the following target.
 
@@ -336,7 +356,7 @@ def generate_outreach(
 
 ## INVESTOR CONTEXT
 {safe_investor_context}
-
+{style_section}
 ## OUTPUT REQUIREMENTS
 - Format: {format_label}
 - {"Include a Subject: line at the top, followed by a blank line, then the message body." if output_format == "email" else "No subject line. Open with a personalized hook."}
@@ -344,7 +364,7 @@ def generate_outreach(
 - Sign off as {investor_ctx.investor_name} from {investor_ctx.firm_name}.
 """
 
-        # Step 7: Get system prompt and model config
+        # Step 8: Get system prompt and model config
         try:
             system_prompt_obj = get_prompt("outreach_system")
             system_prompt_content = system_prompt_obj.content
@@ -373,7 +393,7 @@ def generate_outreach(
             temperature=temperature,
         )
 
-        # Step 8: Call LLM
+        # Step 9: Call LLM
         tracker = get_tracker()
         llm = ChatOpenAI(model=actual_model, temperature=temperature)
         messages = [
@@ -393,7 +413,7 @@ def generate_outreach(
         call_metadata.tokens_out = tokens_out
         call_metadata.latency_ms = latency_ms
 
-        # Step 9: Parse output
+        # Step 10: Parse output
         message_text = raw_content.strip()
         subject = None
 
@@ -406,7 +426,7 @@ def generate_outreach(
         result["subject"] = subject
         result["success"] = True
 
-        # Step 10: Log everything
+        # Step 11: Log everything
         tracker.log_api_call(
             service="openai",
             endpoint=f"/chat/completions ({actual_model})",
