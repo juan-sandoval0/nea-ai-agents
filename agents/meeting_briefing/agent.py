@@ -1214,6 +1214,7 @@ class MeetingBriefingAgent:
 def main():
     """Demo the meeting briefing agent."""
     import sys
+    from services.history import BriefingHistoryDB, BriefingRecord
 
     print("Meeting Briefing Agent - LangGraph Implementation")
     print("=" * 60)
@@ -1234,6 +1235,26 @@ def main():
         print(f"Company: {result['company_name']}")
         print()
         print(result["briefing_markdown"])
+
+        # Save to history
+        try:
+            history_db = BriefingHistoryDB()
+            record = BriefingRecord(
+                id=result["run_id"],
+                company_id=result["url"],
+                company_name=result["company_name"],
+                created_at=datetime.now(),
+                markdown=result["briefing_markdown"],
+                success=True,
+                data_sources={
+                    "retrieval_counts": result["retrieval_counts"],
+                    "step_timings_ms": result["step_timings_ms"],
+                }
+            )
+            history_db.save_briefing(record)
+            print("\n[Saved to briefing history]")
+        except Exception as e:
+            print(f"\n[Warning: Could not save to history: {e}]")
     else:
         print(f"Error: {result['error']}")
 
