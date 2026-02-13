@@ -50,7 +50,7 @@ except ImportError:
 from .database import (
     get_signals, get_companies, get_portfolio_companies,
     get_competitors_for_company, CompanySignal, WatchedCompany,
-    get_company_by_id, init_db, INDUSTRY_CATEGORIES,
+    get_company_by_id, INDUSTRY_CATEGORIES,
     get_companies_by_industry, CachedStory, save_stories_batch,
 )
 
@@ -1648,8 +1648,6 @@ def generate_investor_digest(
     """
     pipeline_start = time.time()
     timing = PipelineTimingStats()
-
-    init_db()
 
     # Calculate date range
     end_date = datetime.now(timezone.utc)

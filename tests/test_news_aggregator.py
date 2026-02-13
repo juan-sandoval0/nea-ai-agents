@@ -14,18 +14,14 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
 
-# We need to patch DB_PATH before importing the database module
+# NOTE: Tests now require Supabase connection (set SUPABASE_URL and SUPABASE_SERVICE_KEY)
+# TODO: Add test database isolation using Supabase test project or transaction rollback
 @pytest.fixture(autouse=True)
 def use_temp_database():
-    """Use a temporary database for each test."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        temp_db = Path(tmpdir) / "test_news_aggregator.db"
-        with patch("agents.news_aggregator.database.DB_PATH", temp_db):
-            # Re-initialize the database with the new path
-            from agents.news_aggregator import database
-            database.DB_PATH = temp_db
-            database.init_db()
-            yield temp_db
+    """Placeholder fixture - tests now use Supabase directly."""
+    # With Supabase, we don't use temp SQLite databases anymore
+    # Tests should clean up their own data or use a test Supabase project
+    yield None
 
 
 # =============================================================================

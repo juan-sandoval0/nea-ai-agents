@@ -32,7 +32,7 @@ except ImportError:
     pass  # dotenv not installed, rely on environment variables
 
 from .database import (
-    init_db, add_company, get_companies, get_signals,
+    add_company, get_companies, get_signals,
     WatchedCompany, CompanySignal, get_portfolio_companies,
     get_competitors_for_company, remove_company, deactivate_company,
     get_or_create_default_investor, add_investor, get_investors,
@@ -738,8 +738,6 @@ Examples:
     parser.add_argument("--days", type=int, default=7, help="Days to look back for alerts")
 
     args = parser.parse_args()
-
-    init_db()
 
     if args.add:
         name = args.name or args.add.split('.')[0].title()
