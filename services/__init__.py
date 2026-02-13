@@ -1,7 +1,9 @@
 """
 Services module for NEA AI Agents.
 
-Provides briefing history persistence using Supabase.
+Provides:
+- FastAPI backend for Lovable frontend
+- Briefing history persistence using Supabase
 """
 
 from services.history import BriefingHistoryDB, BriefingRecord

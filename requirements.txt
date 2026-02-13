@@ -27,6 +27,10 @@ parallel-web>=0.4.0
 # Observability (optional - only needed if LANGSMITH_TRACING=true)
 # langsmith is already included above
 
+# API Server (for Lovable frontend)
+fastapi>=0.100.0
+uvicorn>=0.23.0
+
 # Output validation
 pydantic>=2.0.0
 
