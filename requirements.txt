@@ -27,15 +27,14 @@ parallel-web>=0.4.0
 # Observability (optional - only needed if LANGSMITH_TRACING=true)
 # langsmith is already included above
 
-# API Server
-fastapi>=0.100.0
-uvicorn>=0.23.0
-
 # Output validation
 pydantic>=2.0.0
 
 # Testing
 pytest>=7.0.0
+
+# Supabase (PostgreSQL backend)
+supabase>=2.0.0
 
 # Pin protobuf to avoid Streamlit/grpc conflicts
 protobuf>=4.0.0,<5.0.0

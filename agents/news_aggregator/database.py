@@ -1,14 +1,11 @@
-"""Database layer for news aggregator using SQLite."""
+"""Database layer for news aggregator using Supabase PostgreSQL."""
 
-import sqlite3
-import uuid
 import json
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from typing import Optional, List
-from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "news_aggregator.db"
+from core.clients.supabase_client import get_supabase
 
 
 @dataclass
@@ -36,23 +33,24 @@ class WatchedCompany:
     harmonic_id: Optional[str] = None
     parent_company_id: Optional[str] = None  # For competitors: links to portfolio company
     competitors_refreshed_at: Optional[str] = None  # When competitors were last fetched
-    industry_tags: Optional[str] = None  # JSON list of industry tags (e.g., ["fintech", "payments"])
+    industry_tags: Optional[List[str]] = None  # List of industry tags
     is_active: bool = True
     added_at: str = None
 
     def __post_init__(self):
         if self.added_at is None:
             self.added_at = datetime.utcnow().isoformat()
+        # Handle industry_tags from Supabase (comes as list) vs legacy (JSON string)
+        if isinstance(self.industry_tags, str):
+            try:
+                self.industry_tags = json.loads(self.industry_tags)
+            except (json.JSONDecodeError, TypeError):
+                self.industry_tags = []
 
     @property
     def industries(self) -> List[str]:
         """Get industry tags as a list."""
-        if not self.industry_tags:
-            return []
-        try:
-            return json.loads(self.industry_tags)
-        except (json.JSONDecodeError, TypeError):
-            return []
+        return self.industry_tags or []
 
     def competitors_need_refresh(self, days: int = 30) -> bool:
         """Check if competitors need to be refreshed (older than N days)."""
@@ -60,8 +58,8 @@ class WatchedCompany:
             return False
         if not self.competitors_refreshed_at:
             return True
-        refreshed = datetime.fromisoformat(self.competitors_refreshed_at)
-        return datetime.utcnow() - refreshed > timedelta(days=days)
+        refreshed = datetime.fromisoformat(self.competitors_refreshed_at.replace('Z', '+00:00'))
+        return datetime.utcnow() - refreshed.replace(tzinfo=None) > timedelta(days=days)
 
 
 @dataclass
@@ -82,7 +80,7 @@ class EmployeeSnapshot:
     id: str
     company_id: str
     snapshot_date: str
-    employees_json: str
+    employees_json: str  # Keep as JSON string for compatibility
     created_at: str = None
 
     def __post_init__(self):
@@ -105,8 +103,8 @@ class CompanySignal:
     source_name: Optional[str] = None
     published_date: Optional[str] = None
     relevance_score: int = 0
-    score_breakdown: Optional[str] = None  # JSON
-    raw_data: Optional[str] = None  # JSON
+    score_breakdown: Optional[dict] = None  # Dict (Supabase JSONB)
+    raw_data: Optional[dict] = None  # Dict (Supabase JSONB)
     sentiment: Optional[str] = None  # "positive", "negative", or "neutral"
     synopsis: Optional[str] = None  # 1-2 sentence VC-relevant summary
     detected_at: str = None
@@ -114,177 +112,21 @@ class CompanySignal:
     def __post_init__(self):
         if self.detected_at is None:
             self.detected_at = datetime.utcnow().isoformat()
+        # Handle JSON strings from legacy code
+        if isinstance(self.score_breakdown, str):
+            try:
+                self.score_breakdown = json.loads(self.score_breakdown)
+            except (json.JSONDecodeError, TypeError):
+                self.score_breakdown = None
+        if isinstance(self.raw_data, str):
+            try:
+                self.raw_data = json.loads(self.raw_data)
+            except (json.JSONDecodeError, TypeError):
+                self.raw_data = None
 
     @property
     def raw_data_dict(self) -> dict:
-        return json.loads(self.raw_data) if self.raw_data else {}
-
-
-def get_connection() -> sqlite3.Connection:
-    """Get database connection with row factory."""
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def init_db():
-    """Initialize database tables."""
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    # Investors table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS investors (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            email TEXT,
-            slack_id TEXT,
-            is_active INTEGER DEFAULT 1,
-            created_at TEXT NOT NULL
-        )
-    """)
-
-    # Watched companies table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS watched_companies (
-            id TEXT PRIMARY KEY,
-            company_id TEXT NOT NULL UNIQUE,
-            company_name TEXT NOT NULL,
-            category TEXT NOT NULL,
-            harmonic_id TEXT,
-            parent_company_id TEXT,
-            competitors_refreshed_at TEXT,
-            industry_tags TEXT,
-            is_active INTEGER DEFAULT 1,
-            added_at TEXT NOT NULL,
-            FOREIGN KEY (parent_company_id) REFERENCES watched_companies(id)
-        )
-    """)
-
-    # Add industry_tags column if it doesn't exist (migration for existing DBs)
-    try:
-        cursor.execute("ALTER TABLE watched_companies ADD COLUMN industry_tags TEXT")
-    except sqlite3.OperationalError:
-        pass  # Column already exists
-
-    # Investor-Company junction table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS investor_companies (
-            id TEXT PRIMARY KEY,
-            investor_id TEXT NOT NULL,
-            company_id TEXT NOT NULL,
-            added_at TEXT NOT NULL,
-            FOREIGN KEY (investor_id) REFERENCES investors(id),
-            FOREIGN KEY (company_id) REFERENCES watched_companies(id),
-            UNIQUE(investor_id, company_id)
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS employee_snapshots (
-            id TEXT PRIMARY KEY,
-            company_id TEXT NOT NULL,
-            snapshot_date TEXT NOT NULL,
-            employees_json TEXT,
-            created_at TEXT NOT NULL,
-            FOREIGN KEY (company_id) REFERENCES watched_companies(id)
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS company_signals (
-            id TEXT PRIMARY KEY,
-            company_id TEXT NOT NULL,
-            signal_type TEXT NOT NULL,
-            headline TEXT NOT NULL,
-            description TEXT,
-            source_url TEXT,
-            source_name TEXT,
-            published_date TEXT,
-            relevance_score INTEGER DEFAULT 0,
-            score_breakdown TEXT,
-            raw_data TEXT,
-            sentiment TEXT,
-            synopsis TEXT,
-            detected_at TEXT NOT NULL,
-            FOREIGN KEY (company_id) REFERENCES watched_companies(id)
-        )
-    """)
-
-    # Add columns if they don't exist (migration for existing DBs)
-    for column in ['sentiment', 'synopsis']:
-        try:
-            cursor.execute(f"ALTER TABLE company_signals ADD COLUMN {column} TEXT")
-        except sqlite3.OperationalError:
-            pass  # Column already exists
-
-    # Stories table - cached clustered/merged view from digest generation
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS stories (
-            id TEXT PRIMARY KEY,
-            story_id TEXT NOT NULL UNIQUE,
-            primary_url TEXT NOT NULL,
-            primary_title TEXT NOT NULL,
-            other_urls TEXT,
-            classification TEXT,
-            sentiment_label TEXT,
-            sentiment_score INTEGER,
-            sentiment_keywords TEXT,
-            synopsis TEXT,
-            company_id TEXT,
-            company_name TEXT,
-            company_category TEXT,
-            parent_company_name TEXT,
-            industry_tags TEXT,
-            priority_score REAL,
-            priority_reasons TEXT,
-            published_date TEXT,
-            max_engagement INTEGER,
-            source_count INTEGER,
-            article_signal_ids TEXT,
-            digest_generated_at TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            FOREIGN KEY (company_id) REFERENCES watched_companies(id)
-        )
-    """)
-
-    # Index for faster lookups
-    cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_stories_digest_generated_at
-        ON stories(digest_generated_at)
-    """)
-    cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_stories_company_id
-        ON stories(company_id)
-    """)
-    cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_stories_classification
-        ON stories(classification)
-    """)
-
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_signals_company ON company_signals(company_id)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_signals_type ON company_signals(signal_type)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_signals_score ON company_signals(relevance_score)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_investor_companies ON investor_companies(investor_id)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_company_parent ON watched_companies(parent_company_id)")
-
-    # Embedding cache table - stores embeddings by URL hash to avoid recomputation
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS embedding_cache (
-            url_hash TEXT PRIMARY KEY,
-            embedding BLOB NOT NULL,
-            title TEXT,
-            snippet TEXT,
-            created_at TEXT NOT NULL
-        )
-    """)
-    cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_embedding_cache_created
-        ON embedding_cache(created_at)
-    """)
-
-    conn.commit()
-    conn.close()
+        return self.raw_data or {}
 
 
 # =============================================================================
@@ -293,50 +135,72 @@ def init_db():
 
 def add_investor(name: str, email: str = None, slack_id: str = None) -> Investor:
     """Add a new investor."""
-    investor = Investor(
-        id=str(uuid.uuid4()),
-        name=name,
-        email=email,
-        slack_id=slack_id
+    supabase = get_supabase()
+    data = {
+        "name": name,
+        "email": email,
+        "slack_id": slack_id,
+        "is_active": True,
+    }
+    result = supabase.table("investors").insert(data).execute()
+    row = result.data[0]
+    return Investor(
+        id=row["id"],
+        name=row["name"],
+        email=row.get("email"),
+        slack_id=row.get("slack_id"),
+        is_active=row.get("is_active", True),
+        created_at=row.get("created_at"),
     )
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO investors (id, name, email, slack_id, is_active, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (investor.id, investor.name, investor.email, investor.slack_id,
-          investor.is_active, investor.created_at))
-    conn.commit()
-    conn.close()
-    return investor
 
 
 def get_investor(investor_id: str = None, name: str = None) -> Optional[Investor]:
     """Get investor by ID or name."""
-    conn = get_connection()
-    cursor = conn.cursor()
+    supabase = get_supabase()
+    query = supabase.table("investors").select("*")
+
     if investor_id:
-        cursor.execute("SELECT * FROM investors WHERE id = ?", (investor_id,))
+        query = query.eq("id", investor_id)
     elif name:
-        cursor.execute("SELECT * FROM investors WHERE name = ?", (name,))
+        query = query.eq("name", name)
     else:
         return None
-    row = cursor.fetchone()
-    conn.close()
-    return Investor(**dict(row)) if row else None
+
+    result = query.execute()
+    if not result.data:
+        return None
+
+    row = result.data[0]
+    return Investor(
+        id=row["id"],
+        name=row["name"],
+        email=row.get("email"),
+        slack_id=row.get("slack_id"),
+        is_active=row.get("is_active", True),
+        created_at=row.get("created_at"),
+    )
 
 
 def get_investors(active_only: bool = True) -> List[Investor]:
     """Get all investors."""
-    conn = get_connection()
-    cursor = conn.cursor()
+    supabase = get_supabase()
+    query = supabase.table("investors").select("*")
+
     if active_only:
-        cursor.execute("SELECT * FROM investors WHERE is_active = 1")
-    else:
-        cursor.execute("SELECT * FROM investors")
-    rows = cursor.fetchall()
-    conn.close()
-    return [Investor(**dict(row)) for row in rows]
+        query = query.eq("is_active", True)
+
+    result = query.execute()
+    return [
+        Investor(
+            id=row["id"],
+            name=row["name"],
+            email=row.get("email"),
+            slack_id=row.get("slack_id"),
+            is_active=row.get("is_active", True),
+            created_at=row.get("created_at"),
+        )
+        for row in result.data
+    ]
 
 
 def get_or_create_default_investor() -> Investor:
@@ -351,24 +215,40 @@ def get_or_create_default_investor() -> Investor:
 # COMPANY OPERATIONS
 # =============================================================================
 
+def _row_to_company(row: dict) -> WatchedCompany:
+    """Convert Supabase row to WatchedCompany."""
+    return WatchedCompany(
+        id=row["id"],
+        company_id=row["company_id"],
+        company_name=row["company_name"],
+        category=row["category"],
+        harmonic_id=row.get("harmonic_id"),
+        parent_company_id=row.get("parent_company_id"),
+        competitors_refreshed_at=row.get("competitors_refreshed_at"),
+        industry_tags=row.get("industry_tags") or [],
+        is_active=row.get("is_active", True),
+        added_at=row.get("added_at"),
+    )
+
+
 def get_company_by_domain(domain: str) -> Optional[WatchedCompany]:
     """Get company by domain (company_id)."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM watched_companies WHERE company_id = ?", (domain,))
-    row = cursor.fetchone()
-    conn.close()
-    return WatchedCompany(**dict(row)) if row else None
+    supabase = get_supabase()
+    result = supabase.table("watched_companies").select("*").eq("company_id", domain).execute()
+
+    if not result.data:
+        return None
+    return _row_to_company(result.data[0])
 
 
 def get_company_by_id(company_id: str) -> Optional[WatchedCompany]:
     """Get company by internal ID."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM watched_companies WHERE id = ?", (company_id,))
-    row = cursor.fetchone()
-    conn.close()
-    return WatchedCompany(**dict(row)) if row else None
+    supabase = get_supabase()
+    result = supabase.table("watched_companies").select("*").eq("id", company_id).execute()
+
+    if not result.data:
+        return None
+    return _row_to_company(result.data[0])
 
 
 def add_company(
@@ -385,74 +265,60 @@ def add_company(
     if existing:
         return existing
 
-    # Serialize industry tags to JSON
-    industry_tags_json = json.dumps(industry_tags) if industry_tags else None
+    supabase = get_supabase()
+    data = {
+        "company_id": company_id,
+        "company_name": company_name,
+        "category": category,
+        "harmonic_id": harmonic_id,
+        "parent_company_id": parent_company_id,
+        "industry_tags": industry_tags or [],
+        "is_active": True,
+    }
 
-    company = WatchedCompany(
-        id=str(uuid.uuid4()),
-        company_id=company_id,
-        company_name=company_name,
-        category=category,
-        harmonic_id=harmonic_id,
-        parent_company_id=parent_company_id,
-        industry_tags=industry_tags_json,
-    )
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO watched_companies
-        (id, company_id, company_name, category, harmonic_id, parent_company_id,
-         competitors_refreshed_at, industry_tags, is_active, added_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (company.id, company.company_id, company.company_name, company.category,
-          company.harmonic_id, company.parent_company_id, company.competitors_refreshed_at,
-          company.industry_tags, company.is_active, company.added_at))
-    conn.commit()
-    conn.close()
-    return company
+    result = supabase.table("watched_companies").insert(data).execute()
+    return _row_to_company(result.data[0])
 
 
 def link_investor_to_company(investor_id: str, company_id: str) -> InvestorCompany:
     """Link an investor to a company."""
-    conn = get_connection()
-    cursor = conn.cursor()
+    supabase = get_supabase()
 
     # Check if link already exists
-    cursor.execute("""
-        SELECT * FROM investor_companies
-        WHERE investor_id = ? AND company_id = ?
-    """, (investor_id, company_id))
-    existing = cursor.fetchone()
-    if existing:
-        conn.close()
-        return InvestorCompany(**dict(existing))
+    existing = supabase.table("investor_companies").select("*").eq(
+        "investor_id", investor_id
+    ).eq("company_id", company_id).execute()
 
-    link = InvestorCompany(
-        id=str(uuid.uuid4()),
-        investor_id=investor_id,
-        company_id=company_id
+    if existing.data:
+        row = existing.data[0]
+        return InvestorCompany(
+            id=row["id"],
+            investor_id=row["investor_id"],
+            company_id=row["company_id"],
+            added_at=row.get("added_at"),
+        )
+
+    data = {
+        "investor_id": investor_id,
+        "company_id": company_id,
+    }
+    result = supabase.table("investor_companies").insert(data).execute()
+    row = result.data[0]
+    return InvestorCompany(
+        id=row["id"],
+        investor_id=row["investor_id"],
+        company_id=row["company_id"],
+        added_at=row.get("added_at"),
     )
-    cursor.execute("""
-        INSERT INTO investor_companies (id, investor_id, company_id, added_at)
-        VALUES (?, ?, ?, ?)
-    """, (link.id, link.investor_id, link.company_id, link.added_at))
-    conn.commit()
-    conn.close()
-    return link
 
 
 def unlink_investor_from_company(investor_id: str, company_id: str) -> bool:
     """Remove link between investor and company."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        DELETE FROM investor_companies
-        WHERE investor_id = ? AND company_id = ?
-    """, (investor_id, company_id))
-    deleted = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
-    return deleted
+    supabase = get_supabase()
+    result = supabase.table("investor_companies").delete().eq(
+        "investor_id", investor_id
+    ).eq("company_id", company_id).execute()
+    return len(result.data) > 0
 
 
 def get_companies(
@@ -462,43 +328,33 @@ def get_companies(
     parent_company_id: str = None
 ) -> List[WatchedCompany]:
     """Get watched companies with optional filters."""
-    conn = get_connection()
-    cursor = conn.cursor()
+    supabase = get_supabase()
 
     if investor_id:
-        # Get companies for a specific investor
-        query = """
-            SELECT wc.* FROM watched_companies wc
-            JOIN investor_companies ic ON wc.id = ic.company_id
-            WHERE ic.investor_id = ?
-        """
-        params = [investor_id]
-        if active_only:
-            query += " AND wc.is_active = 1"
-        if category:
-            query += " AND wc.category = ?"
-            params.append(category)
-        if parent_company_id:
-            query += " AND wc.parent_company_id = ?"
-            params.append(parent_company_id)
-        cursor.execute(query, params)
-    else:
-        # Get all companies
-        query = "SELECT * FROM watched_companies WHERE 1=1"
-        params = []
-        if active_only:
-            query += " AND is_active = 1"
-        if category:
-            query += " AND category = ?"
-            params.append(category)
-        if parent_company_id:
-            query += " AND parent_company_id = ?"
-            params.append(parent_company_id)
-        cursor.execute(query, params)
+        # Get companies for a specific investor via junction table
+        # First get company IDs for this investor
+        links = supabase.table("investor_companies").select("company_id").eq(
+            "investor_id", investor_id
+        ).execute()
 
-    rows = cursor.fetchall()
-    conn.close()
-    return [WatchedCompany(**dict(row)) for row in rows]
+        if not links.data:
+            return []
+
+        company_ids = [link["company_id"] for link in links.data]
+
+        query = supabase.table("watched_companies").select("*").in_("id", company_ids)
+    else:
+        query = supabase.table("watched_companies").select("*")
+
+    if active_only:
+        query = query.eq("is_active", True)
+    if category:
+        query = query.eq("category", category)
+    if parent_company_id:
+        query = query.eq("parent_company_id", parent_company_id)
+
+    result = query.execute()
+    return [_row_to_company(row) for row in result.data]
 
 
 def get_portfolio_companies(investor_id: str = None) -> List[WatchedCompany]:
@@ -516,20 +372,9 @@ def update_company(company_id: str, **updates) -> bool:
     if not updates:
         return False
 
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    set_clauses = ", ".join(f"{k} = ?" for k in updates.keys())
-    values = list(updates.values()) + [company_id]
-
-    cursor.execute(f"""
-        UPDATE watched_companies SET {set_clauses} WHERE id = ?
-    """, values)
-
-    updated = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
-    return updated
+    supabase = get_supabase()
+    result = supabase.table("watched_companies").update(updates).eq("id", company_id).execute()
+    return len(result.data) > 0
 
 
 def update_company_harmonic_id(company_id: str, harmonic_id: str):
@@ -544,7 +389,7 @@ def update_competitors_refreshed(company_id: str):
 
 def deactivate_company(company_id: str) -> bool:
     """Soft-delete a company by marking inactive."""
-    return update_company(company_id, is_active=0)
+    return update_company(company_id, is_active=False)
 
 
 def remove_company(company_id: str, hard_delete: bool = False) -> bool:
@@ -552,43 +397,64 @@ def remove_company(company_id: str, hard_delete: bool = False) -> bool:
     if not hard_delete:
         return deactivate_company(company_id)
 
-    conn = get_connection()
-    cursor = conn.cursor()
+    supabase = get_supabase()
 
     # Remove investor links
-    cursor.execute("DELETE FROM investor_companies WHERE company_id = ?", (company_id,))
+    supabase.table("investor_companies").delete().eq("company_id", company_id).execute()
     # Remove signals
-    cursor.execute("DELETE FROM company_signals WHERE company_id = ?", (company_id,))
+    supabase.table("company_signals").delete().eq("company_id", company_id).execute()
     # Remove snapshots
-    cursor.execute("DELETE FROM employee_snapshots WHERE company_id = ?", (company_id,))
+    supabase.table("employee_snapshots").delete().eq("company_id", company_id).execute()
     # Remove company
-    cursor.execute("DELETE FROM watched_companies WHERE id = ?", (company_id,))
+    result = supabase.table("watched_companies").delete().eq("id", company_id).execute()
 
-    deleted = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
-    return deleted
+    return len(result.data) > 0
 
 
 # =============================================================================
 # SIGNAL OPERATIONS
 # =============================================================================
 
+def _row_to_signal(row: dict) -> CompanySignal:
+    """Convert Supabase row to CompanySignal."""
+    return CompanySignal(
+        id=row["id"],
+        company_id=row["company_id"],
+        signal_type=row["signal_type"],
+        headline=row["headline"],
+        description=row.get("description", ""),
+        source_url=row.get("source_url"),
+        source_name=row.get("source_name"),
+        published_date=row.get("published_date"),
+        relevance_score=row.get("relevance_score", 0),
+        score_breakdown=row.get("score_breakdown"),
+        raw_data=row.get("raw_data"),
+        sentiment=row.get("sentiment"),
+        synopsis=row.get("synopsis"),
+        detected_at=row.get("detected_at"),
+    )
+
+
 def save_signal(signal: CompanySignal) -> CompanySignal:
     """Save a signal to the database."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO company_signals
-        (id, company_id, signal_type, headline, description, source_url, source_name,
-         published_date, relevance_score, score_breakdown, raw_data, sentiment, synopsis, detected_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (signal.id, signal.company_id, signal.signal_type, signal.headline, signal.description,
-          signal.source_url, signal.source_name, signal.published_date, signal.relevance_score,
-          signal.score_breakdown, signal.raw_data, signal.sentiment, signal.synopsis, signal.detected_at))
-    conn.commit()
-    conn.close()
-    return signal
+    supabase = get_supabase()
+    data = {
+        "company_id": signal.company_id,
+        "signal_type": signal.signal_type,
+        "headline": signal.headline,
+        "description": signal.description,
+        "source_url": signal.source_url,
+        "source_name": signal.source_name,
+        "published_date": signal.published_date,
+        "relevance_score": signal.relevance_score,
+        "score_breakdown": signal.score_breakdown,
+        "raw_data": signal.raw_data,
+        "sentiment": signal.sentiment,
+        "synopsis": signal.synopsis,
+    }
+
+    result = supabase.table("company_signals").insert(data).execute()
+    return _row_to_signal(result.data[0])
 
 
 def get_signals(
@@ -599,51 +465,42 @@ def get_signals(
     investor_id: str = None
 ) -> List[CompanySignal]:
     """Get signals with optional filters."""
-    conn = get_connection()
-    cursor = conn.cursor()
+    supabase = get_supabase()
 
     if investor_id:
         # Get signals for companies tracked by this investor
-        query = """
-            SELECT cs.* FROM company_signals cs
-            JOIN investor_companies ic ON cs.company_id = ic.company_id
-            WHERE ic.investor_id = ?
-        """
-        params = [investor_id]
+        links = supabase.table("investor_companies").select("company_id").eq(
+            "investor_id", investor_id
+        ).execute()
+
+        if not links.data:
+            return []
+
+        company_ids = [link["company_id"] for link in links.data]
+        query = supabase.table("company_signals").select("*").in_("company_id", company_ids)
     else:
-        query = "SELECT * FROM company_signals WHERE 1=1"
-        params = []
+        query = supabase.table("company_signals").select("*")
 
     if company_id:
-        query += " AND company_id = ?"
-        params.append(company_id)
+        query = query.eq("company_id", company_id)
     if signal_type:
-        query += " AND signal_type = ?"
-        params.append(signal_type)
+        query = query.eq("signal_type", signal_type)
     if min_score is not None:
-        query += " AND relevance_score >= ?"
-        params.append(min_score)
+        query = query.gte("relevance_score", min_score)
 
-    query += " ORDER BY relevance_score DESC, detected_at DESC LIMIT ?"
-    params.append(limit)
+    query = query.order("relevance_score", desc=True).order("detected_at", desc=True).limit(limit)
 
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
-    conn.close()
-    return [CompanySignal(**dict(row)) for row in rows]
+    result = query.execute()
+    return [_row_to_signal(row) for row in result.data]
 
 
 def signal_exists(company_id: str, signal_type: str, headline: str) -> bool:
     """Check if a similar signal already exists (deduplication)."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT COUNT(*) FROM company_signals
-        WHERE company_id = ? AND signal_type = ? AND headline = ?
-    """, (company_id, signal_type, headline))
-    count = cursor.fetchone()[0]
-    conn.close()
-    return count > 0
+    supabase = get_supabase()
+    result = supabase.table("company_signals").select("id").eq(
+        "company_id", company_id
+    ).eq("signal_type", signal_type).eq("headline", headline).execute()
+    return len(result.data) > 0
 
 
 # =============================================================================
@@ -679,24 +536,14 @@ def get_companies_by_industry(
     Returns:
         List of WatchedCompany with matching industry tags
     """
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    # SQLite JSON search - look for industry in the JSON array
-    query = """
-        SELECT * FROM watched_companies
-        WHERE industry_tags LIKE ?
-    """
-    params = [f'%"{industry}"%']
+    supabase = get_supabase()
+    query = supabase.table("watched_companies").select("*").contains("industry_tags", [industry])
 
     if active_only:
-        query += " AND is_active = 1"
+        query = query.eq("is_active", True)
 
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
-    conn.close()
-
-    return [WatchedCompany(**dict(row)) for row in rows]
+    result = query.execute()
+    return [_row_to_company(row) for row in result.data]
 
 
 def get_all_industries() -> List[str]:
@@ -706,24 +553,15 @@ def get_all_industries() -> List[str]:
     Returns:
         List of unique industry tag strings
     """
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT DISTINCT industry_tags FROM watched_companies
-        WHERE industry_tags IS NOT NULL AND industry_tags != ''
-    """)
-    rows = cursor.fetchall()
-    conn.close()
+    supabase = get_supabase()
+    result = supabase.table("watched_companies").select("industry_tags").not_.is_("industry_tags", "null").execute()
 
-    # Parse all JSON arrays and collect unique tags
+    # Collect unique tags from all JSONB arrays
     all_tags = set()
-    for row in rows:
-        try:
-            tags = json.loads(row[0])
-            if isinstance(tags, list):
-                all_tags.update(tags)
-        except (json.JSONDecodeError, TypeError):
-            pass
+    for row in result.data:
+        tags = row.get("industry_tags") or []
+        if isinstance(tags, list):
+            all_tags.update(tags)
 
     return sorted(list(all_tags))
 
@@ -739,8 +577,7 @@ def update_company_industries(company_id: str, industry_tags: List[str]) -> bool
     Returns:
         True if updated successfully
     """
-    industry_tags_json = json.dumps(industry_tags) if industry_tags else None
-    return update_company(company_id, industry_tags=industry_tags_json)
+    return update_company(company_id, industry_tags=industry_tags or [])
 
 
 def search_industry_news(
@@ -765,35 +602,25 @@ def search_industry_news(
         List of CompanySignal from companies in the specified industry,
         sorted by relevance score and detection time
     """
-    conn = get_connection()
-    cursor = conn.cursor()
+    # Get companies in this industry
+    companies = get_companies_by_industry(industry)
+    if not companies:
+        return []
 
-    # Join signals with companies filtered by industry
-    query = """
-        SELECT cs.* FROM company_signals cs
-        JOIN watched_companies wc ON cs.company_id = wc.id
-        WHERE wc.industry_tags LIKE ?
-        AND wc.is_active = 1
-    """
-    params = [f'%"{industry}"%']
+    company_ids = [c.id for c in companies]
+
+    supabase = get_supabase()
+    query = supabase.table("company_signals").select("*").in_("company_id", company_ids)
 
     if signal_types:
-        placeholders = ", ".join("?" * len(signal_types))
-        query += f" AND cs.signal_type IN ({placeholders})"
-        params.extend(signal_types)
-
+        query = query.in_("signal_type", signal_types)
     if min_score is not None:
-        query += " AND cs.relevance_score >= ?"
-        params.append(min_score)
+        query = query.gte("relevance_score", min_score)
 
-    query += " ORDER BY cs.relevance_score DESC, cs.detected_at DESC LIMIT ?"
-    params.append(limit)
+    query = query.order("relevance_score", desc=True).order("detected_at", desc=True).limit(limit)
 
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
-    conn.close()
-
-    return [CompanySignal(**dict(row)) for row in rows]
+    result = query.execute()
+    return [_row_to_signal(row) for row in result.data]
 
 
 def get_industry_signal_summary(industry: str, days: int = 7) -> dict:
@@ -807,54 +634,45 @@ def get_industry_signal_summary(industry: str, days: int = 7) -> dict:
     Returns:
         Dict with signal counts by type and top signals
     """
-    conn = get_connection()
-    cursor = conn.cursor()
-
     cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
 
-    # Get signal counts by type
-    cursor.execute("""
-        SELECT cs.signal_type, COUNT(*) as count
-        FROM company_signals cs
-        JOIN watched_companies wc ON cs.company_id = wc.id
-        WHERE wc.industry_tags LIKE ?
-        AND wc.is_active = 1
-        AND cs.detected_at >= ?
-        GROUP BY cs.signal_type
-        ORDER BY count DESC
-    """, (f'%"{industry}"%', cutoff))
+    # Get companies in this industry
+    companies = get_companies_by_industry(industry)
+    if not companies:
+        return {
+            "industry": industry,
+            "days": days,
+            "company_count": 0,
+            "signal_counts": {},
+            "total_signals": 0,
+            "top_signals": [],
+        }
 
-    signal_counts = {row["signal_type"]: row["count"] for row in cursor.fetchall()}
+    company_ids = [c.id for c in companies]
 
-    # Get top signals by score
-    cursor.execute("""
-        SELECT cs.* FROM company_signals cs
-        JOIN watched_companies wc ON cs.company_id = wc.id
-        WHERE wc.industry_tags LIKE ?
-        AND wc.is_active = 1
-        AND cs.detected_at >= ?
-        ORDER BY cs.relevance_score DESC
-        LIMIT 10
-    """, (f'%"{industry}"%', cutoff))
+    supabase = get_supabase()
 
-    top_signals = [CompanySignal(**dict(row)) for row in cursor.fetchall()]
+    # Get signals for these companies within the time period
+    result = supabase.table("company_signals").select("*").in_(
+        "company_id", company_ids
+    ).gte("detected_at", cutoff).order("relevance_score", desc=True).execute()
 
-    # Get company count in industry
-    cursor.execute("""
-        SELECT COUNT(*) FROM watched_companies
-        WHERE industry_tags LIKE ?
-        AND is_active = 1
-    """, (f'%"{industry}"%',))
-    company_count = cursor.fetchone()[0]
+    signals = [_row_to_signal(row) for row in result.data]
 
-    conn.close()
+    # Count by signal type
+    signal_counts = {}
+    for signal in signals:
+        signal_counts[signal.signal_type] = signal_counts.get(signal.signal_type, 0) + 1
+
+    # Top 10 signals
+    top_signals = signals[:10]
 
     return {
         "industry": industry,
         "days": days,
-        "company_count": company_count,
+        "company_count": len(companies),
         "signal_counts": signal_counts,
-        "total_signals": sum(signal_counts.values()),
+        "total_signals": len(signals),
         "top_signals": top_signals,
     }
 
@@ -865,35 +683,43 @@ def get_industry_signal_summary(industry: str, days: int = 7) -> dict:
 
 def save_employee_snapshot(company_id: str, employees: List[dict]) -> EmployeeSnapshot:
     """Save an employee snapshot."""
-    snapshot = EmployeeSnapshot(
-        id=str(uuid.uuid4()),
-        company_id=company_id,
-        snapshot_date=datetime.utcnow().strftime("%Y-%m-%d"),
-        employees_json=json.dumps(employees)
+    supabase = get_supabase()
+    data = {
+        "company_id": company_id,
+        "snapshot_date": datetime.utcnow().strftime("%Y-%m-%d"),
+        "employees": employees,  # JSONB in Supabase
+    }
+
+    result = supabase.table("employee_snapshots").insert(data).execute()
+    row = result.data[0]
+
+    return EmployeeSnapshot(
+        id=row["id"],
+        company_id=row["company_id"],
+        snapshot_date=row["snapshot_date"],
+        employees_json=json.dumps(row.get("employees") or []),
+        created_at=row.get("created_at"),
     )
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO employee_snapshots (id, company_id, snapshot_date, employees_json, created_at)
-        VALUES (?, ?, ?, ?, ?)
-    """, (snapshot.id, snapshot.company_id, snapshot.snapshot_date, snapshot.employees_json, snapshot.created_at))
-    conn.commit()
-    conn.close()
-    return snapshot
 
 
 def get_latest_employee_snapshot(company_id: str) -> Optional[EmployeeSnapshot]:
     """Get the most recent employee snapshot for a company."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT * FROM employee_snapshots
-        WHERE company_id = ?
-        ORDER BY snapshot_date DESC LIMIT 1
-    """, (company_id,))
-    row = cursor.fetchone()
-    conn.close()
-    return EmployeeSnapshot(**dict(row)) if row else None
+    supabase = get_supabase()
+    result = supabase.table("employee_snapshots").select("*").eq(
+        "company_id", company_id
+    ).order("snapshot_date", desc=True).limit(1).execute()
+
+    if not result.data:
+        return None
+
+    row = result.data[0]
+    return EmployeeSnapshot(
+        id=row["id"],
+        company_id=row["company_id"],
+        snapshot_date=row["snapshot_date"],
+        employees_json=json.dumps(row.get("employees") or []),
+        created_at=row.get("created_at"),
+    )
 
 
 # =============================================================================
@@ -932,117 +758,99 @@ class CachedStory:
             self.created_at = datetime.utcnow().isoformat()
 
     @classmethod
-    def from_row(cls, row: sqlite3.Row) -> "CachedStory":
+    def from_row(cls, row: dict) -> "CachedStory":
         """Create CachedStory from database row."""
-        data = dict(row)
-        # Parse JSON fields
-        data['other_urls'] = json.loads(data.get('other_urls') or '[]')
-        data['sentiment_keywords'] = json.loads(data.get('sentiment_keywords') or '[]')
-        data['industry_tags'] = json.loads(data.get('industry_tags') or '[]')
-        data['priority_reasons'] = json.loads(data.get('priority_reasons') or '[]')
-        data['article_signal_ids'] = json.loads(data.get('article_signal_ids') or '[]')
-        return cls(**data)
+        return cls(
+            id=row["id"],
+            story_id=row["story_id"],
+            primary_url=row["primary_url"],
+            primary_title=row["primary_title"],
+            other_urls=row.get("other_urls") or [],
+            classification=row.get("classification", "GENERAL"),
+            sentiment_label=row.get("sentiment_label", "Neutral"),
+            sentiment_score=row.get("sentiment_score", 0),
+            sentiment_keywords=row.get("sentiment_keywords") or [],
+            synopsis=row.get("synopsis", ""),
+            company_id=row.get("company_id", ""),
+            company_name=row.get("company_name", ""),
+            company_category=row.get("company_category", ""),
+            parent_company_name=row.get("parent_company_name"),
+            industry_tags=row.get("industry_tags") or [],
+            priority_score=row.get("priority_score", 0.0),
+            priority_reasons=row.get("priority_reasons") or [],
+            published_date=row.get("published_date"),
+            max_engagement=row.get("max_engagement", 0),
+            source_count=row.get("source_count", 0),
+            article_signal_ids=row.get("article_signal_ids") or [],
+            digest_generated_at=row.get("digest_generated_at", ""),
+            created_at=row.get("created_at"),
+        )
 
 
-def save_story(story: "CachedStory") -> bool:
+def save_story(story: CachedStory) -> bool:
     """Save or update a cached story."""
-    conn = get_connection()
-    cursor = conn.cursor()
+    supabase = get_supabase()
+    data = {
+        "story_id": story.story_id,
+        "primary_url": story.primary_url,
+        "primary_title": story.primary_title,
+        "other_urls": story.other_urls,
+        "classification": story.classification,
+        "sentiment_label": story.sentiment_label,
+        "sentiment_score": story.sentiment_score,
+        "sentiment_keywords": story.sentiment_keywords,
+        "synopsis": story.synopsis,
+        "company_id": story.company_id,
+        "company_name": story.company_name,
+        "company_category": story.company_category,
+        "parent_company_name": story.parent_company_name,
+        "industry_tags": story.industry_tags,
+        "priority_score": story.priority_score,
+        "priority_reasons": story.priority_reasons,
+        "published_date": story.published_date,
+        "max_engagement": story.max_engagement,
+        "source_count": story.source_count,
+        "article_signal_ids": story.article_signal_ids,
+        "digest_generated_at": story.digest_generated_at,
+    }
 
-    try:
-        cursor.execute("""
-            INSERT OR REPLACE INTO stories (
-                id, story_id, primary_url, primary_title, other_urls,
-                classification, sentiment_label, sentiment_score, sentiment_keywords,
-                synopsis, company_id, company_name, company_category, parent_company_name,
-                industry_tags, priority_score, priority_reasons, published_date,
-                max_engagement, source_count, article_signal_ids,
-                digest_generated_at, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            story.id,
-            story.story_id,
-            story.primary_url,
-            story.primary_title,
-            json.dumps(story.other_urls),
-            story.classification,
-            story.sentiment_label,
-            story.sentiment_score,
-            json.dumps(story.sentiment_keywords),
-            story.synopsis,
-            story.company_id,
-            story.company_name,
-            story.company_category,
-            story.parent_company_name,
-            json.dumps(story.industry_tags),
-            story.priority_score,
-            json.dumps(story.priority_reasons),
-            story.published_date,
-            story.max_engagement,
-            story.source_count,
-            json.dumps(story.article_signal_ids),
-            story.digest_generated_at,
-            story.created_at,
-        ))
-        conn.commit()
-        return True
-    except Exception as e:
-        conn.rollback()
-        raise e
-    finally:
-        conn.close()
+    # Upsert based on story_id
+    supabase.table("stories").upsert(data, on_conflict="story_id").execute()
+    return True
 
 
-def save_stories_batch(stories: List["CachedStory"], digest_generated_at: str) -> int:
+def save_stories_batch(stories: List[CachedStory], digest_generated_at: str) -> int:
     """Save multiple stories in a single transaction."""
-    conn = get_connection()
-    cursor = conn.cursor()
-
+    supabase = get_supabase()
     saved_count = 0
-    try:
-        for story in stories:
-            story.digest_generated_at = digest_generated_at
-            cursor.execute("""
-                INSERT OR REPLACE INTO stories (
-                    id, story_id, primary_url, primary_title, other_urls,
-                    classification, sentiment_label, sentiment_score, sentiment_keywords,
-                    synopsis, company_id, company_name, company_category, parent_company_name,
-                    industry_tags, priority_score, priority_reasons, published_date,
-                    max_engagement, source_count, article_signal_ids,
-                    digest_generated_at, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                story.id,
-                story.story_id,
-                story.primary_url,
-                story.primary_title,
-                json.dumps(story.other_urls),
-                story.classification,
-                story.sentiment_label,
-                story.sentiment_score,
-                json.dumps(story.sentiment_keywords),
-                story.synopsis,
-                story.company_id,
-                story.company_name,
-                story.company_category,
-                story.parent_company_name,
-                json.dumps(story.industry_tags),
-                story.priority_score,
-                json.dumps(story.priority_reasons),
-                story.published_date,
-                story.max_engagement,
-                story.source_count,
-                json.dumps(story.article_signal_ids),
-                story.digest_generated_at,
-                story.created_at,
-            ))
-            saved_count += 1
-        conn.commit()
-    except Exception as e:
-        conn.rollback()
-        raise e
-    finally:
-        conn.close()
+
+    for story in stories:
+        story.digest_generated_at = digest_generated_at
+        data = {
+            "story_id": story.story_id,
+            "primary_url": story.primary_url,
+            "primary_title": story.primary_title,
+            "other_urls": story.other_urls,
+            "classification": story.classification,
+            "sentiment_label": story.sentiment_label,
+            "sentiment_score": story.sentiment_score,
+            "sentiment_keywords": story.sentiment_keywords,
+            "synopsis": story.synopsis,
+            "company_id": story.company_id,
+            "company_name": story.company_name,
+            "company_category": story.company_category,
+            "parent_company_name": story.parent_company_name,
+            "industry_tags": story.industry_tags,
+            "priority_score": story.priority_score,
+            "priority_reasons": story.priority_reasons,
+            "published_date": story.published_date,
+            "max_engagement": story.max_engagement,
+            "source_count": story.source_count,
+            "article_signal_ids": story.article_signal_ids,
+            "digest_generated_at": story.digest_generated_at,
+        }
+        supabase.table("stories").upsert(data, on_conflict="story_id").execute()
+        saved_count += 1
 
     return saved_count
 
@@ -1054,45 +862,32 @@ def get_stories(
     limit: int = 100
 ) -> List[CachedStory]:
     """Get cached stories with optional filters."""
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    query = "SELECT * FROM stories WHERE 1=1"
-    params = []
+    supabase = get_supabase()
+    query = supabase.table("stories").select("*")
 
     if digest_generated_at:
-        query += " AND digest_generated_at = ?"
-        params.append(digest_generated_at)
-
+        query = query.eq("digest_generated_at", digest_generated_at)
     if company_id:
-        query += " AND company_id = ?"
-        params.append(company_id)
-
+        query = query.eq("company_id", company_id)
     if classification:
-        query += " AND classification = ?"
-        params.append(classification)
+        query = query.eq("classification", classification)
 
-    query += " ORDER BY priority_score DESC LIMIT ?"
-    params.append(limit)
+    query = query.order("priority_score", desc=True).limit(limit)
 
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
-    conn.close()
-
-    return [CachedStory.from_row(row) for row in rows]
+    result = query.execute()
+    return [CachedStory.from_row(row) for row in result.data]
 
 
 def get_latest_digest_timestamp() -> Optional[str]:
     """Get the timestamp of the most recent digest generation."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT digest_generated_at FROM stories
-        ORDER BY digest_generated_at DESC LIMIT 1
-    """)
-    row = cursor.fetchone()
-    conn.close()
-    return row[0] if row else None
+    supabase = get_supabase()
+    result = supabase.table("stories").select("digest_generated_at").order(
+        "digest_generated_at", desc=True
+    ).limit(1).execute()
+
+    if not result.data:
+        return None
+    return result.data[0]["digest_generated_at"]
 
 
 def get_stories_by_digest(digest_generated_at: str) -> List[CachedStory]:
@@ -1102,21 +897,55 @@ def get_stories_by_digest(digest_generated_at: str) -> List[CachedStory]:
 
 def delete_old_stories(keep_days: int = 30) -> int:
     """Delete stories older than N days."""
-    conn = get_connection()
-    cursor = conn.cursor()
-
+    supabase = get_supabase()
     cutoff = (datetime.utcnow() - timedelta(days=keep_days)).isoformat()
-    cursor.execute("DELETE FROM stories WHERE created_at < ?", (cutoff,))
-    deleted = cursor.rowcount
-    conn.commit()
-    conn.close()
-
-    return deleted
+    result = supabase.table("stories").delete().lt("created_at", cutoff).execute()
+    return len(result.data)
 
 
 # =============================================================================
 # EMBEDDING CACHE OPERATIONS
+# Note: Embedding cache remains local for performance. Consider using
+# pg_vector extension in Supabase for production vector search.
 # =============================================================================
+
+import sqlite3
+from pathlib import Path
+
+EMBEDDING_CACHE_PATH = Path(__file__).parent / "embedding_cache.db"
+
+
+def _get_embedding_connection() -> sqlite3.Connection:
+    """Get connection to local embedding cache."""
+    conn = sqlite3.connect(str(EMBEDDING_CACHE_PATH))
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def _init_embedding_cache():
+    """Initialize local embedding cache table."""
+    conn = _get_embedding_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS embedding_cache (
+            url_hash TEXT PRIMARY KEY,
+            embedding BLOB NOT NULL,
+            title TEXT,
+            snippet TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_embedding_cache_created
+        ON embedding_cache(created_at)
+    """)
+    conn.commit()
+    conn.close()
+
+
+# Initialize embedding cache on import
+_init_embedding_cache()
+
 
 def get_cached_embedding(url_hash: str) -> Optional[bytes]:
     """
@@ -1128,7 +957,7 @@ def get_cached_embedding(url_hash: str) -> Optional[bytes]:
     Returns:
         Embedding bytes if cached, None otherwise
     """
-    conn = get_connection()
+    conn = _get_embedding_connection()
     cursor = conn.cursor()
     cursor.execute(
         "SELECT embedding FROM embedding_cache WHERE url_hash = ?",
@@ -1157,7 +986,7 @@ def save_embedding(
     Returns:
         True if saved successfully
     """
-    conn = get_connection()
+    conn = _get_embedding_connection()
     cursor = conn.cursor()
     try:
         cursor.execute("""
@@ -1190,7 +1019,7 @@ def delete_old_embeddings(keep_days: int = 30) -> int:
     Returns:
         Number of deleted embeddings
     """
-    conn = get_connection()
+    conn = _get_embedding_connection()
     cursor = conn.cursor()
 
     cutoff = (datetime.utcnow() - timedelta(days=keep_days)).isoformat()
@@ -1204,7 +1033,7 @@ def delete_old_embeddings(keep_days: int = 30) -> int:
 
 def get_embedding_cache_stats() -> dict:
     """Get embedding cache statistics."""
-    conn = get_connection()
+    conn = _get_embedding_connection()
     cursor = conn.cursor()
 
     cursor.execute("SELECT COUNT(*) FROM embedding_cache")
@@ -1224,7 +1053,3 @@ def get_embedding_cache_stats() -> dict:
         'oldest': oldest,
         'newest': newest,
     }
-
-
-# Initialize on import
-init_db()

@@ -1,5 +1,9 @@
 """
-Services module for NEA AI Agents API.
+Services module for NEA AI Agents.
 
-Provides FastAPI backend for the Lovable web frontend.
+Provides briefing history persistence using Supabase.
 """
+
+from services.history import BriefingHistoryDB, BriefingRecord
+
+__all__ = ["BriefingHistoryDB", "BriefingRecord"]

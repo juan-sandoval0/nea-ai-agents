@@ -41,6 +41,11 @@ from core.clients.hackernews import (
     HNSearchResult,
     HackerNewsAPIError,
 )
+from core.clients.supabase_client import (
+    get_supabase,
+    clear_supabase_cache,
+    SupabaseConfigError,
+)
 
 __all__ = [
     "HarmonicClient",
@@ -66,4 +71,7 @@ __all__ = [
     "HNStory",
     "HNSearchResult",
     "HackerNewsAPIError",
+    "get_supabase",
+    "clear_supabase_cache",
+    "SupabaseConfigError",
 ]
