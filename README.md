@@ -90,19 +90,55 @@ This project provides AI agents to automate and enhance venture capital workflow
    python main.py
    ```
 
+7. **Set up automatic history cleanup** (required for production):
+
+   The system stores history for all agent runs (briefings, digests, outreach messages, audit logs). To automatically delete records older than 30 days, set up the cleanup cron job:
+
+   ```bash
+   # Open crontab editor
+   crontab -e
+
+   # Add this line (adjust path to your installation):
+   0 2 * * * /usr/bin/python3 /path/to/nea-ai-agents/scripts/cleanup_history.py >> /path/to/nea-ai-agents/logs/cleanup.log 2>&1
+   ```
+
+   This runs daily at 2 AM and cleans up:
+   - `briefing_history` (meeting briefing agent)
+   - `digest_history` (news aggregator agent)
+   - `stories` (cached digest stories)
+   - `outreach_history` (outreach agent)
+   - `audit_logs` (all agents)
+   - Local embedding cache
+
+   You can also run cleanup manually:
+   ```bash
+   # Preview what would be deleted (dry run)
+   python scripts/cleanup_history.py --dry-run
+
+   # Run cleanup with default 30-day retention
+   python scripts/cleanup_history.py
+
+   # Custom retention period
+   python scripts/cleanup_history.py --days 14
+   ```
+
 ## Project Structure
 
 ```
 nea-ai-agents/
 ├── agents/              # AI agent implementations
-│   ├── meeting_briefing/
-│   ├── deck_parser/
-│   └── company_tracker/
+│   ├── meeting_briefing/  # Meeting prep briefings
+│   ├── news_aggregator/   # Investor news digest
+│   └── outreach/          # Personalized outreach messages
+├── services/           # Shared services (history, etc.)
+├── scripts/            # CLI scripts (cleanup, etc.)
 ├── tools/              # Custom tools for agents
+├── core/               # Core utilities and clients
 ├── data/               # Data files (gitignored)
+├── logs/               # Log files (gitignored)
 ├── notebooks/          # Jupyter notebooks for exploration
 ├── tests/              # Unit tests
-└── main.py            # Demo entry point
+└── main.py             # Demo entry point
 ```
 
 ## Development

@@ -43,6 +43,7 @@ from core.observability import (
     set_request_context,
     clear_request_context,
 )
+from services.history import get_outreach_history, get_audit_log
 from tools.company_tools import get_company_bundle, normalize_company_id, ingest_company
 
 from .context import get_investor_context, load_samples
@@ -540,6 +541,45 @@ def generate_outreach(
                 "latency_ms": latency_ms,
             },
         )
+
+        # Save to persistent history
+        try:
+            outreach_history = get_outreach_history()
+            message_content = result.get("email") or result.get("linkedin") or ""
+            outreach_history.save_outreach(
+                company_id=normalized_id,
+                company_name=bundle.company_core.company_name,
+                contact_name=result["contact_name"],
+                investor_key=investor_key,
+                context_type=ctx_type.value,
+                output_format=output_format,
+                message_preview=message_content[:500] if message_content else None,
+                full_message=message_content,
+                model=actual_model,
+                tokens_total=tokens_in + tokens_out,
+                latency_ms=latency_ms,
+                success=True,
+            )
+
+            # Also save to persistent audit log
+            audit_log = get_audit_log()
+            audit_log.log(
+                agent="outreach",
+                event_type="generation",
+                action="create",
+                resource_type="outreach_message",
+                resource_id=normalized_id,
+                details={
+                    "company_name": bundle.company_core.company_name,
+                    "contact_name": result["contact_name"],
+                    "investor_key": investor_key,
+                    "context_type": ctx_type.value,
+                    "output_format": output_format,
+                    "tokens_total": tokens_in + tokens_out,
+                },
+            )
+        except Exception as hist_err:
+            logger.warning(f"Failed to save outreach history: {hist_err}")
 
         logger.info(
             f"Generated {output_format} outreach for {safe_company_name} "

@@ -392,9 +392,8 @@ class TestIngestToBriefingFlow:
                 with patch("tools.company_tools.get_tavily_client", return_value=None):
                     with patch("tools.company_tools.get_parallel_client", return_value=None):
                         with patch("tools.company_tools.get_tracker", return_value=mock_tracker_instance):
-                            with patch("agents.meeting_briefing.data_corrections.get_corrected_founders", return_value=None):
-                                from tools.company_tools import ingest_company
-                                ingest_result = ingest_company("testco.com")
+                            from tools.company_tools import ingest_company
+                            ingest_result = ingest_company("testco.com")
 
         assert ingest_result["company_name"] == "TestCo"
         assert ingest_result["company_core"] is True
@@ -442,10 +441,9 @@ class TestIngestToBriefingFlow:
                 with patch("tools.company_tools.get_tavily_client", return_value=None):
                     with patch("tools.company_tools.get_parallel_client", return_value=None):
                         with patch("tools.company_tools.get_tracker", return_value=mock_tracker_instance):
-                            with patch("agents.meeting_briefing.data_corrections.get_corrected_founders", return_value=None):
-                                from tools.company_tools import ingest_company
-                                # Should not raise
-                                result = ingest_company("minimal.com")
+                            from tools.company_tools import ingest_company
+                            # Should not raise
+                            result = ingest_company("minimal.com")
 
         assert result["company_name"] == "MinimalCo"
         assert result["company_core"] is True
@@ -704,9 +702,8 @@ class TestGracefulDegradation:
                 with patch("tools.company_tools.get_tavily_client", return_value=None):
                     with patch("tools.company_tools.get_parallel_client", return_value=None):
                         with patch("tools.company_tools.get_tracker", return_value=mock_tracker_instance):
-                            with patch("agents.meeting_briefing.data_corrections.get_corrected_founders", return_value=None):
-                                from tools.company_tools import ingest_company
-                                result = ingest_company("testco.com")
+                            from tools.company_tools import ingest_company
+                            result = ingest_company("testco.com")
 
         # Should succeed even without Tavily
         assert result["company_name"] == "TestCo"
@@ -753,9 +750,8 @@ class TestGracefulDegradation:
                 with patch("tools.company_tools.get_tavily_client", return_value=None):
                     with patch("tools.company_tools.get_parallel_client", return_value=None):
                         with patch("tools.company_tools.get_tracker", return_value=mock_tracker_instance):
-                            with patch("agents.meeting_briefing.data_corrections.get_corrected_founders", return_value=None):
-                                from tools.company_tools import ingest_company
-                                result = ingest_company("testco.com")
+                            from tools.company_tools import ingest_company
+                            result = ingest_company("testco.com")
 
         # Should succeed even without Parallel
         assert result["company_name"] == "TestCo"

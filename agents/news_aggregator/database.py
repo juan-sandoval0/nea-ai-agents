@@ -896,7 +896,11 @@ def get_stories_by_digest(digest_generated_at: str) -> List[CachedStory]:
 
 
 def delete_old_stories(keep_days: int = 30) -> int:
-    """Delete stories older than N days."""
+    """Delete stories older than N days.
+
+    Note: For comprehensive cleanup across all agents, use
+    services.history.cleanup_all() instead.
+    """
     supabase = get_supabase()
     cutoff = (datetime.utcnow() - timedelta(days=keep_days)).isoformat()
     result = supabase.table("stories").delete().lt("created_at", cutoff).execute()

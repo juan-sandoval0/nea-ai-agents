@@ -479,11 +479,10 @@ class TestIngestCompany:
                 mock_client.return_value.lookup_company.return_value = mock_harmonic_company
                 with patch("tools.company_tools.get_tavily_client", return_value=None):
                     with patch("tools.company_tools.get_parallel_client", return_value=None):
-                        with patch("agents.meeting_briefing.data_corrections.get_corrected_founders", return_value=None):
-                            with patch("tools.company_tools.get_tracker") as mock_tracker:
-                                mock_tracker.return_value.log_usage = Mock()
-                                from tools.company_tools import ingest_company
-                                results = ingest_company("stripe.com")
+                        with patch("tools.company_tools.get_tracker") as mock_tracker:
+                            mock_tracker.return_value.log_usage = Mock()
+                            from tools.company_tools import ingest_company
+                            results = ingest_company("stripe.com")
 
         assert isinstance(results, dict)
         assert "company_id" in results

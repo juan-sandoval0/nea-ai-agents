@@ -97,6 +97,68 @@ CREATE INDEX idx_briefings_company ON briefing_history(company_id);
 CREATE INDEX idx_briefings_created ON briefing_history(created_at DESC);
 
 -- =============================================================================
+-- DIGEST HISTORY (news aggregator runs)
+-- =============================================================================
+CREATE TABLE digest_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  generated_at TIMESTAMPTZ DEFAULT now(),
+  story_count INTEGER DEFAULT 0,
+  portfolio_count INTEGER DEFAULT 0,
+  competitor_count INTEGER DEFAULT 0,
+  top_stories_summary TEXT,
+  investor_filter TEXT,
+  success BOOLEAN DEFAULT true,
+  error TEXT
+);
+
+CREATE INDEX idx_digest_history_generated ON digest_history(generated_at DESC);
+
+-- =============================================================================
+-- OUTREACH HISTORY (outreach agent messages)
+-- =============================================================================
+CREATE TABLE outreach_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id TEXT NOT NULL,
+  company_name TEXT NOT NULL,
+  contact_name TEXT NOT NULL,
+  investor_key TEXT NOT NULL,
+  context_type TEXT NOT NULL,
+  output_format TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  message_preview TEXT,
+  full_message TEXT,
+  model TEXT,
+  tokens_total INTEGER DEFAULT 0,
+  latency_ms INTEGER DEFAULT 0,
+  success BOOLEAN DEFAULT true,
+  error TEXT
+);
+
+CREATE INDEX idx_outreach_company ON outreach_history(company_id);
+CREATE INDEX idx_outreach_investor ON outreach_history(investor_key);
+CREATE INDEX idx_outreach_created ON outreach_history(created_at DESC);
+
+-- =============================================================================
+-- AUDIT LOGS (all agents)
+-- =============================================================================
+CREATE TABLE audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  agent TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  action TEXT NOT NULL,
+  resource_type TEXT,
+  resource_id TEXT,
+  actor TEXT,
+  details JSONB DEFAULT '{}',
+  request_id TEXT
+);
+
+CREATE INDEX idx_audit_agent ON audit_logs(agent);
+CREATE INDEX idx_audit_event_type ON audit_logs(event_type);
+CREATE INDEX idx_audit_created ON audit_logs(created_at DESC);
+
+-- =============================================================================
 -- STORIES (cached digest stories)
 -- =============================================================================
 CREATE TABLE stories (
@@ -162,6 +224,9 @@ ALTER TABLE briefing_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE employee_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE story_clusters ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE digest_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE outreach_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- Public read access (for Lovable with anon key)
 CREATE POLICY "Public read" ON watched_companies FOR SELECT USING (true);
@@ -170,5 +235,8 @@ CREATE POLICY "Public read" ON briefing_history FOR SELECT USING (true);
 CREATE POLICY "Public read" ON story_clusters FOR SELECT USING (true);
 CREATE POLICY "Public read" ON investors FOR SELECT USING (true);
 CREATE POLICY "Public read" ON stories FOR SELECT USING (true);
+CREATE POLICY "Public read" ON digest_history FOR SELECT USING (true);
+CREATE POLICY "Public read" ON outreach_history FOR SELECT USING (true);
+CREATE POLICY "Public read" ON audit_logs FOR SELECT USING (true);
 
 -- Service role (used by Python CLI) bypasses RLS automatically

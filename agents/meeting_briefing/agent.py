@@ -1214,7 +1214,7 @@ class MeetingBriefingAgent:
 def main():
     """Demo the meeting briefing agent."""
     import sys
-    from services.history import BriefingHistoryDB, BriefingRecord
+    from services.history import BriefingHistoryDB, BriefingRecord, get_audit_log
 
     print("Meeting Briefing Agent - LangGraph Implementation")
     print("=" * 60)
@@ -1252,6 +1252,21 @@ def main():
                 }
             )
             history_db.save_briefing(record)
+
+            # Also save to persistent audit log
+            audit_log = get_audit_log()
+            audit_log.log(
+                agent="meeting_briefing",
+                event_type="briefing",
+                action="generate",
+                resource_type="briefing",
+                resource_id=result["url"],
+                details={
+                    "company_name": result["company_name"],
+                    "retrieval_counts": result["retrieval_counts"],
+                    "total_time_ms": result["total_elapsed_ms"],
+                },
+            )
             print("\n[Saved to briefing history]")
         except Exception as e:
             print(f"\n[Warning: Could not save to history: {e}]")

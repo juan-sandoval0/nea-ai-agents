@@ -53,6 +53,7 @@ from .database import (
     get_company_by_id, INDUSTRY_CATEGORIES,
     get_companies_by_industry, CachedStory, save_stories_batch,
 )
+from services.history import get_digest_history, get_audit_log
 
 logger = logging.getLogger(__name__)
 
@@ -1878,6 +1879,46 @@ def generate_investor_digest(
     if cached_stories:
         saved_count = save_stories_batch(cached_stories, digest_generated_at)
         logger.info(f"Cached {saved_count} stories to database")
+
+    # Save digest run to history
+    try:
+        portfolio_story_count = len([s for s in store.stories if s.company_category == "portfolio"])
+        competitor_story_count = len([s for s in store.stories if s.company_category == "competitor"])
+
+        # Get top 3 stories summary
+        top_stories = sorted(store.stories, key=lambda s: s.priority_score, reverse=True)[:3]
+        top_stories_summary = "; ".join([
+            f"{s.company_name}: {s.primary_title[:80]}" for s in top_stories
+        ]) if top_stories else None
+
+        digest_history = get_digest_history()
+        digest_history.save_digest(
+            story_count=digest.total_stories,
+            portfolio_count=portfolio_story_count,
+            competitor_count=competitor_story_count,
+            top_stories_summary=top_stories_summary,
+            investor_filter=industry_filter,
+            success=True,
+        )
+
+        # Also save to persistent audit log
+        audit_log = get_audit_log()
+        audit_log.log(
+            agent="news_aggregator",
+            event_type="digest",
+            action="generate",
+            resource_type="digest",
+            details={
+                "story_count": digest.total_stories,
+                "portfolio_count": portfolio_story_count,
+                "competitor_count": competitor_story_count,
+                "companies_covered": digest.companies_covered,
+                "industry_filter": industry_filter,
+                "total_time_ms": timing.total_time_ms,
+            },
+        )
+    except Exception as hist_err:
+        logger.warning(f"Failed to save digest history: {hist_err}")
 
     logger.info(
         f"Generated digest: {digest.total_stories} stories from {digest.total_articles} articles "

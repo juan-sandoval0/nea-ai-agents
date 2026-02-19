@@ -35,7 +35,6 @@ from chromadb.config import Settings
 
 from core.clients.harmonic import HarmonicClient, HarmonicCompany, HarmonicPerson, HarmonicAPIError
 from core.database import Database, Founder as DBFounder
-from .data_corrections import get_corrected_founders
 
 # Import from agent.py for type compatibility
 from .agent import RetrievalResult, Source, DEFAULT_NEWS_DAYS
@@ -557,36 +556,15 @@ class HarmonicDataSource:
                     raw_results=[],
                 )
 
-            # Check for manual corrections first
+            # Get enriched founders from DB (or trigger enrichment)
             founders = []
-            use_manual_corrections = False
-            if company.domain:
-                corrected = get_corrected_founders(company.domain)
-                if corrected:
-                    use_manual_corrections = True
-                    # Convert corrections to HarmonicPerson-like objects
-                    founders = [
-                        HarmonicPerson(
-                            id=f"correction_{i}",
-                            name=f["name"],
-                            title=f.get("title"),
-                            linkedin_url=f.get("linkedin_url"),
-                            raw_data={},
-                        )
-                        for i, f in enumerate(corrected)
-                    ]
+            db_founders = self._ensure_founders_enriched(url, company.domain or url)
 
-            # If no manual corrections, get enriched founders from DB (or trigger enrichment)
-            if not use_manual_corrections:
-                # Try to get enriched founders from database, triggering enrichment if needed
-                db_founders = self._ensure_founders_enriched(url, company.domain or url)
-
-                if db_founders:
-                    # Use DB founders (they have background info)
-                    # Convert to objects that _format_company_profile can handle
-                    founders = db_founders
-                    logger.info(f"Using {len(founders)} founders from database for {company.name}")
-                else:
+            if db_founders:
+                # Use DB founders (they have background info)
+                founders = db_founders
+                logger.info(f"Using {len(founders)} founders from database for {company.name}")
+            else:
                     # Fallback: Extract key people from company contact info
                     contact = company.raw_data.get("contact", {}) or {}
                     primary_person_id = contact.get("primary_email_person_id")
