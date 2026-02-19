@@ -1,186 +1,404 @@
 """
-Investor Context for Outreach Agent
-====================================
+Investor Context & Email Samples for Outreach Agent
+=====================================================
 
-Holds investor-side data for prompt injection into outreach messages.
-MVP returns defaults; scaffolded for future real data (DB/files, style matching).
+Loads investor profiles from profiles.yaml and annotated email samples from
+docs/email_samples.md. Provides the public API consumed by the generator:
 
-Usage:
-    from agents.outreach.context import get_investor_context
+    from agents.outreach.context import get_investor_context, load_samples
 
-    ctx = get_investor_context(investor_name="Jane Smith", firm_name="NEA")
-    print(ctx.format_for_prompt())
+    profile = get_investor_context("ashley")
+    samples = load_samples("ashley", context_type="thesis_driven_deep_dive")
+
+All parsing uses PyYAML. Samples are split on ``---`` delimiters and their
+YAML metadata blocks are extracted via regex.
 """
 
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+import yaml
+
 logger = logging.getLogger(__name__)
 
-# Default samples file relative to project root
-_PROJECT_ROOT = Path(__file__).parent.parent.parent
-DEFAULT_SAMPLES_FILE = _PROJECT_ROOT / "docs" / "Cold Outreach Email Samples (02_2026).md"
+# =========================================================================
+# PATH CONSTANTS
+# =========================================================================
 
-# Max samples to include (keeps token usage reasonable)
+_PROJECT_ROOT = Path(__file__).parent.parent.parent
+DEFAULT_SAMPLES_FILE = _PROJECT_ROOT / "docs" / "email_samples.md"
+DEFAULT_PROFILES_FILE = _PROJECT_ROOT / "agents" / "outreach" / "profiles.yaml"
+
+# Max samples to include in a prompt
 MAX_STYLE_SAMPLES = 3
 
+# Regex to extract fenced YAML blocks: ```yaml ... ```
+_YAML_BLOCK_RE = re.compile(r"```yaml\s*\n(.*?)```", re.DOTALL)
+
+
+# =========================================================================
+# DATA CLASSES
+# =========================================================================
 
 @dataclass
-class InvestorContext:
-    """Investor-side context used to personalize outreach messages."""
+class InvestorProfile:
+    """
+    Mirrors a single entry in profiles.yaml.
+
+    Provides format_for_prompt() to serialize the profile into a text block
+    suitable for LLM prompt injection.
+    """
 
     # Identity
-    investor_name: str = "Investment Team"
-    investor_title: str = "Investor"
-    firm_name: str = "Our Firm"
-    firm_description: str = ""
+    full_name: str
+    role: str
+    focus_areas: list[str] = field(default_factory=list)
 
-    # Tone / style
-    tone_description: str = (
-        "Professional, peer-to-peer VC tone. Concise and respectful of the "
-        "founder's time. Show genuine interest in their work by referencing "
-        "specific data points. Avoid being salesy or generic."
-    )
+    # Voice & style
+    tone: str = ""
+    intro_patterns: dict[str, str] = field(default_factory=dict)
+    structural_pattern: str = ""
+    sign_off_options: list[str] = field(default_factory=list)
+    differentiators: str = ""
 
-    # Portfolio / focus (empty for MVP)
-    portfolio_companies: list[str] = field(default_factory=list)
-    investment_focus: str = ""
-    shared_interests: list[str] = field(default_factory=list)
+    # Portfolio & social proof
+    portfolio_companies_to_reference: list[str] = field(default_factory=list)
 
-    # Style examples (future: past emails for few-shot)
-    style_examples: list[str] = field(default_factory=list)
+    # Optional fields
+    location: Optional[str] = None
+    firm_context_block: Optional[str] = None
+    colleague_introductions: Optional[dict[str, str]] = None
 
-    # Optional overrides for message structure
-    custom_opening: Optional[str] = None
-    custom_closing: Optional[str] = None
-    signature_line: Optional[str] = None
+    # Derived (not in YAML, set after loading)
+    firm_name: str = "NEA"
 
     def format_for_prompt(self) -> str:
-        """Format all fields into a text block for LLM prompt injection."""
-        lines = []
-        lines.append(f"Investor Name: {self.investor_name}")
-        lines.append(f"Title: {self.investor_title}")
+        """Serialize this profile into a text block for the LLM prompt."""
+        lines: list[str] = []
+
+        lines.append(f"Name: {self.full_name}")
+        lines.append(f"Role: {self.role}")
         lines.append(f"Firm: {self.firm_name}")
 
-        if self.firm_description:
-            lines.append(f"Firm Description: {self.firm_description}")
+        if self.focus_areas:
+            lines.append(f"Focus Areas: {', '.join(self.focus_areas)}")
 
-        lines.append(f"Tone: {self.tone_description}")
+        if self.tone:
+            lines.append(f"Tone: {self.tone.strip()}")
 
-        if self.investment_focus:
-            lines.append(f"Investment Focus: {self.investment_focus}")
+        if self.intro_patterns:
+            lines.append("Intro Patterns:")
+            for label, pattern in self.intro_patterns.items():
+                lines.append(f"  {label}: {pattern.strip()}")
 
-        if self.portfolio_companies:
-            lines.append(f"Portfolio Companies: {', '.join(self.portfolio_companies)}")
+        if self.structural_pattern:
+            lines.append(f"Structural Pattern: {self.structural_pattern.strip()}")
 
-        if self.shared_interests:
-            lines.append(f"Shared Interests: {', '.join(self.shared_interests)}")
+        if self.sign_off_options:
+            lines.append(
+                f"Sign-Off Options: {' | '.join(s.replace(chr(10), ' / ') for s in self.sign_off_options)}"
+            )
 
-        if self.custom_opening:
-            lines.append(f"Custom Opening: {self.custom_opening}")
+        if self.differentiators:
+            lines.append(f"Differentiators: {self.differentiators.strip()}")
 
-        if self.custom_closing:
-            lines.append(f"Custom Closing: {self.custom_closing}")
+        if self.portfolio_companies_to_reference:
+            lines.append(
+                f"Portfolio Companies: {', '.join(self.portfolio_companies_to_reference)}"
+            )
 
-        if self.signature_line:
-            lines.append(f"Signature: {self.signature_line}")
+        if self.location:
+            lines.append(f"Location: {self.location}")
 
-        if self.style_examples:
-            lines.append("\nStyle Examples:")
-            for i, example in enumerate(self.style_examples, 1):
-                lines.append(f"  Example {i}: {example}")
+        if self.firm_context_block:
+            lines.append(f"Firm Context: {self.firm_context_block.strip()}")
+
+        if self.colleague_introductions:
+            lines.append("Colleague Introductions:")
+            for label, intro in self.colleague_introductions.items():
+                lines.append(f"  {label}: {intro.strip()}")
 
         return "\n".join(lines)
 
 
-def load_style_samples(file_path: str | Path) -> list[str]:
+@dataclass
+class EmailSample:
     """
-    Load email style samples from a markdown file.
+    A single annotated email sample parsed from the samples markdown file.
 
-    Reads the file, splits on '---' delimiters, strips whitespace,
-    and filters out empty chunks.
+    Fields mirror the YAML metadata block plus the email body text.
+    """
+
+    investor: str
+    recipient: str
+    company: str
+    context_type: str
+    personalization_signals: list[str] = field(default_factory=list)
+    length: str = "medium"
+    body: str = ""
+    exclude_from_outreach: bool = False
+
+
+# =========================================================================
+# LOADING FUNCTIONS
+# =========================================================================
+
+def load_profiles(
+    file_path: str | Path | None = None,
+) -> dict[str, InvestorProfile]:
+    """
+    Load investor profiles from a YAML file.
 
     Args:
-        file_path: Path to the markdown samples file.
+        file_path: Path to profiles.yaml. Defaults to
+            agents/outreach/profiles.yaml.
 
     Returns:
-        List of individual email strings. Empty list if file not found or unreadable.
+        Dict mapping lowercase investor key to InvestorProfile.
     """
+    path = Path(file_path) if file_path else DEFAULT_PROFILES_FILE
+
     try:
-        path = Path(file_path)
+        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        logger.error(f"Profiles file not found: {path}")
+        return {}
+    except yaml.YAMLError as e:
+        logger.error(f"Failed to parse profiles YAML: {e}")
+        return {}
+
+    profiles: dict[str, InvestorProfile] = {}
+    for key, data in raw.items():
+        try:
+            profiles[key] = InvestorProfile(
+                full_name=data["full_name"],
+                role=data["role"],
+                focus_areas=data.get("focus_areas", []),
+                tone=data.get("tone", ""),
+                intro_patterns=data.get("intro_patterns", {}),
+                structural_pattern=data.get("structural_pattern", ""),
+                sign_off_options=data.get("sign_off_options", []),
+                differentiators=data.get("differentiators", ""),
+                portfolio_companies_to_reference=data.get(
+                    "portfolio_companies_to_reference", []
+                ),
+                location=data.get("location"),
+                firm_context_block=data.get("firm_context_block"),
+                colleague_introductions=data.get("colleague_introductions"),
+            )
+        except KeyError as e:
+            logger.warning(f"Skipping profile '{key}': missing required field {e}")
+
+    return profiles
+
+
+def load_all_samples(
+    file_path: str | Path | None = None,
+) -> list[EmailSample]:
+    """
+    Parse all annotated email samples from the markdown file.
+
+    Splits the file on ``---`` delimiters, extracts the ```yaml``` metadata
+    block from each chunk via regex, and treats the remaining text as the
+    email body.
+
+    Args:
+        file_path: Path to the samples markdown file. Defaults to
+            docs/email_samples.md.
+
+    Returns:
+        List of EmailSample objects. Empty list if file not found.
+    """
+    path = Path(file_path) if file_path else DEFAULT_SAMPLES_FILE
+
+    try:
         text = path.read_text(encoding="utf-8")
     except FileNotFoundError:
-        logger.warning(f"Style samples file not found: {file_path}")
+        logger.warning(f"Samples file not found: {path}")
         return []
     except OSError as e:
-        logger.warning(f"Could not read style samples file {file_path}: {e}")
+        logger.warning(f"Could not read samples file {path}: {e}")
         return []
 
     chunks = text.split("---")
-    samples = [chunk.strip() for chunk in chunks if chunk.strip()]
+    samples: list[EmailSample] = []
+
+    for chunk in chunks:
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+
+        # Extract YAML metadata block
+        yaml_match = _YAML_BLOCK_RE.search(chunk)
+        if not yaml_match:
+            # No metadata — skip (likely the file header)
+            continue
+
+        try:
+            metadata = yaml.safe_load(yaml_match.group(1))
+        except yaml.YAMLError as e:
+            logger.warning(f"Failed to parse sample YAML block: {e}")
+            continue
+
+        if not isinstance(metadata, dict):
+            continue
+
+        # Everything after the YAML block is the email body
+        body = chunk[yaml_match.end():].strip()
+        if not body:
+            continue
+
+        samples.append(EmailSample(
+            investor=metadata.get("investor", "unknown"),
+            recipient=metadata.get("recipient", "unknown"),
+            company=metadata.get("company", "unknown"),
+            context_type=metadata.get("context_type", "unknown"),
+            personalization_signals=metadata.get("personalization_signals", []),
+            length=metadata.get("length", "medium"),
+            body=body,
+            exclude_from_outreach=metadata.get("exclude_from_outreach", False),
+        ))
+
     return samples
 
 
-def _select_short_samples(samples: list[str], max_count: int = MAX_STYLE_SAMPLES) -> list[str]:
-    """Pick the shortest samples to keep token usage low."""
-    if len(samples) <= max_count:
-        return samples
-    ranked = sorted(samples, key=len)
-    return ranked[:max_count]
+# =========================================================================
+# SAMPLE SELECTION
+# =========================================================================
+
+def select_samples(
+    all_samples: list[EmailSample],
+    investor_key: str,
+    context_type: Optional[str] = None,
+    max_count: int = MAX_STYLE_SAMPLES,
+) -> list[EmailSample]:
+    """
+    Select the best style examples for a given investor and context type.
+
+    Filtering pipeline:
+    1. Keep only samples from the target investor.
+    2. Exclude samples marked exclude_from_outreach=True.
+    3. Prefer samples whose context_type matches the current scenario.
+    4. Fill remainder with other samples from the same investor.
+    5. Sort by body length (shorter first) for token efficiency.
+
+    Args:
+        all_samples: Full list of parsed EmailSample objects.
+        investor_key: Lowercase investor identifier (e.g., "ashley").
+        context_type: Optional context_type string to prefer.
+        max_count: Maximum number of samples to return.
+
+    Returns:
+        List of up to max_count EmailSample objects.
+    """
+    # Step 1 + 2: filter to this investor, exclude internal
+    eligible = [
+        s for s in all_samples
+        if s.investor == investor_key and not s.exclude_from_outreach
+    ]
+
+    if not eligible:
+        return []
+
+    if context_type:
+        # Step 3: matching context_type first
+        matching = [s for s in eligible if s.context_type == context_type]
+        non_matching = [s for s in eligible if s.context_type != context_type]
+
+        # Sort each group by body length (shorter first)
+        matching.sort(key=lambda s: len(s.body))
+        non_matching.sort(key=lambda s: len(s.body))
+
+        # Step 4: fill remainder
+        selected = matching[:max_count]
+        remaining_slots = max_count - len(selected)
+        if remaining_slots > 0:
+            selected.extend(non_matching[:remaining_slots])
+    else:
+        # No context_type preference — just take shortest
+        eligible.sort(key=lambda s: len(s.body))
+        selected = eligible[:max_count]
+
+    return selected
+
+
+# =========================================================================
+# PUBLIC API
+# =========================================================================
+
+# Module-level caches
+_profiles_cache: Optional[dict[str, InvestorProfile]] = None
+_samples_cache: Optional[list[EmailSample]] = None
 
 
 def get_investor_context(
-    investor_name: Optional[str] = None,
-    firm_name: Optional[str] = None,
-    samples_file: Optional[str] = None,
-    **overrides,
-) -> InvestorContext:
+    investor_key: str,
+    profiles_file: str | Path | None = None,
+) -> InvestorProfile:
     """
-    Build an InvestorContext with optional overrides.
+    Load and return an InvestorProfile by key.
 
-    MVP: returns defaults with optional name/firm overrides.
-    Loads style samples from a markdown file if available.
+    Caches profiles after first load. Falls back to a minimal default profile
+    if the key is not found.
 
     Args:
-        investor_name: Investor name override
-        firm_name: Firm name override
-        samples_file: Path to style samples markdown file.
-            None (default) = auto-detect from docs/.
-            Explicit path = use that file.
-            Pass ``""`` to disable loading.
-        **overrides: Additional field overrides (e.g., tone_description, investment_focus)
+        investor_key: Lowercase investor identifier (e.g., "ashley").
+        profiles_file: Optional override path to profiles.yaml.
 
     Returns:
-        InvestorContext with applied overrides
+        InvestorProfile for the requested investor.
     """
-    kwargs = {}
+    global _profiles_cache
 
-    if investor_name:
-        kwargs["investor_name"] = investor_name
+    if _profiles_cache is None or profiles_file is not None:
+        _profiles_cache = load_profiles(profiles_file)
 
-    if firm_name:
-        kwargs["firm_name"] = firm_name
+    if investor_key in _profiles_cache:
+        return _profiles_cache[investor_key]
 
-    # Apply any additional overrides
-    valid_fields = {f.name for f in InvestorContext.__dataclass_fields__.values()}
-    for key, value in overrides.items():
-        if key in valid_fields:
-            kwargs[key] = value
+    logger.warning(
+        f"Investor '{investor_key}' not found in profiles. "
+        f"Available: {list(_profiles_cache.keys())}. Using fallback."
+    )
+    return InvestorProfile(
+        full_name=investor_key.title(),
+        role="Investor",
+    )
 
-    # Load style samples
-    if samples_file is None:
-        # Auto-detect: use default if it exists
-        if DEFAULT_SAMPLES_FILE.exists():
-            samples = load_style_samples(DEFAULT_SAMPLES_FILE)
-            kwargs["style_examples"] = _select_short_samples(samples)
-    elif samples_file:
-        # Explicit path provided
-        samples = load_style_samples(samples_file)
-        kwargs["style_examples"] = _select_short_samples(samples)
-    # else: samples_file == "" → explicitly disabled, don't load
 
-    return InvestorContext(**kwargs)
+def load_samples(
+    investor_key: str,
+    context_type: Optional[str] = None,
+    samples_file: str | Path | None = None,
+    max_count: int = MAX_STYLE_SAMPLES,
+) -> list[EmailSample]:
+    """
+    Load and select email samples for a given investor and context type.
+
+    Caches the full sample list after first load.
+
+    Args:
+        investor_key: Lowercase investor identifier (e.g., "ashley").
+        context_type: Optional context_type string to prefer in selection.
+        samples_file: Optional override path to samples markdown file.
+        max_count: Maximum number of samples to return.
+
+    Returns:
+        List of selected EmailSample objects.
+    """
+    global _samples_cache
+
+    if _samples_cache is None or samples_file is not None:
+        _samples_cache = load_all_samples(samples_file)
+
+    return select_samples(
+        all_samples=_samples_cache,
+        investor_key=investor_key,
+        context_type=context_type,
+        max_count=max_count,
+    )

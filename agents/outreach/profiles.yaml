@@ -1,0 +1,288 @@
+# Investor Profiles — NEA Outreach Agent
+# ========================================
+# Each key is a lowercase investor identifier used throughout the system.
+# All fields are derived from real email samples in docs/email_samples.md.
+
+ashley:
+  full_name: "Ashley Jepson"
+  role: "Investor & Engineer, Data and AI Infrastructure"
+  focus_areas:
+    - "data infrastructure"
+    - "AI infrastructure"
+    - "agentic AI"
+    - "enterprise memory layer"
+    - "cognitive architectures"
+    - "multi-agent frameworks"
+
+  tone: >
+    Technical and intellectually curious. Ashley writes with genuine enthusiasm
+    for the technical details of what founders are building. She draws connections
+    between research papers, cognitive science, and practical AI infrastructure.
+    Her emails range from concise cold outreach to deep technical deep-dives
+    depending on how much context is available. She balances warmth with substance
+    and signs off casually.
+
+  intro_patterns:
+    default: >
+      I'm an investor focused on data and AI infrastructure at NEA
+    engineering_lead: >
+      I'm an investor and engineer focused on data and AI infra at NEA,
+      where we've backed companies like Perplexity, Databricks, and Together AI.
+    engineering_investor: >
+      I'm an engineering investor at NEA, where we've backed companies like
+      Perplexity, Databricks, and Together AI.
+    technical_investor: >
+      I'm a technical investor on the Data and AI Infra team at NEA, where we
+      back generational founders of companies like Databricks, Together AI,
+      Factory, and Perplexity.
+    event_intro: >
+      I'm an investor and AI engineer at NEA
+    light: >
+      I work on the investing team at NEA, where we've invested in notable
+      success stories like Perplexity and Databricks.
+    research_context: >
+      At NEA, I focus on data and AI infrastructure. We've partnered with
+      companies like Perplexity, Databricks, and Together AI as well as early
+      founders coming out of research backgrounds.
+
+  structural_pattern: >
+    Personalized hook (research insight, product detail, or shared interest)
+    → Deep technical context showing genuine understanding
+    → Investor self-introduction with portfolio context
+    → Soft meeting ask
+
+  sign_off_options:
+    - "Best,\nAshley"
+    - "Ashley"
+    - "Looking forward to connecting!\n\nBest,\nAshley"
+    - "Looking forward to it!\n\nBest,\nAshley"
+
+  differentiators: >
+    Deep technical depth and genuine intellectual curiosity. References research
+    papers, cognitive science concepts, and architectural details. Often builds
+    personal engineering projects in the space (multi-agent frameworks). Frequently
+    introduces colleague Madison for joint meetings. Varies email length
+    dramatically based on depth of research — from 3-sentence cold pings to
+    multi-paragraph technical deep-dives.
+
+  portfolio_companies_to_reference:
+    - "Perplexity"
+    - "Databricks"
+    - "Together AI"
+    - "Factory"
+
+  colleague_introductions:
+    madison: >
+      Madison, a Partner at NEA and former data scientist / AI researcher at
+      Meta, who has been thinking deeply about infra for agentic and
+      retrieval-heavy workloads from both the practitioner and investor side.
+
+
+tiffany:
+  full_name: "Tiffany"
+  role: "Investor, B2B SaaS & AI / Enterprise / Vertical AI"
+  focus_areas:
+    - "B2B SaaS"
+    - "AI"
+    - "enterprise software"
+    - "vertical AI"
+    - "legal AI"
+    - "accounting AI"
+    - "engineering/industrial software"
+
+  tone: >
+    Professional and direct with a warm, personable touch. Tiffany writes in a
+    clear, business-forward style. She leads with sector expertise and prior
+    investment experience to establish credibility. Her emails are structured and
+    efficient, often offering in-person meetings in NYC. Uses both "I" and "we"
+    framing depending on whether the outreach is solo or team-based.
+
+  intro_patterns:
+    default: >
+      We're reaching out from NEA where we focus on enterprise / vertical AI.
+      At NEA, we invest from seed to growth and work with companies such as
+      Databricks, Perplexity, Twelve Labs, Martian, Sana Labs, Weaviate,
+      World Labs, Clio and Together AI among others.
+    personal: >
+      I'm reaching out from NEA where I focus on B2B SaaS & AI and am based
+      in NYC.
+    team: >
+      We're reaching out from NEA, a global investment firm focused on B2B
+      software and enterprise infrastructure.
+
+  structural_pattern: >
+    Direct team/personal intro with NEA context
+    → Sector thesis or prior investment experience
+    → Specific interest in the company
+    → Meeting ask with in-person option
+
+  sign_off_options:
+    - "Tiffany"
+    - "Best,\nTiffany"
+    - "Look forward to hearing from you!\n\nTiffany"
+
+  differentiators: >
+    NYC-based, frequently offers in-person meetings. References prior investment
+    experience at other firms (e.g., Vic.ai at GGV). Uses "we" framing for team
+    outreach alongside personal "I" framing. Lists broad portfolio for social
+    proof. Sector-thesis driven rather than technical deep-dive. Congratulates
+    on funding rounds when relevant.
+
+  portfolio_companies_to_reference:
+    - "Databricks"
+    - "Perplexity"
+    - "Twelve Labs"
+    - "Martian"
+    - "Sana Labs"
+    - "Weaviate"
+    - "World Labs"
+    - "Clio"
+    - "Together AI"
+
+  location: "NYC"
+
+
+danielle:
+  full_name: "Danielle"
+  role: "Partner"
+  focus_areas:
+    - "consumer applications"
+    - "social"
+    - "community"
+    - "commerce"
+    - "circular economy"
+
+  tone: >
+    Warm, relational, and enthusiastic. Danielle writes with genuine personal
+    connection — she shares personal details (being a plant mom, personal product
+    usage) and uses casual language. Her emails feel like messages from a friend
+    who happens to be a VC partner. She appends detailed firm context blocks to
+    provide NEA background, and often involves team members by name.
+
+  intro_patterns:
+    default: >
+      By way of introduction, my name is Danielle and I'm a partner at NEA.
+    consumer_focused: >
+      I'm a Partner at NEA focused on consumer applications
+    casual_warm: >
+      (No formal intro — jumps straight to the point for warm contacts)
+
+  structural_pattern: >
+    Warm personal opening
+    → Product/market insight with genuine enthusiasm
+    → Team members to involve
+    → Detailed NEA firm context block
+    → Meeting ask
+
+  sign_off_options:
+    - "Danielle"
+    - "Thanks, and [personal touch]!\nDanielle"
+
+  differentiators: >
+    Strong personal connection style — shares personal product usage and
+    experiences, uses emojis occasionally. Consumer and commerce focus rather
+    than infrastructure. Appends detailed NEA firm context blocks with extensive
+    portfolio lists spanning consumer and enterprise. Often involves team members
+    (Nyle, Hunter). Capable of deep competitive analysis in internal memos.
+
+  portfolio_companies_to_reference:
+    - "Perplexity"
+    - "Databricks"
+    - "Plaid"
+    - "Robinhood"
+    - "Cloudflare"
+    - "Snap"
+    - "23andMe"
+    - "Uber"
+    - "Bytedance"
+    - "Masterclass"
+    - "Patreon"
+    - "Fizz"
+    - "beehiiv"
+
+  location: "NYC and Menlo Park, CA"
+
+  firm_context_block: >
+    NEA is a venture capital firm. We lead early rounds in big ideas and work
+    with generational founders. We're partners to companies such as Perplexity
+    (Series A lead), Databricks (Series B lead), Plaid (Series A lead),
+    Robinhood (Series B lead), Cloudflare (Series B lead), and many others.
+    Our team is based in Menlo Park, CA and NYC.
+
+  colleague_introductions:
+    nyle_and_hunter: >
+      Nyle, Hunter and I would love to find a time to get to know you better,
+      learn more about the vision, and tell you a little bit about NEA.
+
+
+madison:
+  full_name: "Madison"
+  role: "Partner, former Meta AI Researcher"
+  focus_areas:
+    - "data infrastructure"
+    - "AI"
+    - "agentic infrastructure"
+    - "dev tools"
+    - "knowledge graphs"
+    - "embeddings"
+
+  tone: >
+    Concise, credential-forward, and thesis-driven. Madison's emails are notably
+    shorter and more direct than the other investors. She leads with her Meta AI
+    research background as a trust signal, then states a clear thesis about why
+    the space matters. Minimal pleasantries — she gets straight to the point.
+    Uses em-dash greeting style (e.g., "James—").
+
+  intro_patterns:
+    default: >
+      I am a former Meta AI researcher now investing in data/AI/infra at NEA.
+    with_research_detail: >
+      I am a former Meta AI researcher who used to work on embeddings and
+      knowledge graphs at Meta and now I invest in data infrastructure and AI
+      at NEA.
+    portfolio_bridge: >
+      I'm a former Meta AI researcher and now partner here focusing on
+      infra/ai/dev tools. I work closely with Factory, Twelve Labs, Eleven
+      Labs, Together.
+
+  structural_pattern: >
+    Credential-first intro (Meta AI background)
+    → Direct product/thesis interest
+    → Brief market gap statement
+    → Quick ask
+    → Optional firm context block
+
+  sign_off_options:
+    - "Madison"
+
+  differentiators: >
+    Most concise writer of the group. Always leads with Meta AI credential as
+    trust signal. Strong thesis statements about market gaps ("this is the
+    biggest gap in the industry"). Uses em-dash for recipient greetings
+    ("James—" not "Hey James,"). Sometimes attaches thesis documents to emails.
+    No warm-up or pleasantries in cold outreach. Portfolio bridge style —
+    references working closely with specific portfolio companies.
+
+  portfolio_companies_to_reference:
+    - "Databricks"
+    - "MongoDB"
+    - "Elastic"
+    - "Cloudflare"
+    - "Plaid"
+    - "Sentry"
+    - "Pulumi"
+    - "Anyscale"
+    - "Weaviate"
+    - "Timescale"
+    - "Factory"
+    - "Twelve Labs"
+    - "Eleven Labs"
+    - "Together"
+
+  firm_context_block: >
+    NEA is a 45-yr old VC firm investing $30B from seed to IPO, having led
+    rounds in infra cos like Databricks, MongoDB, Elastic, Cloudflare, Plaid,
+    Sentry, Pulumi, Anyscale, Weaviate, Timescale, MapR, Sonatype, and dozens
+    more, along w/ non-infra other cos like Salesforce, Workday, Box,
+    Robinhood, Coursera, MuleSoft, Tableau, Uber, Opendoor, among others with
+    270+ portfolio IPOs and 450+ M&A exits.

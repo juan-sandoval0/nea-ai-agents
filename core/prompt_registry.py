@@ -242,14 +242,14 @@ class PromptRegistry:
             version="1.0.0",
         ))
 
-        # Outreach message generation
+        # Outreach message generation (Claude Sonnet for superior writing quality)
         self.register_model_config(ModelConfig(
             name="outreach",
-            model="gpt-4o-mini",
-            provider=ModelProvider.OPENAI,
+            model="claude-sonnet-4-5-20250929",
+            provider=ModelProvider.ANTHROPIC,
             temperature=0.3,
-            description="Model for personalized outreach message generation",
-            version="1.0.0",
+            description="Claude Sonnet for personalized outreach message generation",
+            version="2.0.0",
         ))
 
     def _register_default_prompts(self):

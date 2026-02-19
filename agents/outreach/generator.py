@@ -3,16 +3,16 @@ Outreach Message Generator
 ===========================
 
 Core generation pipeline for personalized cold outreach messages.
-Follows the pattern in agents/meeting_briefing/briefing_generator.py.
 
 Reuses existing data infrastructure (Harmonic, Swarm, Parallel Search, Tavily)
 to gather company/founder intel, then generates a tailored email or LinkedIn
-message via LLM.
+message via LLM using investor-specific voice profiles and annotated style
+examples.
 
 Usage:
     from agents.outreach.generator import generate_outreach
 
-    result = generate_outreach("stripe.com", output_format="email")
+    result = generate_outreach("stripe.com", investor_key="ashley")
     print(result["message"])
 """
 
@@ -24,11 +24,11 @@ from datetime import datetime
 from typing import Optional
 
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_anthropic import ChatAnthropic
 
-from core.database import CompanyBundle, Founder, KeySignal, NewsArticle
+from core.database import CompanyBundle, Founder
 from core.tracking import get_tracker
-from core.prompt_registry import get_prompt, get_model_config, LLMCallMetadata
+from core.prompt_registry import get_model_config, LLMCallMetadata
 from core.security import (
     sanitize_company_name,
     sanitize_for_prompt,
@@ -45,7 +45,9 @@ from core.observability import (
 )
 from tools.company_tools import get_company_bundle, normalize_company_id, ingest_company
 
-from .context import get_investor_context
+from .context import get_investor_context, load_samples
+from .context_types import detect_context_type, CONTEXT_TYPE_CONFIGS, ContextType
+from .prompts import build_generation_prompt
 
 logger = get_logger(__name__)
 
@@ -53,28 +55,8 @@ logger = get_logger(__name__)
 # CONFIGURATION
 # =============================================================================
 
-DEFAULT_LLM_MODEL = "gpt-4o-mini"
-
-OUTREACH_SYSTEM_PROMPT = """You are an AI assistant generating personalized cold outreach messages for venture capital investors to send to startup founders.
-
-CRITICAL RULES:
-- Use ONLY the provided data about the company, founder, and investor. Do NOT hallucinate or infer facts.
-- Reference specific data points from the provided context (funding rounds, signals, founder background, product details).
-- Write in a peer-to-peer tone — one professional to another. NOT salesy, NOT generic.
-- Show genuine interest by citing concrete details about the company or founder.
-- If the founder has a notable background, mention shared context naturally (do not force it).
-- Keep the message concise and respectful of the founder's time.
-
-FORMAT RULES:
-- For EMAIL format: Keep under 150 words. Start with a "Subject:" line on its own, then a blank line, then the message body.
-- For LINKEDIN format: Keep under 100 words. No subject line. Open with a brief, personalized hook.
-
-TONE:
-- Professional but warm
-- Curious, not presumptuous
-- Specific, not templated
-- Investor reaching out as a peer, not pitching services
-- If style examples are provided, match their tone and structure closely."""
+DEFAULT_LLM_MODEL = "claude-sonnet-4-5-20250929"
+DEFAULT_INVESTOR_KEY = "ashley"
 
 
 # =============================================================================
@@ -203,6 +185,64 @@ def format_contact_context(contact: Founder) -> str:
 
 
 # =============================================================================
+# SIGNAL EXTRACTION (for context type detection)
+# =============================================================================
+
+def _extract_available_signals(bundle: CompanyBundle, contact: Optional[Founder]) -> list[str]:
+    """
+    Derive available personalization signal keys from the company bundle.
+
+    Maps raw data into the signal vocabulary used by context_types.py for
+    detection scoring.
+    """
+    signals: list[str] = []
+
+    # From key_signals
+    if bundle.key_signals:
+        signal_types = {s.signal_type.lower() for s in bundle.key_signals}
+        signal_descs = " ".join(s.description.lower() for s in bundle.key_signals)
+
+        if "funding" in signal_types or "funding" in signal_descs:
+            signals.append("funding_announcement")
+        if "hiring" in signal_types or "team_change" in signal_types:
+            signals.append("market_gap")
+        if "website_update" in signal_types or "product_launch" in signal_types:
+            signals.append("product_launch")
+            signals.append("product_capabilities")
+        if "traffic" in signal_types:
+            signals.append("product_interest")
+
+    # From company data
+    if bundle.company_core:
+        if bundle.company_core.products:
+            signals.append("product_capabilities")
+            signals.append("technical_architecture")
+        if bundle.company_core.total_funding:
+            signals.append("sector_thesis")
+
+    # From news
+    if bundle.news:
+        news_text = " ".join(n.article_headline.lower() for n in bundle.news[:5])
+        if any(kw in news_text for kw in ["launch", "release", "announce"]):
+            signals.append("product_launch")
+        if any(kw in news_text for kw in ["raise", "fund", "series", "seed"]):
+            signals.append("funding_announcement")
+
+    # From contact background
+    if contact and contact.background:
+        bg = contact.background.lower()
+        if any(kw in bg for kw in ["research", "phd", "professor", "paper"]):
+            signals.append("research_background")
+            signals.append("paper_reference")
+        if any(kw in bg for kw in ["meta", "google", "facebook", "amazon", "apple"]):
+            signals.append("shared_employer")
+            signals.append("shared_background")
+
+    # Deduplicate
+    return list(set(signals))
+
+
+# =============================================================================
 # OUTREACH GENERATION
 # =============================================================================
 
@@ -211,34 +251,29 @@ def generate_outreach(
     company_id: str,
     output_format: str = "email",
     contact_name: Optional[str] = None,
-    investor_name: Optional[str] = None,
-    firm_name: Optional[str] = None,
+    investor_key: str = DEFAULT_INVESTOR_KEY,
     model: str = DEFAULT_LLM_MODEL,
     skip_ingest: bool = False,
-    samples_file: Optional[str] = None,
+    context_type_override: Optional[str] = None,
 ) -> dict:
     """
     Generate a personalized outreach message for a founder at a target company.
 
     Pipeline:
-    1. Normalize company ID
-    2. Ingest company data (unless skip_ingest)
-    3. Get company bundle from DB
-    4. Select target contact
-    5. Build investor context
-    6. Sanitize all data
-    7. Call LLM with system + user prompt
-    8. Parse and return result
+    1. Normalize company ID and ingest data
+    2. Load investor profile and detect context type
+    3. Select style examples matching investor + context type
+    4. Build prompts via build_generation_prompt()
+    5. Call LLM and parse result
 
     Args:
         company_id: Company URL or domain
         output_format: "email" or "linkedin" (default: "email")
         contact_name: Optional target contact name (auto-selects if None)
-        investor_name: Optional investor name for the message
-        firm_name: Optional firm name for the message
+        investor_key: Investor profile key (default: "ashley")
         model: LLM model to use
         skip_ingest: If True, use cached DB data only
-        samples_file: Path to style samples file (None=auto-detect, ""=disabled)
+        context_type_override: Optional context type string to force
 
     Returns:
         Dict with message, metadata, and success/error status
@@ -252,7 +287,9 @@ def generate_outreach(
         "contact_name": None,
         "contact_title": None,
         "contact_linkedin": None,
+        "investor_key": investor_key,
         "output_format": output_format,
+        "context_type": None,
         "message": None,
         "subject": None,
         "generated_at": datetime.utcnow().isoformat(),
@@ -293,23 +330,47 @@ def generate_outreach(
             result["contact_title"] = contact.role_title
             result["contact_linkedin"] = contact.linkedin_url
 
-        # Step 4: Build investor context
-        investor_ctx = get_investor_context(
-            investor_name=investor_name,
-            firm_name=firm_name,
-            samples_file=samples_file,
+        # Step 4: Load investor profile
+        investor_profile = get_investor_context(investor_key)
+
+        # Step 5: Detect context type
+        if context_type_override:
+            try:
+                ctx_type = ContextType(context_type_override)
+            except ValueError:
+                logger.warning(
+                    f"Unknown context_type '{context_type_override}', "
+                    f"falling back to auto-detection"
+                )
+                ctx_type = None
+        else:
+            ctx_type = None
+
+        if ctx_type is None:
+            available_signals = _extract_available_signals(bundle, contact)
+            ctx_type = detect_context_type(
+                available_signals=available_signals,
+                has_prior_relationship=False,
+                has_event_context=False,
+            )
+
+        result["context_type"] = ctx_type.value
+        ctx_config = CONTEXT_TYPE_CONFIGS[ctx_type]
+
+        # Step 6: Load style examples
+        style_examples = load_samples(
+            investor_key=investor_key,
+            context_type=ctx_type.value,
         )
 
-        # Step 5: Sanitize all data
+        # Step 7: Format and sanitize data
         safe_company_name = sanitize_company_name(bundle.company_core.company_name)
+
         company_context = format_company_context(bundle)
         safe_company_context = sanitize_for_prompt(company_context, escape_markdown=False)
 
         contact_context = format_contact_context(contact) if contact else "No contact information available."
         safe_contact_context = sanitize_for_prompt(contact_context, escape_markdown=False)
-
-        investor_context = investor_ctx.format_for_prompt()
-        safe_investor_context = sanitize_for_prompt(investor_context, escape_markdown=False)
 
         # Check for prompt injection
         for field_name, field_data in [
@@ -328,50 +389,20 @@ def generate_outreach(
                     severity="warning",
                 )
 
-        # Step 6: Build style examples section
-        style_section = ""
-        if investor_ctx.style_examples:
-            sanitized_examples = []
-            for i, ex in enumerate(investor_ctx.style_examples, 1):
-                safe_ex = sanitize_for_prompt(ex, escape_markdown=False)
-                sanitized_examples.append(f"### Example {i}\n{safe_ex}")
-            examples_block = "\n\n".join(sanitized_examples)
-            style_section = f"""
+        # Step 8: Build prompts via the prompts module
+        messages = build_generation_prompt(
+            investor_profile=investor_profile,
+            founder_context=safe_contact_context,
+            company_context=safe_company_context,
+            style_examples=style_examples,
+            context_type_pattern=ctx_config.email_pattern,
+            output_format=output_format,
+        )
 
-## STYLE EXAMPLES
-Match the tone, structure, and voice of these real emails. Do NOT copy them — use them as inspiration for the writing style.
+        system_prompt_content = messages[0].content
+        user_prompt = messages[1].content
 
-{examples_block}
-"""
-
-        # Step 7: Build user prompt
-        format_label = "EMAIL" if output_format == "email" else "LINKEDIN"
-        user_prompt = f"""Generate a personalized {format_label} outreach message for the following target.
-
-## TARGET CONTACT
-{safe_contact_context}
-
-## COMPANY DATA
-{safe_company_context}
-
-## INVESTOR CONTEXT
-{safe_investor_context}
-{style_section}
-## OUTPUT REQUIREMENTS
-- Format: {format_label}
-- {"Include a Subject: line at the top, followed by a blank line, then the message body." if output_format == "email" else "No subject line. Open with a personalized hook."}
-- Reference specific details from the company data and founder background.
-- Sign off as {investor_ctx.investor_name} from {investor_ctx.firm_name}.
-"""
-
-        # Step 8: Get system prompt and model config
-        try:
-            system_prompt_obj = get_prompt("outreach_system")
-            system_prompt_content = system_prompt_obj.content
-        except KeyError:
-            system_prompt_obj = None
-            system_prompt_content = OUTREACH_SYSTEM_PROMPT
-
+        # Step 9: Get model config
         try:
             model_config = get_model_config("outreach")
             actual_model = model_config.model if model == DEFAULT_LLM_MODEL else model
@@ -384,7 +415,7 @@ Match the tone, structure, and voice of these real emails. Do NOT copy them — 
         # Create call metadata
         call_metadata = LLMCallMetadata.create(
             operation="outreach",
-            prompt=system_prompt_obj,
+            prompt=None,
             model_config=model_config,
             system_prompt=system_prompt_content,
             user_prompt=user_prompt,
@@ -393,13 +424,13 @@ Match the tone, structure, and voice of these real emails. Do NOT copy them — 
             temperature=temperature,
         )
 
-        # Step 9: Call LLM
+        # Step 10: Call LLM (select provider based on model name)
         tracker = get_tracker()
-        llm = ChatOpenAI(model=actual_model, temperature=temperature)
-        messages = [
-            SystemMessage(content=system_prompt_content),
-            HumanMessage(content=user_prompt),
-        ]
+        is_anthropic = actual_model.startswith("claude")
+        if is_anthropic:
+            llm = ChatAnthropic(model=actual_model, temperature=temperature)
+        else:
+            llm = ChatOpenAI(model=actual_model, temperature=temperature)
 
         start_time = time.time()
         response = llm.invoke(messages)
@@ -413,7 +444,7 @@ Match the tone, structure, and voice of these real emails. Do NOT copy them — 
         call_metadata.tokens_out = tokens_out
         call_metadata.latency_ms = latency_ms
 
-        # Step 10: Parse output
+        # Step 11: Parse output
         message_text = raw_content.strip()
         subject = None
 
@@ -426,10 +457,10 @@ Match the tone, structure, and voice of these real emails. Do NOT copy them — 
         result["subject"] = subject
         result["success"] = True
 
-        # Step 11: Log everything
+        # Step 12: Log everything
         tracker.log_api_call(
-            service="openai",
-            endpoint=f"/chat/completions ({actual_model})",
+            service="anthropic" if is_anthropic else "openai",
+            endpoint=f"/messages ({actual_model})" if is_anthropic else f"/chat/completions ({actual_model})",
             method="POST",
             status_code=200,
             tokens_in=tokens_in,
@@ -441,6 +472,8 @@ Match the tone, structure, and voice of these real emails. Do NOT copy them — 
                 "prompt_id": call_metadata.prompt_id,
                 "prompt_version": call_metadata.prompt_version,
                 "output_format": output_format,
+                "investor_key": investor_key,
+                "context_type": ctx_type.value,
             },
         )
 
@@ -468,6 +501,8 @@ Match the tone, structure, and voice of these real emails. Do NOT copy them — 
             metadata={
                 "model": actual_model,
                 "output_format": output_format,
+                "investor_key": investor_key,
+                "context_type": ctx_type.value,
                 "contact_name": result["contact_name"],
                 "tokens_in": tokens_in,
                 "tokens_out": tokens_out,
@@ -497,6 +532,8 @@ Match the tone, structure, and voice of these real emails. Do NOT copy them — 
             details={
                 "company_name": bundle.company_core.company_name,
                 "contact_name": result["contact_name"],
+                "investor_key": investor_key,
+                "context_type": ctx_type.value,
                 "output_format": output_format,
                 "model": actual_model,
                 "tokens_total": tokens_in + tokens_out,
@@ -506,7 +543,8 @@ Match the tone, structure, and voice of these real emails. Do NOT copy them — 
 
         logger.info(
             f"Generated {output_format} outreach for {safe_company_name} "
-            f"(contact: {result['contact_name']})"
+            f"(contact: {result['contact_name']}, investor: {investor_key}, "
+            f"context: {ctx_type.value})"
         )
 
     except Exception as e:
