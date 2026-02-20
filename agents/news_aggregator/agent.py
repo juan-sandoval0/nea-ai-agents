@@ -757,19 +757,38 @@ Examples:
     elif args.signals:
         cmd_signals(min_score=args.min_score, signal_type=args.signal_type, limit=args.limit, company_filter=args.company)
     elif args.digest:
-        # Auto-fetch new signals unless --no-fetch is specified
-        if not args.no_fetch:
-            print("Fetching latest signals...\n")
-            cmd_check(investor_id=args.investor_id, refresh_competitors=True, quiet=True)
-            print("")
+        # Track job in Supabase for Lovable UI
+        from services.job_manager import get_job_manager
+        job_manager = get_job_manager()
+        job = job_manager.create_job("news_aggregator", triggered_by="terminal")
 
-        digest = generate_investor_digest(
-            days=args.days,
-            min_priority_score=args.min_priority,
-            investor_id=args.investor_id,
-            industry_filter=args.industry
-        )
-        print(digest.to_markdown())
+        try:
+            job_manager.start_job(job.id)
+            print(f"Job {job.id[:8]}... started\n")
+
+            # Auto-fetch new signals unless --no-fetch is specified
+            if not args.no_fetch:
+                print("Fetching latest signals...\n")
+                cmd_check(investor_id=args.investor_id, refresh_competitors=False, quiet=True)
+                print("")
+
+            digest = generate_investor_digest(
+                days=args.days,
+                min_priority_score=args.min_priority,
+                investor_id=args.investor_id,
+                industry_filter=args.industry
+            )
+            print(digest.to_markdown())
+
+            # Mark job complete
+            story_count = len(digest.stories) if hasattr(digest, 'stories') else 0
+            job_manager.complete_job(job.id, {"story_count": story_count, "days": args.days})
+            print(f"\n✓ Job completed")
+
+        except Exception as e:
+            job_manager.fail_job(job.id, str(e))
+            print(f"\n✗ Job failed: {e}")
+            raise
     elif args.refresh_industries:
         cmd_refresh_industries(investor_id=args.investor_id)
     else:

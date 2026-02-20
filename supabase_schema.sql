@@ -159,6 +159,25 @@ CREATE INDEX idx_audit_event_type ON audit_logs(event_type);
 CREATE INDEX idx_audit_created ON audit_logs(created_at DESC);
 
 -- =============================================================================
+-- JOB RUNS (track agent execution status for UI)
+-- =============================================================================
+CREATE TABLE job_runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  agent_type TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed')),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  error TEXT,
+  result_summary JSONB DEFAULT '{}',
+  triggered_by TEXT DEFAULT 'api'
+);
+
+CREATE INDEX idx_job_runs_status ON job_runs(status);
+CREATE INDEX idx_job_runs_agent ON job_runs(agent_type);
+CREATE INDEX idx_job_runs_created ON job_runs(created_at DESC);
+
+-- =============================================================================
 -- STORIES (cached digest stories)
 -- =============================================================================
 CREATE TABLE stories (
@@ -227,6 +246,7 @@ ALTER TABLE stories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE digest_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE outreach_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE job_runs ENABLE ROW LEVEL SECURITY;
 
 -- Public read access (for Lovable with anon key)
 CREATE POLICY "Public read" ON watched_companies FOR SELECT USING (true);
@@ -238,5 +258,6 @@ CREATE POLICY "Public read" ON stories FOR SELECT USING (true);
 CREATE POLICY "Public read" ON digest_history FOR SELECT USING (true);
 CREATE POLICY "Public read" ON outreach_history FOR SELECT USING (true);
 CREATE POLICY "Public read" ON audit_logs FOR SELECT USING (true);
+CREATE POLICY "Public read" ON job_runs FOR SELECT USING (true);
 
 -- Service role (used by Python CLI) bypasses RLS automatically

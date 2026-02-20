@@ -218,3 +218,32 @@ class WatchlistResponse(BaseModel):
     companies: list[WatchlistCompanyResponse]
     total_portfolio: int
     total_competitors: int
+
+
+# =============================================================================
+# JOB RUN MODELS (for tracking agent execution)
+# =============================================================================
+
+class JobRunResponse(BaseModel):
+    """Response for a job run."""
+    id: str
+    agent_type: str
+    status: str  # "pending", "running", "completed", "failed"
+    created_at: datetime
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    error: Optional[str] = None
+    result_summary: dict = {}
+
+
+class NewsRefreshRequest(BaseModel):
+    """Request to trigger a news refresh."""
+    days: int = Field(default=7, ge=1, le=30, description="Days to look back for signals")
+    refresh_competitors: bool = Field(default=False, description="Discover competitors (disabled by default)")
+
+
+class NewsRefreshResponse(BaseModel):
+    """Response after triggering a news refresh."""
+    job_id: str
+    status: str
+    message: str

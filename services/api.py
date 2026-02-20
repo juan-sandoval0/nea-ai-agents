@@ -43,6 +43,9 @@ from services.models import (
     WatchlistAddRequest,
     WatchlistCompanyResponse,
     WatchlistResponse,
+    JobRunResponse,
+    NewsRefreshRequest,
+    NewsRefreshResponse,
 )
 from services.history import BriefingHistoryDB, BriefingRecord
 
@@ -648,6 +651,191 @@ async def remove_from_watchlist(domain: str, hard_delete: bool = False):
     except Exception as e:
         logger.exception(f"Error removing from watchlist: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# NEWS REFRESH ENDPOINTS
+# =============================================================================
+
+def _run_news_refresh_job(job_id: str, days: int, refresh_competitors: bool):
+    """Background task to run news refresh."""
+    from services.job_manager import get_job_manager
+    from agents.news_aggregator.agent import cmd_check
+    from agents.news_aggregator.investor_digest import generate_investor_digest
+
+    job_manager = get_job_manager()
+
+    try:
+        # Start the job
+        job_manager.start_job(job_id)
+
+        # Step 1: Check for new signals
+        logger.info(f"Job {job_id}: Checking for new signals...")
+        cmd_check(refresh_competitors=refresh_competitors, quiet=True)
+
+        # Step 2: Generate investor digest (this saves stories to Supabase)
+        logger.info(f"Job {job_id}: Generating investor digest...")
+        digest = generate_investor_digest(days=days)
+
+        # Build result summary
+        result_summary = {
+            "story_count": len(digest.stories) if hasattr(digest, 'stories') else 0,
+            "days": days,
+        }
+
+        # Complete the job
+        job_manager.complete_job(job_id, result_summary)
+        logger.info(f"Job {job_id}: Completed with {result_summary['story_count']} stories")
+
+    except Exception as e:
+        logger.exception(f"Job {job_id} failed: {e}")
+        job_manager.fail_job(job_id, str(e))
+
+
+@app.post("/api/news/refresh", response_model=NewsRefreshResponse)
+async def refresh_news(request: NewsRefreshRequest = None):
+    """
+    Trigger a news refresh to fetch latest signals and generate digest.
+
+    This creates a job that runs in the background:
+    1. Checks all watched companies for new signals
+    2. Discovers competitors if refresh_competitors=True
+    3. Generates investor digest with clustered stories
+    4. Saves stories to Supabase for the frontend
+
+    Returns immediately with job_id. Poll GET /api/news/status/{job_id}
+    or query job_runs table directly to track progress.
+    """
+    import threading
+    from services.job_manager import get_job_manager
+
+    if request is None:
+        request = NewsRefreshRequest()
+
+    job_manager = get_job_manager()
+
+    # Check if there's already a running job
+    running = job_manager.get_running_job("news_aggregator")
+    if running:
+        return NewsRefreshResponse(
+            job_id=running.id,
+            status="running",
+            message="A news refresh is already in progress"
+        )
+
+    # Create new job
+    job = job_manager.create_job("news_aggregator", triggered_by="api")
+
+    # Run in background thread
+    thread = threading.Thread(
+        target=_run_news_refresh_job,
+        args=(job.id, request.days, request.refresh_competitors),
+        daemon=True
+    )
+    thread.start()
+
+    return NewsRefreshResponse(
+        job_id=job.id,
+        status="pending",
+        message="News refresh started. Poll /api/news/status/{job_id} for progress."
+    )
+
+
+@app.get("/api/news/status/{job_id}", response_model=JobRunResponse)
+async def get_news_job_status(job_id: str):
+    """
+    Get the status of a specific news refresh job.
+
+    Note: Lovable can also query the job_runs table directly via Supabase
+    for real-time updates without hitting this endpoint.
+    """
+    from services.job_manager import get_job_manager
+
+    job_manager = get_job_manager()
+    job = job_manager.get_job(job_id)
+
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    return JobRunResponse(
+        id=job.id,
+        agent_type=job.agent_type,
+        status=job.status,
+        created_at=job.created_at,
+        started_at=job.started_at,
+        completed_at=job.completed_at,
+        error=job.error,
+        result_summary=job.result_summary or {},
+    )
+
+
+@app.get("/api/news/status", response_model=JobRunResponse)
+async def get_latest_news_status():
+    """
+    Get the status of the most recent news refresh job.
+
+    Useful for checking if a refresh is currently running or
+    when the last refresh completed.
+    """
+    from services.job_manager import get_job_manager
+
+    job_manager = get_job_manager()
+    job = job_manager.get_latest_job("news_aggregator")
+
+    if not job:
+        raise HTTPException(status_code=404, detail="No news jobs found")
+
+    return JobRunResponse(
+        id=job.id,
+        agent_type=job.agent_type,
+        status=job.status,
+        created_at=job.created_at,
+        started_at=job.started_at,
+        completed_at=job.completed_at,
+        error=job.error,
+        result_summary=job.result_summary or {},
+    )
+
+
+@app.get("/api/news/stories")
+async def get_stories(
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    classification: Optional[str] = Query(None, description="Filter by classification"),
+    company_category: Optional[str] = Query(None, description="Filter by portfolio/competitor"),
+    min_priority: Optional[float] = Query(None, description="Minimum priority score"),
+):
+    """
+    Get cached stories from the most recent digest.
+
+    Note: Lovable can also query the stories table directly via Supabase.
+    This endpoint provides convenient filtering and pagination.
+    """
+    from core.clients.supabase_client import get_supabase
+
+    supabase = get_supabase()
+    query = supabase.table("stories").select("*")
+
+    if classification:
+        query = query.eq("classification", classification)
+    if company_category:
+        query = query.eq("company_category", company_category)
+    if min_priority is not None:
+        query = query.gte("priority_score", min_priority)
+
+    result = (
+        query
+        .order("priority_score", desc=True)
+        .range(offset, offset + limit - 1)
+        .execute()
+    )
+
+    return {
+        "stories": result.data,
+        "count": len(result.data),
+        "offset": offset,
+        "limit": limit,
+    }
 
 
 # =============================================================================
