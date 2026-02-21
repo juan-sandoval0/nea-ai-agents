@@ -419,7 +419,7 @@ class Story:
     story_id: str  # Hash-based ID for caching
     primary_url: str
     primary_title: str
-    other_urls: List[str] = field(default_factory=list)
+    other_urls: List[Dict[str, str]] = field(default_factory=list)  # [{url, source}, ...]
     articles: List[ArticleRef] = field(default_factory=list)
 
     # Derived fields (computed once)
@@ -444,12 +444,33 @@ class Story:
     source_count: int = 0
 
     def compute_story_id(self) -> str:
-        """Generate deterministic story ID for caching."""
-        # Use normalized URL + title hash + date bucket
+        """Generate deterministic story ID for caching.
+
+        Uses event-based key (company + classification + funding amount + week)
+        rather than URL-based key. This ensures multiple articles about the
+        same event (e.g., "ElevenLabs $500M Series D") get the same story_id.
+        """
+        # Extract funding amount if present (for funding stories)
+        funding_amount = extract_funding_amount(self.primary_title) or ""
+
+        # Get week bucket (YYYY-WW) for time grouping
+        week_bucket = ""
+        if self.published_date:
+            try:
+                pub_date = datetime.fromisoformat(
+                    self.published_date.replace('Z', '+00:00')
+                )
+                week_bucket = pub_date.strftime("%Y-W%W")
+            except (ValueError, TypeError):
+                week_bucket = self.published_date[:7] if self.published_date else ""
+
+        # Event-based key: company + classification + funding_amount + week
+        # This groups all articles about the same event into one story
         key_parts = [
-            normalize_url(self.primary_url),
-            self.primary_title[:50].lower(),
-            self.published_date[:10] if self.published_date else '',
+            self.company_id or self.company_name.lower(),
+            self.classification,
+            funding_amount,
+            week_bucket,
         ]
         key = '|'.join(key_parts)
         return hashlib.md5(key.encode()).hexdigest()[:12]
@@ -721,8 +742,13 @@ def cluster_articles(articles: List[ArticleRef]) -> List[List[ArticleRef]]:
     return clusters
 
 
-def select_primary_article(articles: List[ArticleRef]) -> Tuple[ArticleRef, List[str]]:
-    """Select primary article from cluster based on engagement + source priority."""
+def select_primary_article(articles: List[ArticleRef]) -> Tuple[ArticleRef, List[Dict[str, str]]]:
+    """Select primary article from cluster based on engagement + source priority.
+
+    Returns:
+        Tuple of (primary_article, other_sources) where other_sources is a list of
+        {"url": "...", "source": "TechCrunch"} dicts for display in the UI.
+    """
     if not articles:
         raise ValueError("Cannot select from empty list")
 
@@ -754,9 +780,56 @@ def select_primary_article(articles: List[ArticleRef]) -> Tuple[ArticleRef, List
     scored.sort(key=lambda x: x[0], reverse=True)
 
     primary = scored[0][1]
-    other_urls = [a.url for _, a in scored[1:] if a.url and a.url != primary.url]
+    # Include source name with each URL for UI display
+    other_sources = [
+        {"url": a.url, "source": _format_source_name(a.source_domain)}
+        for _, a in scored[1:]
+        if a.url and a.url != primary.url
+    ]
 
-    return primary, other_urls
+    return primary, other_sources
+
+
+def _format_source_name(domain: str) -> str:
+    """Format domain into readable source name (e.g., 'techcrunch.com' -> 'TechCrunch')."""
+    if not domain:
+        return "News"
+
+    # Known source name mappings
+    source_names = {
+        'techcrunch.com': 'TechCrunch',
+        'bloomberg.com': 'Bloomberg',
+        'reuters.com': 'Reuters',
+        'wsj.com': 'Wall Street Journal',
+        'ft.com': 'Financial Times',
+        'forbes.com': 'Forbes',
+        'cnbc.com': 'CNBC',
+        'theverge.com': 'The Verge',
+        'wired.com': 'Wired',
+        'venturebeat.com': 'VentureBeat',
+        'axios.com': 'Axios',
+        'theinformation.com': 'The Information',
+        'businessinsider.com': 'Business Insider',
+        'nytimes.com': 'NY Times',
+        'news.ycombinator.com': 'Hacker News',
+        'producthunt.com': 'Product Hunt',
+        'crunchbase.com': 'Crunchbase',
+        'pitchbook.com': 'PitchBook',
+        'semafor.com': 'Semafor',
+        'news.google.com': 'Google News',
+    }
+
+    domain_lower = domain.lower().replace('www.', '')
+
+    # Check for known sources
+    for key, name in source_names.items():
+        if key in domain_lower:
+            return name
+
+    # Fallback: capitalize the domain name
+    # e.g., "example.com" -> "Example"
+    name = domain_lower.split('.')[0]
+    return name.title() if name else "News"
 
 
 # =============================================================================
@@ -1792,23 +1865,18 @@ def generate_investor_digest(
             source_count=len(cluster),
         )
 
-        # Compute story ID for caching
-        story.story_id = story.compute_story_id()
-
         # Sentiment (deterministic - do first for priority scoring)
         story.sentiment = analyze_sentiment(cluster)
 
-        # Check cache for classification + synopsis
-        if story.story_id in synopsis_cache:
-            story.classification, story.synopsis = synopsis_cache[story.story_id]
-        else:
-            # LLM classifies AND generates synopsis in single call
-            story.classification, story.synopsis = classify_and_summarize_story(
-                cluster,
-                story.company_name,
-                llm_call_count
-            )
-            synopsis_cache[story.story_id] = (story.classification, story.synopsis)
+        # LLM classifies AND generates synopsis
+        story.classification, story.synopsis = classify_and_summarize_story(
+            cluster,
+            story.company_name,
+            llm_call_count
+        )
+
+        # Compute story ID AFTER classification (uses company + classification + amount + week)
+        story.story_id = story.compute_story_id()
 
         # Priority scoring
         story.priority_score, story.priority_reasons = calculate_priority_score(story)
@@ -1879,6 +1947,12 @@ def generate_investor_digest(
     if cached_stories:
         saved_count = save_stories_batch(cached_stories, digest_generated_at)
         logger.info(f"Cached {saved_count} stories to database")
+
+        # Deduplicate any stories that represent the same event
+        from .database import deduplicate_stories
+        dedup_result = deduplicate_stories()
+        if dedup_result['deleted'] > 0:
+            logger.info(f"Deduplicated {dedup_result['merged']} story groups, removed {dedup_result['deleted']} duplicates")
 
     # Save digest run to history
     try:

@@ -37,7 +37,7 @@ from .database import (
     get_competitors_for_company, remove_company, deactivate_company,
     get_or_create_default_investor, add_investor, get_investors,
     link_investor_to_company, unlink_investor_from_company,
-    get_company_by_id, get_company_by_domain
+    get_company_by_id, get_company_by_domain, deduplicate_stories
 )
 from .detector import SignalDetector
 from .investor_digest import generate_investor_digest
@@ -635,6 +635,14 @@ def cmd_alerts(days: int = 7, max_per_company: int = 4):
     print("=" * 60 + "\n")
 
 
+def cmd_dedup():
+    """Deduplicate stories in the database."""
+    print("Deduplicating stories...")
+    result = deduplicate_stories()
+    print(f"✓ Merged {result['merged']} duplicate story groups")
+    print(f"  Deleted {result['deleted']} duplicate entries")
+
+
 def cmd_refresh_industries(investor_id: str = None):
     """Refresh industry tags for all companies from Harmonic API."""
     companies = get_companies(investor_id=investor_id)
@@ -722,6 +730,8 @@ Examples:
                         help="Filter by industry tag (e.g., fintech, ai_ml, healthcare)")
     parser.add_argument("--refresh-industries", action="store_true",
                         help="Refresh industry tags for all companies from Harmonic API")
+    parser.add_argument("--dedup", action="store_true",
+                        help="Deduplicate stories in the database (merge same-event duplicates)")
 
     # Investor management
     parser.add_argument("--investors", nargs="?", const="list", metavar="ACTION",
@@ -791,6 +801,8 @@ Examples:
             raise
     elif args.refresh_industries:
         cmd_refresh_industries(investor_id=args.investor_id)
+    elif args.dedup:
+        cmd_dedup()
     else:
         parser.print_help()
 

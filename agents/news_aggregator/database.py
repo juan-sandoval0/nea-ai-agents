@@ -733,7 +733,7 @@ class CachedStory:
     story_id: str  # Hash-based ID for deduplication
     primary_url: str
     primary_title: str
-    other_urls: List[str] = field(default_factory=list)
+    other_urls: List[dict] = field(default_factory=list)  # [{url, source}, ...]
     classification: str = "GENERAL"
     sentiment_label: str = "Neutral"
     sentiment_score: int = 0
@@ -905,6 +905,199 @@ def delete_old_stories(keep_days: int = 30) -> int:
     cutoff = (datetime.utcnow() - timedelta(days=keep_days)).isoformat()
     result = supabase.table("stories").delete().lt("created_at", cutoff).execute()
     return len(result.data)
+
+
+def deduplicate_stories() -> dict:
+    """
+    Deduplicate stories that represent the same event.
+
+    Finds stories with the same company + classification + week that should
+    be merged. Keeps the one with highest priority score, merges URLs from
+    others, then deletes the duplicates.
+
+    Returns:
+        Dict with stats: {merged: N, deleted: N}
+    """
+    import re
+    from collections import defaultdict
+
+    supabase = get_supabase()
+
+    # Get all stories from the last 45 days
+    cutoff = (datetime.utcnow() - timedelta(days=45)).isoformat()
+    result = supabase.table("stories").select("*").gte("created_at", cutoff).execute()
+
+    if not result.data:
+        return {"merged": 0, "deleted": 0}
+
+    # Helper to extract funding amount
+    def extract_funding(title: str) -> str:
+        if not title:
+            return ""
+        pattern = r'\$(\d+(?:\.\d+)?)\s*([BMK]|billion|million)?'
+        match = re.search(pattern, title, re.IGNORECASE)
+        if match:
+            amount = match.group(1)
+            unit = (match.group(2) or 'M').upper()[0]
+            return f"${amount}{unit}"
+        return ""
+
+    # Helper to get week bucket
+    def get_week(pub_date: str) -> str:
+        if not pub_date:
+            return ""
+        try:
+            # Handle various date formats
+            date_str = pub_date.replace('Z', '+00:00')
+            if 'T' not in date_str:
+                date_str = f"{date_str}T00:00:00+00:00"
+            dt = datetime.fromisoformat(date_str)
+            return dt.strftime("%Y-W%W")
+        except (ValueError, TypeError):
+            return pub_date[:7] if pub_date else ""
+
+    # Group stories by event key (company + classification)
+    # For FUNDING and M&A stories, we cluster by company + classification only
+    # (same event reported on different dates should still be merged)
+    # For other types, we include the month to allow multiple distinct events
+    groups = defaultdict(list)
+    for row in result.data:
+        company = row.get("company_id") or row.get("company_name", "").lower()
+        classification = row.get("classification", "GENERAL")
+
+        # For high-impact event types (funding, M&A, IPO), merge all stories
+        # for the same company since there's usually only one major event
+        if classification in ("FUNDING", "M&A", "IPO"):
+            event_key = f"{company}|{classification}"
+        else:
+            # For other types, include month to allow multiple events
+            month = get_week(row.get("published_date"))[:7] if row.get("published_date") else ""
+            event_key = f"{company}|{classification}|{month}"
+        groups[event_key].append(row)
+
+    merged = 0
+    deleted = 0
+
+    # Helper to extract source name from URL
+    def get_source_from_url(url: str) -> str:
+        """Extract readable source name from URL."""
+        if not url:
+            return "News"
+        try:
+            from urllib.parse import urlparse
+            domain = urlparse(url).netloc.lower().replace('www.', '')
+
+            source_names = {
+                'techcrunch.com': 'TechCrunch',
+                'bloomberg.com': 'Bloomberg',
+                'reuters.com': 'Reuters',
+                'wsj.com': 'Wall Street Journal',
+                'ft.com': 'Financial Times',
+                'forbes.com': 'Forbes',
+                'cnbc.com': 'CNBC',
+                'theverge.com': 'The Verge',
+                'wired.com': 'Wired',
+                'venturebeat.com': 'VentureBeat',
+                'axios.com': 'Axios',
+                'theinformation.com': 'The Information',
+                'businessinsider.com': 'Business Insider',
+                'nytimes.com': 'NY Times',
+                'news.ycombinator.com': 'Hacker News',
+                'producthunt.com': 'Product Hunt',
+                'crunchbase.com': 'Crunchbase',
+                'pitchbook.com': 'PitchBook',
+                'semafor.com': 'Semafor',
+                'news.google.com': 'Google News',
+            }
+
+            for key, name in source_names.items():
+                if key in domain:
+                    return name
+
+            # Fallback: capitalize domain
+            name = domain.split('.')[0]
+            return name.title() if name else "News"
+        except Exception:
+            return "News"
+
+    # Process groups with duplicates
+    for event_key, stories in groups.items():
+        if len(stories) <= 1:
+            continue
+
+        # Sort by priority_score desc, then by source_count desc
+        stories.sort(
+            key=lambda s: (s.get("priority_score", 0), s.get("source_count", 0)),
+            reverse=True
+        )
+
+        # Keep the best one, merge URLs from others
+        best = stories[0]
+        best_id = best["id"]
+        best_primary_url = best.get("primary_url", "")
+
+        # Collect all sources as {url, source} dicts (deduped by URL)
+        all_sources = {}  # url -> {url, source}
+
+        # Add primary URL of best story
+        all_sources[best_primary_url] = {
+            "url": best_primary_url,
+            "source": get_source_from_url(best_primary_url)
+        }
+
+        # Add other_urls from best story (handle both old and new format)
+        for item in (best.get("other_urls") or []):
+            if isinstance(item, dict):
+                url = item.get("url", "")
+                source = item.get("source", get_source_from_url(url))
+            else:
+                url = item
+                source = get_source_from_url(url)
+            if url:
+                all_sources[url] = {"url": url, "source": source}
+
+        # Collect URLs from duplicates
+        ids_to_delete = []
+        for dup in stories[1:]:
+            # Add primary URL
+            dup_primary = dup.get("primary_url", "")
+            if dup_primary:
+                all_sources[dup_primary] = {
+                    "url": dup_primary,
+                    "source": get_source_from_url(dup_primary)
+                }
+
+            # Add other_urls (handle both formats)
+            for item in (dup.get("other_urls") or []):
+                if isinstance(item, dict):
+                    url = item.get("url", "")
+                    source = item.get("source", get_source_from_url(url))
+                else:
+                    url = item
+                    source = get_source_from_url(url)
+                if url:
+                    all_sources[url] = {"url": url, "source": source}
+
+            ids_to_delete.append(dup["id"])
+
+        # Remove the best's own primary URL from other_urls
+        all_sources.pop(best_primary_url, None)
+
+        # Update the best story with merged sources
+        merged_sources = list(all_sources.values())
+        supabase.table("stories").update({
+            "other_urls": merged_sources,
+            "source_count": len(merged_sources) + 1,
+        }).eq("id", best_id).execute()
+
+        # Delete the duplicates
+        for dup_id in ids_to_delete:
+            supabase.table("stories").delete().eq("id", dup_id).execute()
+            deleted += 1
+
+        merged += 1
+
+    return {"merged": merged, "deleted": deleted}
 
 
 # =============================================================================
