@@ -34,7 +34,7 @@ import chromadb
 from chromadb.config import Settings
 
 from core.clients.harmonic import HarmonicClient, HarmonicCompany, HarmonicPerson, HarmonicAPIError
-from core.database import Database, Founder as DBFounder
+from core.database import Database, Founder as DBFounder, sync_founders_to_supabase
 
 # Import from agent.py for type compatibility
 from .agent import RetrievalResult, Source, DEFAULT_NEWS_DAYS
@@ -497,6 +497,8 @@ class HarmonicDataSource:
         enriched_founders = self._get_enriched_founders_from_db(normalized_id)
         if enriched_founders:
             logger.info(f"Found {len(enriched_founders)} enriched founders in DB for {normalized_id}")
+            # Sync to Supabase (idempotent upsert)
+            sync_founders_to_supabase(enriched_founders, company_name=normalized_id)
             return enriched_founders
 
         # No enriched founders - need to fetch and enrich
@@ -527,7 +529,14 @@ class HarmonicDataSource:
 
             # Step 3: Return founders from DB (now potentially enriched)
             db = Database()
-            return db.get_founders(normalized_id)
+            founders = db.get_founders(normalized_id)
+
+            # Step 4: Sync to Supabase for Lovable UI access
+            if founders:
+                sync_result = sync_founders_to_supabase(founders, company_name=normalized_id)
+                logger.info(f"Synced {sync_result['synced']} founders to Supabase")
+
+            return founders
 
         except Exception as e:
             logger.error(f"Failed to fetch/enrich founders for {normalized_id}: {e}")

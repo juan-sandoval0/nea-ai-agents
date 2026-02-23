@@ -231,6 +231,26 @@ CREATE TABLE story_clusters (
 CREATE INDEX idx_clusters_created ON story_clusters(created_at DESC);
 
 -- =============================================================================
+-- FOUNDERS (key team members with enriched backgrounds)
+-- =============================================================================
+CREATE TABLE founders (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id   TEXT NOT NULL,
+  company_name TEXT,
+  name         TEXT NOT NULL,
+  role_title   TEXT,
+  linkedin_url TEXT,
+  background   TEXT,
+  source       TEXT DEFAULT 'harmonic',
+  observed_at  TIMESTAMPTZ DEFAULT now(),
+  created_at   TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(company_id, name)
+);
+
+CREATE INDEX idx_founders_company ON founders(company_id);
+CREATE INDEX idx_founders_name ON founders(name);
+
+-- =============================================================================
 -- ROW LEVEL SECURITY
 -- =============================================================================
 
@@ -247,6 +267,7 @@ ALTER TABLE digest_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE outreach_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE founders ENABLE ROW LEVEL SECURITY;
 
 -- Public read access (for Lovable with anon key)
 CREATE POLICY "Public read" ON watched_companies FOR SELECT USING (true);
@@ -259,5 +280,6 @@ CREATE POLICY "Public read" ON digest_history FOR SELECT USING (true);
 CREATE POLICY "Public read" ON outreach_history FOR SELECT USING (true);
 CREATE POLICY "Public read" ON audit_logs FOR SELECT USING (true);
 CREATE POLICY "Public read" ON job_runs FOR SELECT USING (true);
+CREATE POLICY "Public read" ON founders FOR SELECT USING (true);
 
 -- Service role (used by Python CLI) bypasses RLS automatically

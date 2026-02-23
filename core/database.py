@@ -547,3 +547,64 @@ class Database:
             logger.info(f"Cleared all data for company: {company_id}")
         finally:
             conn.close()
+
+
+# =============================================================================
+# SUPABASE SYNC FUNCTIONS
+# =============================================================================
+
+def sync_founders_to_supabase(
+    founders: list[Founder],
+    company_name: Optional[str] = None,
+) -> dict:
+    """
+    Sync founders to Supabase for Lovable UI access.
+
+    Args:
+        founders: List of Founder objects to sync
+        company_name: Optional company name for denormalization
+
+    Returns:
+        Dict with 'synced' count and any 'errors'
+    """
+    if not founders:
+        return {'synced': 0, 'errors': []}
+
+    try:
+        from core.clients import get_supabase
+        supabase = get_supabase()
+    except Exception as e:
+        logger.warning(f"Supabase not configured, skipping sync: {e}")
+        return {'synced': 0, 'errors': [str(e)]}
+
+    synced = 0
+    errors = []
+
+    for founder in founders:
+        try:
+            data = {
+                'company_id': founder.company_id,
+                'company_name': company_name,
+                'name': founder.name,
+                'role_title': founder.role_title,
+                'linkedin_url': founder.linkedin_url,
+                'background': founder.background,
+                'source': founder.source,
+                'observed_at': founder.observed_at,
+            }
+
+            # Upsert (insert or update on conflict)
+            supabase.table('founders').upsert(
+                data,
+                on_conflict='company_id,name'
+            ).execute()
+            synced += 1
+
+        except Exception as e:
+            errors.append(f"{founder.name}: {str(e)}")
+            logger.warning(f"Failed to sync founder {founder.name}: {e}")
+
+    if synced > 0:
+        logger.info(f"Synced {synced} founders to Supabase")
+
+    return {'synced': synced, 'errors': errors}
