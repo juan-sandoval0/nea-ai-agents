@@ -253,6 +253,39 @@ class NewsRefreshResponse(BaseModel):
 # OUTREACH FEEDBACK MODELS
 # =============================================================================
 
+class OutreachRequest(BaseModel):
+    """Request to generate an outreach email or LinkedIn message."""
+    company_id: str = Field(..., description="Company domain, e.g. 'stripe.com'")
+    output_format: str = Field(default="email", pattern="^(email|linkedin)$")
+    contact_name: Optional[str] = Field(default=None, description="Target contact name (auto-selected if omitted)")
+    investor_key: str = Field(default="ashley", description="Investor profile key: ashley | tiffany | danielle | madison")
+    skip_ingest: bool = Field(default=False, description="Use cached DB data only; set True to skip slow live ingest")
+    context_type_override: Optional[str] = Field(default=None, description="Force a specific context type (optional)")
+    outreach_goal: Optional[str] = Field(default=None, description="Free-text goal, e.g. 'congratulate on Series B'")
+    has_event_context: bool = Field(default=False, description="True if investor has recent event/conference context")
+    event_details: Optional[str] = Field(default=None, description="Details about the event context")
+    has_prior_relationship: bool = Field(default=False, description="True if investor has a prior relationship with the founder")
+    prior_relationship_details: Optional[str] = Field(default=None, description="Details about the prior relationship")
+
+
+class OutreachResponse(BaseModel):
+    """Response from outreach generation."""
+    company_id: str
+    company_name: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_title: Optional[str] = None
+    contact_linkedin: Optional[str] = None
+    investor_key: str
+    output_format: str
+    context_type: Optional[str] = None
+    subject: Optional[str] = None
+    message: Optional[str] = None
+    generated_at: str
+    data_sources: dict = {}
+    success: bool
+    error: Optional[str] = None
+
+
 class OutreachFeedbackRequest(BaseModel):
     """Investor feedback on a generated outreach email."""
     outreach_id: Optional[str] = Field(

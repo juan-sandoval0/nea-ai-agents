@@ -46,6 +46,8 @@ from services.models import (
     JobRunResponse,
     NewsRefreshRequest,
     NewsRefreshResponse,
+    OutreachRequest,
+    OutreachResponse,
     OutreachFeedbackRequest,
     OutreachFeedbackResponse,
 )
@@ -838,6 +840,78 @@ async def get_stories(
         "offset": offset,
         "limit": limit,
     }
+
+
+# =============================================================================
+# OUTREACH GENERATION
+# =============================================================================
+
+@app.post("/api/outreach", response_model=OutreachResponse)
+async def generate_outreach_endpoint(request: OutreachRequest):
+    """
+    Generate a personalized cold outreach email or LinkedIn message.
+
+    Runs the full outreach pipeline:
+    1. Ingests company data (Harmonic, Tavily, news) unless skip_ingest=True
+    2. Selects the best contact (or uses contact_name if provided)
+    3. Detects context type from available signals + investor inputs
+    4. Loads investor voice profile and few-shot examples (including any
+       previously promoted from investor feedback)
+    5. Calls Claude to generate the message
+
+    Note: with skip_ingest=False (default) this may take 20-40 seconds
+    depending on data availability. Set skip_ingest=True to use cached
+    data for a faster response.
+    """
+    import asyncio
+    from agents.outreach.generator import generate_outreach
+
+    try:
+        # generate_outreach is synchronous — run in thread pool to avoid
+        # blocking the event loop
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: generate_outreach(
+                company_id=request.company_id,
+                output_format=request.output_format,
+                contact_name=request.contact_name,
+                investor_key=request.investor_key,
+                skip_ingest=request.skip_ingest,
+                context_type_override=request.context_type_override,
+                outreach_goal=request.outreach_goal,
+                has_event_context=request.has_event_context,
+                event_details=request.event_details,
+                has_prior_relationship=request.has_prior_relationship,
+                prior_relationship_details=request.prior_relationship_details,
+            )
+        )
+    except Exception as exc:
+        logger.error(f"Outreach generation error: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=422,
+            detail=result.get("error", "Outreach generation failed")
+        )
+
+    return OutreachResponse(
+        company_id=result["company_id"],
+        company_name=result.get("company_name"),
+        contact_name=result.get("contact_name"),
+        contact_title=result.get("contact_title"),
+        contact_linkedin=result.get("contact_linkedin"),
+        investor_key=result["investor_key"],
+        output_format=result["output_format"],
+        context_type=result.get("context_type"),
+        subject=result.get("subject"),
+        message=result.get("message"),
+        generated_at=result["generated_at"],
+        data_sources=result.get("data_sources", {}),
+        success=result["success"],
+        error=result.get("error"),
+    )
 
 
 # =============================================================================
