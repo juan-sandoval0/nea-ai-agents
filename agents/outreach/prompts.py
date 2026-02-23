@@ -18,7 +18,7 @@ Usage:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from langchain_core.messages import SystemMessage, HumanMessage
 
@@ -102,7 +102,15 @@ greetings entirely.
 - Exclamation inflation: If the investor uses one exclamation mark per email, \
 do not use five.
 - Copying example sentences: Style examples show PATTERNS, not sentences to \
-reuse. Never lift phrases verbatim from the examples."""
+reuse. Never lift phrases verbatim from the examples.
+- Em dashes (—): Do not use em dashes mid-sentence or mid-clause. They are \
+a well-known AI writing tell. Use a comma, period, or rewrite the sentence \
+instead. The only permitted exception is an investor whose greeting style \
+uses a dash (e.g., "James—") — match that exactly and nowhere else.
+- Referencing prior employment: Do not mention the founder's previous \
+employers, past roles, or career history (e.g., "as a former Google \
+engineer..."). This reads as surveillance and is a strong AI tell. Focus \
+only on their current product, public writing, and announced milestones."""
 
 
 # =========================================================================
@@ -138,6 +146,9 @@ def build_generation_prompt(
     style_examples: list["EmailSample"],
     context_type_pattern: str,
     output_format: str = "email",
+    outreach_goal: Optional[str] = None,
+    event_details: Optional[str] = None,
+    prior_relationship_details: Optional[str] = None,
 ) -> list[SystemMessage | HumanMessage]:
     """
     Assemble the full messages list for the LLM API.
@@ -172,6 +183,23 @@ def build_generation_prompt(
     # Investor profile
     user_parts.append("## INVESTOR PROFILE")
     user_parts.append(investor_profile.format_for_prompt())
+
+    # Optional investor-provided context
+    instructions: list[str] = []
+    if outreach_goal:
+        instructions.append(f"Goal: {outreach_goal}")
+    if prior_relationship_details:
+        instructions.append(f"Prior relationship: {prior_relationship_details}")
+    if event_details:
+        instructions.append(f"Event context: {event_details}")
+    if instructions:
+        user_parts.append("## INVESTOR INSTRUCTIONS")
+        user_parts.append(
+            "The investor has provided the following context. "
+            "Let it shape the hook, tone, and opening of the email — "
+            "it takes priority over generic personalization signals."
+        )
+        user_parts.append("\n".join(instructions))
 
     # Context type guidance
     user_parts.append("## CONTEXT TYPE PATTERN")

@@ -178,9 +178,8 @@ def format_contact_context(contact: Founder) -> str:
     if contact.linkedin_url:
         lines.append(f"LinkedIn: {contact.linkedin_url}")
 
-    if contact.background:
-        bg_text = contact.background.split("\n---\n")[0].strip()
-        lines.append(f"Background: {bg_text}")
+    # Background intentionally excluded — prior employment is used for signal
+    # detection only and should not be passed to the LLM prompt directly.
 
     return "\n".join(lines)
 
@@ -256,6 +255,11 @@ def generate_outreach(
     model: str = DEFAULT_LLM_MODEL,
     skip_ingest: bool = False,
     context_type_override: Optional[str] = None,
+    outreach_goal: Optional[str] = None,
+    has_event_context: bool = False,
+    event_details: Optional[str] = None,
+    has_prior_relationship: bool = False,
+    prior_relationship_details: Optional[str] = None,
 ) -> dict:
     """
     Generate a personalized outreach message for a founder at a target company.
@@ -349,10 +353,18 @@ def generate_outreach(
 
         if ctx_type is None:
             available_signals = _extract_available_signals(bundle, contact)
+
+            # Supplement with investor-provided context
+            if has_event_context:
+                available_signals.extend(["event_context", "event_attendance"])
+            if has_prior_relationship:
+                available_signals.extend(["prior_relationship", "company_announcement"])
+            available_signals = list(set(available_signals))
+
             ctx_type = detect_context_type(
                 available_signals=available_signals,
-                has_prior_relationship=False,
-                has_event_context=False,
+                has_prior_relationship=has_prior_relationship,
+                has_event_context=has_event_context,
             )
 
         result["context_type"] = ctx_type.value
@@ -398,6 +410,9 @@ def generate_outreach(
             style_examples=style_examples,
             context_type_pattern=ctx_config.email_pattern,
             output_format=output_format,
+            outreach_goal=outreach_goal,
+            event_details=event_details,
+            prior_relationship_details=prior_relationship_details,
         )
 
         system_prompt_content = messages[0].content

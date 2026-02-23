@@ -551,7 +551,7 @@ def detect_context_type(
     }
 
     best_type = ContextType.COLD_WITH_FIRM_CONTEXT  # safe fallback
-    best_score = 0
+    best_score = (0, 0.0)
 
     for ctx_type, config in CONTEXT_TYPE_CONFIGS.items():
         if ctx_type in _SKIP_IN_SCORING:
@@ -561,8 +561,9 @@ def detect_context_type(
         if not overlap:
             continue
 
-        # Score = overlap count / total detection signals (precision-weighted)
-        score = len(overlap) / len(config.detection_signals)
+        # Primary: raw overlap count (more evidence wins).
+        # Tiebreaker: precision ratio (overlap / total signals for that type).
+        score = (len(overlap), len(overlap) / len(config.detection_signals))
 
         if score > best_score:
             best_score = score
