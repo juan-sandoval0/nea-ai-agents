@@ -46,6 +46,8 @@ from services.models import (
     JobRunResponse,
     NewsRefreshRequest,
     NewsRefreshResponse,
+    OutreachFeedbackRequest,
+    OutreachFeedbackResponse,
 )
 from services.history import BriefingHistoryDB, BriefingRecord
 
@@ -836,6 +838,54 @@ async def get_stories(
         "offset": offset,
         "limit": limit,
     }
+
+
+# =============================================================================
+# OUTREACH FEEDBACK
+# =============================================================================
+
+@app.post("/api/outreach/feedback", response_model=OutreachFeedbackResponse)
+async def submit_outreach_feedback(request: OutreachFeedbackRequest):
+    """
+    Submit investor feedback on a generated outreach email.
+
+    - approval_status='approved'  → original email promoted to examples pool as-is
+    - approval_status='edited'    → investor's edited version promoted to examples pool
+    - approval_status='rejected'  → stored for analysis but never used in generation
+
+    Promoted emails become high-priority few-shot examples for future
+    generations matching the same investor and context type.
+    """
+    from services.feedback import save_feedback, FeedbackRecord, PROMOTABLE_STATUSES
+
+    if request.approval_status == "edited" and not request.edited_message:
+        raise HTTPException(
+            status_code=422,
+            detail="edited_message is required when approval_status is 'edited'"
+        )
+
+    record = FeedbackRecord(
+        outreach_id=request.outreach_id,
+        investor_key=request.investor_key,
+        company_id=request.company_id,
+        context_type=request.context_type,
+        original_message=request.original_message,
+        edited_message=request.edited_message,
+        approval_status=request.approval_status,
+        investor_notes=request.investor_notes,
+    )
+
+    try:
+        record_id = save_feedback(record)
+    except Exception as exc:
+        logger.error(f"Failed to save outreach feedback: {exc}")
+        raise HTTPException(status_code=500, detail="Failed to save feedback")
+
+    return OutreachFeedbackResponse(
+        id=record_id,
+        approval_status=request.approval_status,
+        promoted=request.approval_status in PROMOTABLE_STATUSES,
+    )
 
 
 # =============================================================================

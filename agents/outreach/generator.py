@@ -370,11 +370,24 @@ def generate_outreach(
         result["context_type"] = ctx_type.value
         ctx_config = CONTEXT_TYPE_CONFIGS[ctx_type]
 
-        # Step 6: Load style examples
-        style_examples = load_samples(
+        # Step 6: Load style examples (static file + DB-promoted)
+        static_examples = load_samples(
             investor_key=investor_key,
             context_type=ctx_type.value,
         )
+
+        try:
+            from services.feedback import load_promoted_samples
+            promoted = load_promoted_samples(investor_key)
+            # Context-matching promoted examples take priority
+            promoted_matching = [s for s in promoted if s.context_type == ctx_type.value]
+            promoted_other = [s for s in promoted if s.context_type != ctx_type.value]
+            # Merge: matching promoted → other promoted → static (capped at 3)
+            combined = promoted_matching + promoted_other + static_examples
+            style_examples = combined[:3]
+        except Exception as _promo_err:
+            logger.warning(f"Could not load promoted samples, using static only: {_promo_err}")
+            style_examples = static_examples
 
         # Step 7: Format and sanitize data
         safe_company_name = sanitize_company_name(bundle.company_core.company_name)

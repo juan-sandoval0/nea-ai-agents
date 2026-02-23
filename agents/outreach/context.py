@@ -160,6 +160,7 @@ class EmailSample:
     length: str = "medium"
     body: str = ""
     exclude_from_outreach: bool = False
+    human_edited: bool = False   # True for examples promoted from investor feedback
 
 
 # =========================================================================
@@ -331,9 +332,9 @@ def select_samples(
         matching = [s for s in eligible if s.context_type == context_type]
         non_matching = [s for s in eligible if s.context_type != context_type]
 
-        # Sort each group by body length (shorter first)
-        matching.sort(key=lambda s: len(s.body))
-        non_matching.sort(key=lambda s: len(s.body))
+        # Sort each group: human-edited first, then by body length (shorter first)
+        matching.sort(key=lambda s: (not s.human_edited, len(s.body)))
+        non_matching.sort(key=lambda s: (not s.human_edited, len(s.body)))
 
         # Step 4: fill remainder
         selected = matching[:max_count]
@@ -341,8 +342,8 @@ def select_samples(
         if remaining_slots > 0:
             selected.extend(non_matching[:remaining_slots])
     else:
-        # No context_type preference — just take shortest
-        eligible.sort(key=lambda s: len(s.body))
+        # No context_type preference — human-edited first, then shortest
+        eligible.sort(key=lambda s: (not s.human_edited, len(s.body)))
         selected = eligible[:max_count]
 
     return selected

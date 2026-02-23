@@ -247,3 +247,42 @@ class NewsRefreshResponse(BaseModel):
     job_id: str
     status: str
     message: str
+
+
+# =============================================================================
+# OUTREACH FEEDBACK MODELS
+# =============================================================================
+
+class OutreachFeedbackRequest(BaseModel):
+    """Investor feedback on a generated outreach email."""
+    outreach_id: Optional[str] = Field(
+        default=None,
+        description="ID of the outreach_history record this feedback relates to (optional)"
+    )
+    investor_key: str = Field(..., description="Investor key, e.g. 'ashley'")
+    company_id: str = Field(..., description="Company domain, e.g. 'stripe.com'")
+    context_type: str = Field(..., description="Context type used during generation")
+    original_message: str = Field(..., description="The message as originally generated")
+    edited_message: Optional[str] = Field(
+        default=None,
+        description="The investor's edited version. Required when approval_status='edited'"
+    )
+    approval_status: str = Field(
+        ...,
+        pattern="^(approved|edited|rejected)$",
+        description="'approved' keeps the original, 'edited' promotes the edit, 'rejected' discards"
+    )
+    investor_notes: Optional[str] = Field(
+        default=None,
+        description="Optional free-text note explaining the edit or rejection"
+    )
+
+
+class OutreachFeedbackResponse(BaseModel):
+    """Response after submitting outreach feedback."""
+    id: str = Field(..., description="UUID of the created feedback record")
+    approval_status: str
+    promoted: bool = Field(
+        ...,
+        description="True if this email will be used as a future few-shot example"
+    )
