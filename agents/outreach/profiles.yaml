@@ -6,6 +6,16 @@
 ashley:
   full_name: "Ashley Jepson"
   role: "Investor & Engineer, Data and AI Infrastructure"
+
+  education:
+    - "Stanford University — B.S. Management Science & Engineering"
+
+  prior_career:
+    - "Joined NEA in 2024 as investor and engineer on the Technology team"
+    - "Engineering background applied to identifying and supporting data/AI infrastructure founders"
+
+  prior_investments: []
+
   focus_areas:
     - "data infrastructure"
     - "AI infrastructure"
@@ -81,6 +91,25 @@ ashley:
 tiffany:
   full_name: "Tiffany"
   role: "Investor, B2B SaaS & AI / Enterprise / Vertical AI"
+
+  education:
+    - "University of Virginia — B.A."
+    - "The Wharton School, University of Pennsylvania — MBA"
+
+  prior_career:
+    - "Partner at GGV Capital — led investments in B2B SaaS and enterprise software"
+    - "Technology Investment Banking at Morgan Stanley — advised GitHub, Netflix, Zoom"
+    - "Business development roles at Amazon, Lot18, and Forbes"
+
+  prior_investments:
+    - "Pinwheel"
+    - "Mindee"
+    - "Stream"
+    - "Electric.ai"
+    - "Fairmarkit"
+    - "Workboard"
+    - "Vic.ai"
+
   focus_areas:
     - "B2B SaaS"
     - "AI"
@@ -145,6 +174,15 @@ tiffany:
 danielle:
   full_name: "Danielle"
   role: "Partner"
+
+  education:
+    - "Northwestern University"
+
+  prior_career:
+    - "Investment banker at Goldman Sachs — covered fintech"
+
+  prior_investments: []
+
   focus_areas:
     - "consumer applications"
     - "social"
@@ -218,6 +256,23 @@ danielle:
 madison:
   full_name: "Madison"
   role: "Partner, former Meta AI Researcher"
+
+  education:
+    - "Stanford University — B.S. Management Science & Engineering"
+
+  prior_career:
+    - "Vice President at Costanoa Ventures — backed early-stage data/ML companies"
+    - "Head of Data Science & ML at Thrasio"
+    - "Head of Data Science at Greycroft"
+    - "Data science roles at Facebook (Meta) — worked on embeddings and knowledge graphs"
+
+  prior_investments:
+    - "Delphina.ai"
+    - "Probabl.ai"
+    - "Mindtrip.ai"
+    - "Noteable.io (acq by Confluent)"
+    - "Rafay.co"
+
   focus_areas:
     - "data infrastructure"
     - "AI"

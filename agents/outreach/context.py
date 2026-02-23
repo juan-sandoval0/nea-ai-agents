@@ -69,6 +69,11 @@ class InvestorProfile:
     # Portfolio & social proof
     portfolio_companies_to_reference: list[str] = field(default_factory=list)
 
+    # Background & career history
+    education: list[str] = field(default_factory=list)
+    prior_career: list[str] = field(default_factory=list)
+    prior_investments: list[str] = field(default_factory=list)
+
     # Optional fields
     location: Optional[str] = None
     firm_context_block: Optional[str] = None
@@ -110,6 +115,19 @@ class InvestorProfile:
         if self.portfolio_companies_to_reference:
             lines.append(
                 f"Portfolio Companies: {', '.join(self.portfolio_companies_to_reference)}"
+            )
+
+        if self.education:
+            lines.append(f"Education: {'; '.join(self.education)}")
+
+        if self.prior_career:
+            lines.append("Prior Career:")
+            for entry in self.prior_career:
+                lines.append(f"  - {entry}")
+
+        if self.prior_investments:
+            lines.append(
+                f"Prior Investments (pre-NEA): {', '.join(self.prior_investments)}"
             )
 
         if self.location:
@@ -187,6 +205,9 @@ def load_profiles(
                 portfolio_companies_to_reference=data.get(
                     "portfolio_companies_to_reference", []
                 ),
+                education=data.get("education", []),
+                prior_career=data.get("prior_career", []),
+                prior_investments=data.get("prior_investments", []),
                 location=data.get("location"),
                 firm_context_block=data.get("firm_context_block"),
                 colleague_introductions=data.get("colleague_introductions"),
