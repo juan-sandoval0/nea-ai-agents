@@ -20,6 +20,7 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import os
 import time
 import logging
@@ -27,6 +28,24 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Optional, TYPE_CHECKING
 from urllib.parse import urlparse
+
+
+def _run_async(coro):
+    """
+    Run an async coroutine from sync code, handling nested event loops.
+
+    Works both in CLI (no event loop) and FastAPI (existing event loop).
+    """
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # No running loop - safe to use asyncio.run()
+        return asyncio.run(coro)
+
+    # There's a running loop (e.g., FastAPI) - run in a thread pool
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        future = pool.submit(asyncio.run, coro)
+        return future.result()
 
 import requests
 
@@ -1285,7 +1304,7 @@ class SwarmClient:
         Returns:
             List of FounderProfile objects
         """
-        return asyncio.run(
+        return _run_async(
             self.fetch_profiles_by_linkedin_batch_async(linkedin_inputs)
         )
 
@@ -1304,6 +1323,6 @@ class SwarmClient:
         Returns:
             List of FounderProfile objects
         """
-        return asyncio.run(
+        return _run_async(
             self.fetch_company_founders_async(linkedin_urls, company_name)
         )
