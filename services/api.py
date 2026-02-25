@@ -64,8 +64,11 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="NEA Meeting Briefing API",
     description="API for generating company meeting briefings",
-    version="1.0.0",
+    version="1.0.1",
 )
+
+# Version marker for debugging Railway deployments
+logger.info("=== NEA API VERSION 1.0.1 - ASYNCIO FIX DEPLOYED ===")
 
 # CORS - allow Lovable frontend
 app.add_middleware(
