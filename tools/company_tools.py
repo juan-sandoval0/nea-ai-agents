@@ -45,6 +45,7 @@ from core.database import (
     NewsArticle,
     KeySignal,
     CompanyBundle,
+    sync_founders_to_supabase,
 )
 from core.clients.harmonic import HarmonicClient, HarmonicCompany, HarmonicAPIError
 from core.clients.tavily import TavilyClient, TavilyAPIError
@@ -1267,6 +1268,17 @@ def ingest_company(
         except Exception as e:
             results["errors"].append(f"Founder backgrounds: {str(e)}")
             logger.error(f"Failed to enrich founder backgrounds for {company_id}: {e}")
+
+    # 2c. Sync founders to Supabase for Lovable UI
+    if results["founders_count"] > 0:
+        try:
+            db = get_db()
+            founders_to_sync = db.get_founders(normalized_id)
+            sync_founders_to_supabase(founders_to_sync, company_name=normalized_id)
+            logger.info(f"Synced {len(founders_to_sync)} founders to Supabase for {normalized_id}")
+        except Exception as e:
+            results["errors"].append(f"Founder Supabase sync: {str(e)}")
+            logger.error(f"Failed to sync founders to Supabase for {company_id}: {e}")
 
     # 3. Fetch key signals
     try:
