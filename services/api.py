@@ -68,7 +68,8 @@ app = FastAPI(
 )
 
 # Version marker for debugging Railway deployments
-logger.info("=== NEA API VERSION 1.0.1 - ASYNCIO FIX DEPLOYED ===")
+API_VERSION = "1.0.2"
+logger.info(f"=== NEA API VERSION {API_VERSION} - SYNOPSIS FIX DEPLOYED ===")
 
 # CORS - allow Lovable frontend
 app.add_middleware(
@@ -225,7 +226,7 @@ def build_response(
 @app.get("/")
 async def root():
     """Health check endpoint."""
-    return {"status": "ok", "service": "NEA Meeting Briefing API"}
+    return {"status": "ok", "service": "NEA Meeting Briefing API", "version": API_VERSION}
 
 
 @app.post("/api/briefing", response_model=BriefingResponse)
