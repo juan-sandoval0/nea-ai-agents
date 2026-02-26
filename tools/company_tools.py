@@ -46,6 +46,8 @@ from core.database import (
     KeySignal,
     CompanyBundle,
     sync_founders_to_supabase,
+    sync_company_to_supabase,
+    sync_news_to_supabase,
 )
 from core.clients.harmonic import HarmonicClient, HarmonicCompany, HarmonicAPIError
 from core.clients.tavily import TavilyClient, TavilyAPIError
@@ -1247,6 +1249,13 @@ def ingest_company(
         company_core = get_company_profile(company_id)
         results["company_name"] = company_core.company_name
         results["company_core"] = True
+
+        # Sync company to Supabase for Lovable UI
+        try:
+            sync_company_to_supabase(company_core)
+        except Exception as e:
+            results["errors"].append(f"Company Supabase sync: {str(e)}")
+            logger.error(f"Failed to sync company to Supabase for {company_id}: {e}")
     except Exception as e:
         results["errors"].append(f"Company profile: {str(e)}")
         logger.error(f"Failed to ingest company profile for {company_id}: {e}")
@@ -1288,10 +1297,18 @@ def ingest_company(
         results["errors"].append(f"Signals: {str(e)}")
         logger.error(f"Failed to ingest signals for {company_id}: {e}")
 
-    # 4. Fetch recent news (NOT IMPLEMENTED)
+    # 4. Fetch recent news
     try:
         news = get_recent_news(company_id)
         results["news_count"] = len(news)
+
+        # Sync news to Supabase for Lovable UI
+        if news:
+            try:
+                sync_news_to_supabase(news, normalized_id)
+            except Exception as e:
+                results["errors"].append(f"News Supabase sync: {str(e)}")
+                logger.error(f"Failed to sync news to Supabase for {company_id}: {e}")
     except Exception as e:
         results["errors"].append(f"News: {str(e)}")
         logger.error(f"Failed to ingest news for {company_id}: {e}")

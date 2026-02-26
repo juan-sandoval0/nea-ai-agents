@@ -608,3 +608,107 @@ def sync_founders_to_supabase(
         logger.info(f"Synced {synced} founders to Supabase")
 
     return {'synced': synced, 'errors': errors}
+
+
+def sync_company_to_supabase(company: CompanyCore) -> dict:
+    """
+    Sync company data to Supabase briefing_companies table for Lovable UI access.
+
+    Args:
+        company: CompanyCore object to sync
+
+    Returns:
+        Dict with 'synced' bool and 'error' str|None
+    """
+    try:
+        from core.clients import get_supabase
+        supabase = get_supabase()
+    except Exception as e:
+        logger.warning(f"Supabase not configured, skipping company sync: {e}")
+        return {'synced': False, 'error': str(e)}
+
+    try:
+        data = {
+            'company_id': company.company_id,
+            'company_name': company.company_name,
+            'founding_date': company.founding_date,
+            'hq': company.hq,
+            'employee_count': company.employee_count,
+            'total_funding': company.total_funding,
+            'products': company.products,
+            'customers': company.customers,
+            'last_round_date': company.last_round_date,
+            'last_round_funding': company.last_round_funding,
+            'web_traffic_trend': company.web_traffic_trend,
+            'hiring_firing': company.hiring_firing,
+            'observed_at': company.observed_at,
+        }
+
+        # Upsert (insert or update on conflict)
+        supabase.table('briefing_companies').upsert(
+            data,
+            on_conflict='company_id'
+        ).execute()
+
+        logger.info(f"Synced company {company.company_id} to Supabase")
+        return {'synced': True, 'error': None}
+
+    except Exception as e:
+        logger.warning(f"Failed to sync company {company.company_id}: {e}")
+        return {'synced': False, 'error': str(e)}
+
+
+def sync_news_to_supabase(news: list[NewsArticle], company_id: str) -> dict:
+    """
+    Sync news articles to Supabase briefing_news table for Lovable UI access.
+
+    Args:
+        news: List of NewsArticle objects to sync
+        company_id: Company ID for logging
+
+    Returns:
+        Dict with 'synced' count and 'errors' list
+    """
+    if not news:
+        return {'synced': 0, 'errors': []}
+
+    try:
+        from core.clients import get_supabase
+        supabase = get_supabase()
+    except Exception as e:
+        logger.warning(f"Supabase not configured, skipping news sync: {e}")
+        return {'synced': 0, 'errors': [str(e)]}
+
+    synced = 0
+    errors = []
+
+    for article in news:
+        try:
+            data = {
+                'company_id': article.company_id,
+                'article_headline': article.article_headline,
+                'outlet': article.outlet,
+                'url': article.url,
+                'published_date': article.published_date,
+                'excerpts': article.excerpts,
+                'synopsis': article.synopsis,
+                'sentiment': article.sentiment,
+                'news_type': article.news_type,
+                'observed_at': article.observed_at,
+            }
+
+            # Upsert (insert or update on conflict)
+            supabase.table('briefing_news').upsert(
+                data,
+                on_conflict='company_id,url'
+            ).execute()
+            synced += 1
+
+        except Exception as e:
+            errors.append(f"{article.article_headline[:50]}: {str(e)}")
+            logger.warning(f"Failed to sync news article: {e}")
+
+    if synced > 0:
+        logger.info(f"Synced {synced} news articles to Supabase for {company_id}")
+
+    return {'synced': synced, 'errors': errors}

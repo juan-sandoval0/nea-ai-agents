@@ -251,6 +251,51 @@ CREATE INDEX idx_founders_company ON founders(company_id);
 CREATE INDEX idx_founders_name ON founders(name);
 
 -- =============================================================================
+-- BRIEFING COMPANIES (company snapshots for meeting briefings)
+-- =============================================================================
+CREATE TABLE briefing_companies (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id TEXT UNIQUE NOT NULL,
+  company_name TEXT NOT NULL,
+  founding_date TEXT,
+  hq TEXT,
+  employee_count INTEGER,
+  total_funding REAL,
+  products TEXT,
+  customers TEXT,
+  last_round_date TEXT,
+  last_round_funding REAL,
+  web_traffic_trend TEXT,
+  hiring_firing TEXT,
+  observed_at TIMESTAMPTZ DEFAULT now(),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_briefing_companies_company_id ON briefing_companies(company_id);
+
+-- =============================================================================
+-- BRIEFING NEWS (news articles for meeting briefings)
+-- =============================================================================
+CREATE TABLE briefing_news (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id TEXT NOT NULL,
+  article_headline TEXT NOT NULL,
+  outlet TEXT,
+  url TEXT,
+  published_date TEXT,
+  excerpts TEXT,
+  synopsis TEXT,
+  sentiment TEXT,
+  news_type TEXT,
+  observed_at TIMESTAMPTZ DEFAULT now(),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(company_id, url)
+);
+
+CREATE INDEX idx_briefing_news_company_id ON briefing_news(company_id);
+CREATE INDEX idx_briefing_news_published ON briefing_news(published_date DESC);
+
+-- =============================================================================
 -- ROW LEVEL SECURITY
 -- =============================================================================
 
@@ -268,6 +313,8 @@ ALTER TABLE outreach_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE founders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE briefing_companies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE briefing_news ENABLE ROW LEVEL SECURITY;
 
 -- Public read access (for Lovable with anon key)
 CREATE POLICY "Public read" ON watched_companies FOR SELECT USING (true);
@@ -281,5 +328,7 @@ CREATE POLICY "Public read" ON outreach_history FOR SELECT USING (true);
 CREATE POLICY "Public read" ON audit_logs FOR SELECT USING (true);
 CREATE POLICY "Public read" ON job_runs FOR SELECT USING (true);
 CREATE POLICY "Public read" ON founders FOR SELECT USING (true);
+CREATE POLICY "Public read" ON briefing_companies FOR SELECT USING (true);
+CREATE POLICY "Public read" ON briefing_news FOR SELECT USING (true);
 
 -- Service role (used by Python CLI) bypasses RLS automatically
