@@ -191,7 +191,10 @@ def build_response(
             outlet=n.outlet,
             url=n.url,
             published_date=n.published_date,
-            takeaway=None,  # Takeaways are in the markdown, not parsed separately
+            synopsis=n.synopsis,
+            takeaway=n.synopsis,  # Use synopsis as takeaway for frontend compatibility
+            sentiment=n.sentiment,
+            news_type=n.news_type,
         )
         for n in bundle.news
     ]

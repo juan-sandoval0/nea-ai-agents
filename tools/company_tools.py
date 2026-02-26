@@ -987,6 +987,36 @@ def get_recent_news(company_id: str, days: int = 30) -> list[NewsArticle]:
             source="parallel",
         ))
 
+    # Generate synopsis and classify news type for each article
+    if articles and company_name:
+        logger.info(f"Generating synopsis for {len(articles)} news articles...")
+        for article in articles:
+            try:
+                # Generate synopsis using LLM
+                synopsis = _summarize_news_article(
+                    headline=article.article_headline,
+                    excerpts=article.excerpts or "",
+                    outlet=article.outlet or "Unknown",
+                    company_name=company_name,
+                )
+                article.synopsis = synopsis
+
+                # Classify news type based on headline and excerpts
+                excerpts_list = [article.excerpts] if article.excerpts else []
+                article.news_type = _classify_signal_type(article.article_headline, excerpts_list)
+
+                # Simple sentiment classification based on keywords
+                headline_lower = article.article_headline.lower()
+                if any(w in headline_lower for w in ["raises", "funding", "growth", "launches", "partnership", "expands"]):
+                    article.sentiment = "positive"
+                elif any(w in headline_lower for w in ["layoffs", "lawsuit", "decline", "fails", "shuts down"]):
+                    article.sentiment = "negative"
+                else:
+                    article.sentiment = "neutral"
+
+            except Exception as e:
+                logger.warning(f"Failed to generate synopsis for '{article.article_headline[:50]}': {e}")
+
     if articles:
         db.insert_news(articles)
         logger.info(f"Stored {len(articles)} news articles for {normalized_id}")
