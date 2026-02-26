@@ -24,6 +24,7 @@ import re
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
 from services.models import (
     BriefingRequest,
@@ -661,6 +662,123 @@ async def remove_from_watchlist(domain: str, hard_delete: bool = False):
         raise
     except Exception as e:
         logger.exception(f"Error removing from watchlist: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# COMPANY ENDPOINTS (Supabase-backed for Lovable frontend)
+# =============================================================================
+
+class CompanyAddRequest(BaseModel):
+    """Request to add a company via the API (bypasses RLS)."""
+    name: str = Field(..., description="Company name (e.g., 'Stripe')")
+    domain: str = Field(..., description="Company domain (e.g., 'stripe.com')")
+    category: str = Field(default="portfolio", description="Category: 'portfolio' or 'competitor'")
+
+
+class CompanyResponse(BaseModel):
+    """Response for a company."""
+    id: str
+    company_id: str
+    company_name: str
+    category: str
+    is_active: bool
+    added_at: Optional[str] = None
+
+
+@app.post("/api/companies", response_model=CompanyResponse)
+async def add_company(request: CompanyAddRequest):
+    """
+    Add a company to the watched_companies table.
+
+    Uses service role key to bypass RLS. After adding, automatically
+    triggers a news refresh to fetch stories for the new company.
+    """
+    from core.clients.supabase_client import get_supabase
+
+    try:
+        supabase = get_supabase()
+
+        # Validate category
+        if request.category not in ["portfolio", "competitor"]:
+            raise HTTPException(
+                status_code=400,
+                detail="Category must be 'portfolio' or 'competitor'"
+            )
+
+        # Check if company already exists
+        existing = supabase.table("watched_companies").select("*").eq("company_id", request.domain).execute()
+        if existing.data:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Company '{request.domain}' already exists"
+            )
+
+        # Insert the company
+        result = supabase.table("watched_companies").insert({
+            "company_id": request.domain,
+            "company_name": request.name,
+            "category": request.category,
+            "is_active": True,
+        }).execute()
+
+        if not result.data:
+            raise HTTPException(status_code=500, detail="Failed to insert company")
+
+        company = result.data[0]
+        logger.info(f"Added company: {request.name} ({request.domain})")
+
+        return CompanyResponse(
+            id=company["id"],
+            company_id=company["company_id"],
+            company_name=company["company_name"],
+            category=company["category"],
+            is_active=company["is_active"],
+            added_at=company.get("added_at"),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error adding company: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/companies/{company_id}")
+async def delete_company(company_id: str, hard_delete: bool = False):
+    """
+    Remove a company from the watched_companies table.
+
+    - company_id: UUID of the company to remove
+    - hard_delete: If true, permanently delete. Otherwise just deactivate.
+    """
+    from core.clients.supabase_client import get_supabase
+
+    try:
+        supabase = get_supabase()
+
+        # Check if company exists
+        existing = supabase.table("watched_companies").select("*").eq("id", company_id).execute()
+        if not existing.data:
+            raise HTTPException(status_code=404, detail=f"Company not found")
+
+        company = existing.data[0]
+
+        if hard_delete:
+            supabase.table("watched_companies").delete().eq("id", company_id).execute()
+            action = "deleted"
+        else:
+            supabase.table("watched_companies").update({"is_active": False}).eq("id", company_id).execute()
+            action = "deactivated"
+
+        logger.info(f"{action.capitalize()} company: {company['company_name']} ({company['company_id']})")
+
+        return {"status": action, "id": company_id, "name": company["company_name"]}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error removing company: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
