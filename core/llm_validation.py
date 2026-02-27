@@ -304,6 +304,7 @@ BRIEFING_REQUIRED_SECTIONS = [
     "Founder",
     "Key Signals",
     "In the News",
+    "Competitive Landscape",
     "For This Meeting",
 ]
 
@@ -367,6 +368,8 @@ def validate_briefing_content(
             variations.extend(["founder information", "founders", "founding team"])
         elif section_lower == "in the news":
             variations.extend(["news", "recent news", "press"])
+        elif section_lower == "competitive landscape":
+            variations.extend(["competitors", "competition", "competitive analysis"])
         elif section_lower == "for this meeting":
             variations.extend(["meeting prep", "meeting preparation", "questions"])
 

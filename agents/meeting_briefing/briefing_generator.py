@@ -12,7 +12,8 @@ Sections:
 4. Founder Information
 5. Key Signals
 6. In the News
-7. For This Meeting
+7. Competitive Landscape
+8. For This Meeting
 
 Usage:
     from agents.meeting_briefing.briefing_generator import generate_briefing
@@ -36,7 +37,7 @@ import time
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from core.database import CompanyBundle, CompanyCore, Founder, KeySignal, NewsArticle
+from core.database import CompanyBundle, CompanyCore, Founder, KeySignal, NewsArticle, CompetitorSnapshot
 from core.tracking import get_tracker
 from core.llm_validation import (
     validate_briefing_content,
@@ -242,6 +243,60 @@ def format_news_data(news: list[NewsArticle]) -> str:
     return "\n".join(lines)
 
 
+def format_competitors_data(competitors: list[CompetitorSnapshot]) -> str:
+    """Format competitor data for LLM context."""
+    if not competitors:
+        return "No competitor data available."
+
+    startups = [c for c in competitors if c.competitor_type == "startup"]
+    incumbents = [c for c in competitors if c.competitor_type == "incumbent"]
+
+    def _fmt_competitor(c: CompetitorSnapshot) -> list[str]:
+        parts = []
+        if c.competitor_domain:
+            parts.append(f"Domain: {c.competitor_domain}")
+        if c.description:
+            parts.append(f"Description: {c.description}")
+        funding_parts = []
+        if c.funding_total:
+            funding_parts.append(f"Total Raised: ${c.funding_total:,.0f}")
+        if c.funding_stage:
+            funding_parts.append(f"Stage: {c.funding_stage}")
+        if c.funding_last_amount and c.funding_last_date:
+            funding_parts.append(f"Last Round: ${c.funding_last_amount:,.0f} ({c.funding_last_date})")
+        elif c.funding_last_amount:
+            funding_parts.append(f"Last Round: ${c.funding_last_amount:,.0f}")
+        if funding_parts:
+            parts.append(" | ".join(funding_parts))
+        if c.headcount:
+            parts.append(f"Headcount: {c.headcount:,}")
+        if c.tags:
+            parts.append(f"Tags: {c.tags}")
+        return parts
+
+    lines = []
+    if startups:
+        lines.append("[STARTUP COMPETITORS]")
+        for i, c in enumerate(startups, 1):
+            lines.append(f"Startup {i}: {c.competitor_name}")
+            for detail in _fmt_competitor(c):
+                lines.append(f"  {detail}")
+            lines.append("")
+
+    if incumbents:
+        lines.append("[INCUMBENT COMPETITORS]")
+        for i, c in enumerate(incumbents, 1):
+            lines.append(f"Incumbent {i}: {c.competitor_name}")
+            for detail in _fmt_competitor(c):
+                lines.append(f"  {detail}")
+            lines.append("")
+
+    if not startups and not incumbents:
+        return "No competitor data available."
+
+    return "\n".join(lines)
+
+
 # =============================================================================
 # BRIEFING GENERATION
 # =============================================================================
@@ -305,12 +360,14 @@ def generate_briefing(company_id: str, model: str = DEFAULT_LLM_MODEL) -> dict:
     result["data_sources"]["founders"] = len(bundle.founders)
     result["data_sources"]["signals"] = len(bundle.key_signals)
     result["data_sources"]["news"] = len(bundle.news)
+    result["data_sources"]["competitors"] = len(bundle.competitors)
 
     # Format data for LLM
     company_data, snapshot_last_updated = format_company_snapshot_data(bundle.company_core)
     founders_data = format_founders_data(bundle.founders)
     signals_data = format_signals_data(bundle.key_signals)
     news_data = format_news_data(bundle.news)
+    competitors_data = format_competitors_data(bundle.competitors)
 
     # Sanitize all external data before inserting into prompt
     # This prevents prompt injection from malicious data in external APIs
@@ -319,6 +376,7 @@ def generate_briefing(company_id: str, model: str = DEFAULT_LLM_MODEL) -> dict:
     safe_founders_data = sanitize_for_prompt(founders_data, escape_markdown=False)
     safe_signals_data = sanitize_for_prompt(signals_data, escape_markdown=False)
     safe_news_data = sanitize_for_prompt(news_data, escape_markdown=False)
+    safe_competitors_data = sanitize_for_prompt(competitors_data, escape_markdown=False)
 
     # Check for prompt injection in the data
     for field_name, field_data in [
@@ -326,6 +384,7 @@ def generate_briefing(company_id: str, model: str = DEFAULT_LLM_MODEL) -> dict:
         ("founders_data", founders_data),
         ("signals_data", signals_data),
         ("news_data", news_data),
+        ("competitors_data", competitors_data),
     ]:
         detection = detect_prompt_injection(field_data)
         if detection.is_suspicious:
@@ -355,6 +414,9 @@ def generate_briefing(company_id: str, model: str = DEFAULT_LLM_MODEL) -> dict:
 
 ### Table: news
 {safe_news_data}
+
+### Table: competitors
+{safe_competitors_data}
 
 ---
 
@@ -407,7 +469,22 @@ For each news article, display in this format:
 IMPORTANT: Use the article excerpts provided in the data to generate meaningful takeaways. Do NOT display the raw excerpts - synthesize them into a concise takeaway.
 If no news: "No recent news available (source not yet implemented)"
 
-### 7) For This Meeting
+### 7) Competitive Landscape
+Using data from the competitors table:
+
+**Startup Competitors** (top 1-3):
+For each startup competitor:
+- **[Name]** | [Stage] | Total Raised: $[amount] | Last Round: $[amount] ([date])
+  - [One sentence: what they do and how they compete with {safe_company_name}]
+
+**Incumbent Competitors** (top 1-3):
+For each incumbent competitor:
+- **[Name]** | [Headcount] employees
+  - [One sentence: what they do and how they compete with {safe_company_name}]
+
+If no competitor data: "Competitive landscape data not available"
+
+### 8) For This Meeting
 - 2-3 suggested agenda items or questions
 - Key risks to probe
 - Recommended next steps

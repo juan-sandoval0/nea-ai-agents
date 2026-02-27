@@ -59,6 +59,20 @@ class NewsItem(BaseModel):
     news_type: Optional[str] = None  # Signal type: funding, acquisition, executive_change, etc.
 
 
+class CompetitorInfo(BaseModel):
+    """Competitor company information."""
+    name: str
+    domain: Optional[str] = None
+    competitor_type: str  # "startup" or "incumbent"
+    description: Optional[str] = None
+    funding_total: Optional[float] = None
+    funding_stage: Optional[str] = None
+    funding_last_amount: Optional[float] = None
+    funding_last_date: Optional[str] = None
+    headcount: Optional[int] = None
+    tags: Optional[str] = None
+
+
 class BriefingResponse(BaseModel):
     """Full briefing response."""
     id: str = Field(..., description="Unique briefing ID")
@@ -73,6 +87,7 @@ class BriefingResponse(BaseModel):
     founders: list[FounderInfo] = []
     signals: list[Signal] = []
     news: list[NewsItem] = []
+    competitors: list[CompetitorInfo] = []
     meeting_prep: Optional[str] = None
 
     # Full markdown (for copy/export)

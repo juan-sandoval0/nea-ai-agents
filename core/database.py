@@ -152,12 +152,31 @@ class KeySignal:
 
 
 @dataclass
+class CompetitorSnapshot:
+    """Competitor company data for briefing competitive landscape section."""
+    company_id: str  # The subject company this competitor relates to
+    competitor_name: str
+    competitor_domain: Optional[str] = None
+    competitor_type: str = "startup"  # "startup" or "incumbent"
+    description: Optional[str] = None
+    funding_total: Optional[float] = None
+    funding_stage: Optional[str] = None
+    funding_last_amount: Optional[float] = None
+    funding_last_date: Optional[str] = None
+    headcount: Optional[int] = None
+    tags: Optional[str] = None
+    harmonic_id: Optional[str] = None
+    observed_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+
+
+@dataclass
 class CompanyBundle:
     """Complete company data bundle for briefing generation."""
     company_core: Optional[CompanyCore] = None
     founders: list[Founder] = field(default_factory=list)
     news: list[NewsArticle] = field(default_factory=list)
     key_signals: list[KeySignal] = field(default_factory=list)
+    competitors: list[CompetitorSnapshot] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Convert entire bundle to dictionary."""
@@ -166,6 +185,7 @@ class CompanyBundle:
             'founders': [asdict(f) for f in self.founders],
             'news': [asdict(n) for n in self.news],
             'key_signals': [asdict(s) for s in self.key_signals],
+            'competitors': [asdict(c) for c in self.competitors],
         }
 
 
@@ -710,5 +730,62 @@ def sync_news_to_supabase(news: list[NewsArticle], company_id: str) -> dict:
 
     if synced > 0:
         logger.info(f"Synced {synced} news articles to Supabase for {company_id}")
+
+    return {'synced': synced, 'errors': errors}
+
+
+def sync_competitors_to_supabase(competitors: list[CompetitorSnapshot]) -> dict:
+    """
+    Sync competitor snapshots to Supabase briefing_competitors table.
+
+    Args:
+        competitors: List of CompetitorSnapshot objects to sync
+
+    Returns:
+        Dict with 'synced' count and 'errors' list
+    """
+    if not competitors:
+        return {'synced': 0, 'errors': []}
+
+    try:
+        from core.clients import get_supabase
+        supabase = get_supabase()
+    except Exception as e:
+        logger.warning(f"Supabase not configured, skipping competitor sync: {e}")
+        return {'synced': 0, 'errors': [str(e)]}
+
+    synced = 0
+    errors = []
+
+    for c in competitors:
+        try:
+            data = {
+                'company_id': c.company_id,
+                'competitor_name': c.competitor_name,
+                'competitor_domain': c.competitor_domain,
+                'competitor_type': c.competitor_type,
+                'description': c.description,
+                'funding_total': c.funding_total,
+                'funding_stage': c.funding_stage,
+                'funding_last_amount': c.funding_last_amount,
+                'funding_last_date': c.funding_last_date,
+                'headcount': c.headcount,
+                'tags': c.tags,
+                'harmonic_id': c.harmonic_id,
+                'observed_at': c.observed_at,
+            }
+
+            supabase.table('briefing_competitors').upsert(
+                data,
+                on_conflict='company_id,competitor_name'
+            ).execute()
+            synced += 1
+
+        except Exception as e:
+            errors.append(f"{c.competitor_name}: {str(e)}")
+            logger.warning(f"Failed to sync competitor {c.competitor_name}: {e}")
+
+    if synced > 0:
+        logger.info(f"Synced {synced} competitors to Supabase")
 
     return {'synced': synced, 'errors': errors}

@@ -35,6 +35,7 @@ from services.models import (
     FounderInfo,
     Signal,
     NewsItem,
+    CompetitorInfo,
     ErrorResponse,
     WeeklyDigestResponse,
     DigestArticleResponse,
@@ -119,9 +120,9 @@ def parse_briefing_sections(markdown: str) -> dict:
         bullets = re.findall(r'[-*]\s+(.+)', why_match.group(1))
         sections['why_it_matters'] = bullets if bullets else None
 
-    # Extract For This Meeting
+    # Extract For This Meeting (section 8 with competitors added, fallback to 7)
     meeting_match = re.search(
-        r'### 7\) For This Meeting\s*\n(.*?)(?=\n### |\Z)',
+        r'### [78]\) For This Meeting\s*\n(.*?)(?=\n### |\Z)',
         markdown,
         re.DOTALL
     )
@@ -201,6 +202,23 @@ def build_response(
         for n in bundle.news
     ]
 
+    # Build competitors list
+    competitors = [
+        CompetitorInfo(
+            name=c.competitor_name,
+            domain=c.competitor_domain,
+            competitor_type=c.competitor_type,
+            description=c.description,
+            funding_total=c.funding_total,
+            funding_stage=c.funding_stage,
+            funding_last_amount=c.funding_last_amount,
+            funding_last_date=c.funding_last_date,
+            headcount=c.headcount,
+            tags=c.tags,
+        )
+        for c in bundle.competitors
+    ]
+
     return BriefingResponse(
         id=briefing_id,
         company_id=result['company_id'],
@@ -212,6 +230,7 @@ def build_response(
         founders=founders,
         signals=signals,
         news=news,
+        competitors=competitors,
         meeting_prep=sections.get('meeting_prep'),
         markdown=result.get('markdown') or '',
         success=result.get('success', False),

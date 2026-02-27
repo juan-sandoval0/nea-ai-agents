@@ -45,9 +45,11 @@ from core.database import (
     NewsArticle,
     KeySignal,
     CompanyBundle,
+    CompetitorSnapshot,
     sync_founders_to_supabase,
     sync_company_to_supabase,
     sync_news_to_supabase,
+    sync_competitors_to_supabase,
 )
 from core.clients.harmonic import HarmonicClient, HarmonicCompany, HarmonicAPIError
 from core.clients.tavily import TavilyClient, TavilyAPIError
@@ -1238,6 +1240,142 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
 
 
 # =============================================================================
+# TOOL 5a: get_competitors
+# =============================================================================
+
+# Heuristics for startup vs incumbent classification
+_INCUMBENT_STAGES = {
+    "public", "ipo", "post_ipo_equity", "post_ipo_debt", "post_ipo_secondary", "acquired"
+}
+_INCUMBENT_HEADCOUNT_THRESHOLD = 500
+_INCUMBENT_FOUNDED_BEFORE = 2010
+
+
+def _classify_competitor_type(company: HarmonicCompany) -> str:
+    """Classify a competitor as 'startup' or 'incumbent' using simple heuristics."""
+    stage = (company.funding_stage or "").lower().replace(" ", "_").replace("-", "_")
+    if stage in _INCUMBENT_STAGES:
+        return "incumbent"
+    if company.headcount and company.headcount >= _INCUMBENT_HEADCOUNT_THRESHOLD:
+        return "incumbent"
+    if company.founded_year and company.founded_year < _INCUMBENT_FOUNDED_BEFORE:
+        return "incumbent"
+    return "startup"
+
+
+def get_competitors(company_id: str, max_per_type: int = 3) -> list[CompetitorSnapshot]:
+    """
+    Fetch top startup and incumbent competitors via Harmonic's similar_companies endpoint.
+
+    Steps:
+    1. Look up the company in Harmonic to get its internal ID
+    2. Call find_similar_companies() to get similar companies
+    3. Classify each as startup or incumbent
+    4. Return top max_per_type of each type
+    5. Sync to Supabase briefing_competitors table
+
+    Args:
+        company_id: Company URL or domain
+        max_per_type: Max competitors to return per type (startup/incumbent)
+
+    Returns:
+        List of CompetitorSnapshot objects (up to max_per_type * 2 total)
+    """
+    normalized_id = normalize_company_id(company_id)
+    client = get_harmonic_client()
+
+    # Step 1: Resolve Harmonic internal ID (not stored in CompanyCore)
+    try:
+        url_type, normalized = parse_company_url(company_id)
+        if url_type == "company_domain":
+            hc_subject = client.lookup_company(domain=normalized)
+        elif url_type == "company_linkedin":
+            hc_subject = client.lookup_company(linkedin_url=normalized)
+        else:
+            hc_subject = client.lookup_company(domain=normalized_id)
+    except HarmonicAPIError as e:
+        logger.warning(f"Harmonic lookup failed for {normalized_id}: {e}")
+        return []
+
+    if not hc_subject or not hc_subject.id:
+        logger.warning(f"No Harmonic record found for {normalized_id}")
+        return []
+
+    # Step 2: Fetch similar company URNs then resolve each to full HarmonicCompany
+    # The endpoint returns URNs like 'urn:harmonic:company:1858', not full objects
+    try:
+        resp = client._request(
+            "GET",
+            f"/search/similar_companies/{hc_subject.id}",
+            params={"page_size": max_per_type * 5},
+        )
+        similar_urns = resp.get("results", [])
+    except Exception as e:
+        logger.error(f"similar_companies request failed for {normalized_id}: {e}")
+        return []
+
+    if not similar_urns:
+        logger.info(f"No similar companies returned by Harmonic for {normalized_id}")
+        return []
+
+    # Resolve URNs to full company objects
+    similar: list[HarmonicCompany] = []
+    for urn in similar_urns:
+        if not (isinstance(urn, str) and ":" in urn):
+            continue
+        comp_harmonic_id = urn.split(":")[-1]
+        try:
+            hc = client.get_company(comp_harmonic_id)
+            if hc:
+                similar.append(hc)
+        except Exception:
+            continue
+
+    # Step 3: Classify and bucket
+    startups: list[CompetitorSnapshot] = []
+    incumbents: list[CompetitorSnapshot] = []
+
+    for hc in similar:
+        ctype = _classify_competitor_type(hc)
+        snapshot = CompetitorSnapshot(
+            company_id=normalized_id,
+            competitor_name=hc.name,
+            competitor_domain=hc.domain,
+            competitor_type=ctype,
+            description=(hc.description or "")[:300] if hc.description else None,
+            funding_total=hc.funding_total,
+            funding_stage=hc.funding_stage,
+            funding_last_amount=hc.funding_last_amount,
+            funding_last_date=hc.funding_last_date,
+            headcount=hc.headcount,
+            tags=", ".join(hc.tags[:5]) if hc.tags else None,
+            harmonic_id=hc.id,
+        )
+        if ctype == "startup":
+            startups.append(snapshot)
+        else:
+            incumbents.append(snapshot)
+
+    # Step 4: Sort by headcount as relevance proxy, take top N per type
+    startups.sort(key=lambda c: c.headcount or 0, reverse=True)
+    incumbents.sort(key=lambda c: c.headcount or 0, reverse=True)
+    result = startups[:max_per_type] + incumbents[:max_per_type]
+
+    # Step 5: Sync to Supabase
+    if result:
+        try:
+            sync_competitors_to_supabase(result)
+        except Exception as e:
+            logger.error(f"Failed to sync competitors to Supabase for {normalized_id}: {e}")
+
+    logger.info(
+        f"Fetched {len(startups[:max_per_type])} startup and "
+        f"{len(incumbents[:max_per_type])} incumbent competitors for {normalized_id}"
+    )
+    return result
+
+
+# =============================================================================
 # TOOL 5: ingest_company
 # =============================================================================
 
@@ -1271,6 +1409,7 @@ def ingest_company(
         "founders_enriched": 0,
         "signals_count": 0,
         "news_count": 0,
+        "competitors_count": 0,
         "errors": [],
     }
 
@@ -1343,11 +1482,20 @@ def ingest_company(
         results["errors"].append(f"News: {str(e)}")
         logger.error(f"Failed to ingest news for {company_id}: {e}")
 
+    # 5. Fetch competitors
+    try:
+        competitors = get_competitors(company_id)
+        results["competitors_count"] = len(competitors)
+    except Exception as e:
+        results["errors"].append(f"Competitors: {str(e)}")
+        logger.error(f"Failed to fetch competitors for {company_id}: {e}")
+
     logger.info(
         f"Ingestion complete for {results['company_name']}: "
         f"founders={results['founders_count']} (enriched={results['founders_enriched']}), "
         f"signals={results['signals_count']}, "
-        f"news={results['news_count']}"
+        f"news={results['news_count']}, "
+        f"competitors={results['competitors_count']}"
     )
 
     # Track usage
@@ -1359,6 +1507,7 @@ def ingest_company(
             "founders_count": results["founders_count"],
             "founders_enriched": results["founders_enriched"],
             "signals_count": results["signals_count"],
+            "competitors_count": results["competitors_count"],
             "errors": results["errors"],
         }
     )
@@ -1375,6 +1524,7 @@ def get_company_bundle(company_id: str) -> CompanyBundle:
     Read-only database accessor for briefing generation.
 
     Returns all stored data for a company. Does NOT fetch from APIs.
+    Competitors are loaded from Supabase (briefing_competitors table).
 
     Args:
         company_id: Company URL or domain
@@ -1384,4 +1534,25 @@ def get_company_bundle(company_id: str) -> CompanyBundle:
     """
     db = get_db()
     normalized_id = normalize_company_id(company_id)
-    return db.get_company_bundle(normalized_id)
+    bundle = db.get_company_bundle(normalized_id)
+
+    # Load competitors from Supabase (not stored in local SQLite)
+    try:
+        from core.clients import get_supabase
+        supabase = get_supabase()
+        resp = (
+            supabase.table("briefing_competitors")
+            .select("*")
+            .eq("company_id", normalized_id)
+            .execute()
+        )
+        competitors = []
+        for row in (resp.data or []):
+            row.pop("id", None)
+            row.pop("created_at", None)
+            competitors.append(CompetitorSnapshot(**row))
+        bundle.competitors = competitors
+    except Exception as e:
+        logger.warning(f"Could not load competitors from Supabase for {normalized_id}: {e}")
+
+    return bundle
