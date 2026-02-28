@@ -917,9 +917,13 @@ Classification guidelines:
 - GENERAL: other news
 
 Headline guidelines:
-- Start with {company_name}
-- Focus ONLY on what {company_name} did (raised, launched, partnered, etc.)
-- DO NOT include source names like "| TechCrunch", "| Forbes", "| Reuters"
+- ALWAYS start headline with "{company_name}:" or "{company_name} "
+- If the article is DIRECTLY about {company_name}, describe what they did (raised, launched, partnered)
+- If the article is about a competitor or market trend relevant to {company_name}, frame it from {company_name}'s perspective:
+  * "Competitor X raised $Y" → "{company_name}: Competitor X Raises $Y"
+  * "Industry trend Z" → "{company_name}: Market Sees Z Trend"
+- NEVER just copy the raw article title - always rewrite to focus on {company_name}
+- DO NOT include source names like "| TechCrunch", "- Forbes", "| Reuters"
 - DO NOT include generic phrases like "Press and News", "Latest News", "Company Profile"
 - Include specific facts (funding amounts, valuations, partner names)
 - Be concise (max 80 chars)
@@ -986,17 +990,36 @@ Classify, write headline, and summarize:"""
     if headline.endswith('…'):
         headline = headline[:-1].rstrip()
 
-    # Remove source suffixes (e.g., "| TechCrunch", "| Forbes")
-    source_suffixes = [
-        '| TechCrunch', '| Forbes', '| Reuters', '| Bloomberg', '| WSJ',
-        '| VentureBeat', '| The Verge', '| Wired', '| CNBC', '| Yahoo',
+    # Remove source suffixes (e.g., "| TechCrunch", "- TechCrunch", "| Forbes")
+    source_names = [
+        'TechCrunch', 'Forbes', 'Reuters', 'Bloomberg', 'WSJ', 'Wall Street Journal',
+        'VentureBeat', 'The Verge', 'Wired', 'CNBC', 'Yahoo', 'Yahoo Finance',
+        'Business Insider', 'The Information', 'Axios', 'Semafor', 'NYT', 'New York Times',
     ]
-    for suffix in source_suffixes:
-        if suffix in headline:
-            headline = headline.split(suffix)[0].strip()
-    # Also handle company name suffixes (e.g., "| Slash", "| Harness")
+    for source in source_names:
+        # Handle both pipe and dash separators
+        for sep in [' | ', ' - ', ' — ', ' – ']:
+            suffix = f"{sep}{source}"
+            if suffix in headline:
+                headline = headline.split(suffix)[0].strip()
+    # Also handle any remaining pipe/dash separated suffixes
     if ' | ' in headline:
         headline = headline.split(' | ')[0].strip()
+    if ' - ' in headline and len(headline.split(' - ')[-1]) < 30:
+        # Only strip if the suffix is short (likely a source name)
+        headline = headline.rsplit(' - ', 1)[0].strip()
+
+    # Ensure headline starts with company name (critical for competitor stories)
+    company_lower = company_name.lower()
+    headline_lower = headline.lower()
+    if not headline_lower.startswith(company_lower):
+        # Headline doesn't start with company name - prepend it
+        # First, clean up the existing headline
+        headline = headline.strip()
+        if headline:
+            headline = f"{company_name}: {headline}"
+        else:
+            headline = f"{company_name}: {classification.title()} News"
 
     return classification, synopsis[:SYNOPSIS_CONFIG['max_synopsis_length']], headline[:100]
 
