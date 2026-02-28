@@ -643,6 +643,49 @@ class SignalDetector:
         'developer guide', 'user manual', 'specification',
     ]
 
+    # Common words that have non-tech meanings and need stricter validation
+    # Maps word -> list of keywords that indicate non-company usage
+    COMMON_WORD_EXCLUSIONS = {
+        'port': [
+            'shipping', 'maritime', 'harbor', 'harbour', 'dock', 'cargo',
+            'container ship', 'freight', 'sea-intelligence', 'vessel',
+            'cruise', 'royal caribbean', 'maersk', 'hapag', 'zim',
+            'norfolk southern', 'union pacific', 'railroad', 'rail',
+            'port of', 'seaport', 'airport', 'sports', '$ports',
+        ],
+        'cloud': [
+            'weather', 'cloudy', 'rain', 'storm', 'meteorology',
+        ],
+        'stream': [
+            'river', 'creek', 'brook', 'fishing', 'salmon', 'trout',
+        ],
+        'base': [
+            'military', 'air force', 'army', 'naval base', 'baseball',
+            'home base', 'base camp', 'base of',
+        ],
+        'hub': [
+            'airport hub', 'transit hub', 'bicycle hub', 'wheel hub',
+        ],
+        'grid': [
+            'power grid', 'electrical grid', 'national grid', 'grid operator',
+        ],
+        'edge': [
+            'cutting edge', 'on the edge', 'edge of',
+        ],
+        'gate': [
+            'airport gate', 'gate agent', 'boarding gate', 'golden gate',
+        ],
+        'key': [
+            'florida keys', 'key west', 'key largo', 'piano key',
+        ],
+        'scale': [
+            'fish scale', 'musical scale', 'weighing scale', 'scale model',
+        ],
+        'core': [
+            'apple core', 'core workout', 'core strength', "earth's core",
+        ],
+    }
+
     def _validate_company_context(
         self,
         company: WatchedCompany,
@@ -674,6 +717,18 @@ class SignalDetector:
         for keyword in self.TECHNICAL_DOC_KEYWORDS:
             if keyword in title_lower:
                 return False
+
+        # Check for common word exclusions (e.g., "port" in shipping context)
+        company_name_lower = company.company_name.lower().strip()
+        if company_name_lower in self.COMMON_WORD_EXCLUSIONS:
+            exclusion_keywords = self.COMMON_WORD_EXCLUSIONS[company_name_lower]
+            for exclusion in exclusion_keywords:
+                if exclusion in combined_text:
+                    # Found a non-company usage indicator
+                    # Only allow if company's domain is explicitly mentioned
+                    domain = company.company_id.replace("https://", "").replace("http://", "").rstrip("/")
+                    if domain not in combined_text and domain not in url_lower:
+                        return False
 
         # Check if another company is the primary subject of the article
         # (e.g., "Guardant Health Announces..." - Guardant is the subject, not NameSpace)
