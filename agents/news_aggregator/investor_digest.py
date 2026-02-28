@@ -847,14 +847,14 @@ def classify_and_summarize_story(
     articles: List[ArticleRef],
     company_name: str,
     llm_call_count: Dict[str, int] = None
-) -> Tuple[str, str]:
+) -> Tuple[str, str, str]:
     """
-    Use LLM to classify story type AND generate synopsis in a single call.
+    Use LLM to classify story type, generate headline, AND generate synopsis in a single call.
 
-    Returns (classification, synopsis)
+    Returns (classification, synopsis, headline)
     """
     if not articles:
-        return 'GENERAL', ''
+        return 'GENERAL', '', ''
 
     if llm_call_count is None:
         llm_call_count = {'count': 0}
@@ -864,7 +864,7 @@ def classify_and_summarize_story(
     snippets = [a.snippet for a in articles[:5] if a.snippet]
     sources = [a.source_domain for a in articles[:5]]
 
-    # Try LLM classification + synopsis
+    # Try LLM classification + synopsis + headline
     if SYNOPSIS_CONFIG['use_llm'] and os.getenv("OPENAI_API_KEY"):
         try:
             result = _llm_classify_and_summarize(company_name, titles, snippets, sources)
@@ -873,8 +873,8 @@ def classify_and_summarize_story(
         except Exception as e:
             logger.warning(f"LLM classify/summarize failed: {e}")
 
-    # Fallback: simple classification and title as synopsis
-    return 'GENERAL', titles[0] if titles else ''
+    # Fallback: simple classification, title as synopsis, first title as headline
+    return 'GENERAL', titles[0] if titles else '', titles[0] if titles else ''
 
 
 def _llm_classify_and_summarize(
@@ -882,9 +882,11 @@ def _llm_classify_and_summarize(
     titles: List[str],
     snippets: List[str],
     sources: List[str]
-) -> Tuple[str, str]:
+) -> Tuple[str, str, str]:
     """
-    Single LLM call to classify type AND generate synopsis.
+    Single LLM call to classify type, generate headline, AND generate synopsis.
+
+    Returns (classification, synopsis, headline)
     """
     from langchain_openai import ChatOpenAI
     from langchain_core.messages import SystemMessage, HumanMessage
@@ -895,7 +897,8 @@ def _llm_classify_and_summarize(
 
 Your task:
 1. Classify the story into ONE of these types: {types_str}
-2. Write a 2-3 sentence synopsis for investors
+2. Write a clear, complete headline (max 100 chars) that captures the key news
+3. Write a 2-3 sentence synopsis for investors
 
 Classification guidelines:
 - FUNDING: fundraising, Series A/B/C, seed rounds, valuations
@@ -912,8 +915,16 @@ Classification guidelines:
 - MARKET: industry trends, macro analysis
 - GENERAL: other news
 
+Headline guidelines:
+- Be concise but complete (no truncation)
+- Include company name
+- Include key facts (funding amount, acquirer, product name, etc.)
+- Use active voice
+- No trailing ellipsis or periods
+
 Respond in this exact format:
 TYPE: [classification]
+HEADLINE: [clear, complete headline]
 SYNOPSIS: [2-3 sentence synopsis]"""
 
     # Build context from articles
@@ -930,9 +941,9 @@ SYNOPSIS: [2-3 sentence synopsis]"""
 Articles:
 {chr(10).join(context_lines)}
 
-Classify and summarize:"""
+Classify, write headline, and summarize:"""
 
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, max_tokens=200)
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, max_tokens=300)
     response = llm.invoke([
         SystemMessage(content=system_prompt),
         HumanMessage(content=user_prompt),
@@ -941,6 +952,7 @@ Classify and summarize:"""
     # Parse response
     content = response.content.strip()
     classification = 'GENERAL'
+    headline = ''
     synopsis = ''
 
     for line in content.split('\n'):
@@ -949,16 +961,29 @@ Classify and summarize:"""
             type_val = line[5:].strip().upper()
             if type_val in VALID_TYPES:
                 classification = type_val
+        elif line.upper().startswith('HEADLINE:'):
+            headline = line[9:].strip()
         elif line.upper().startswith('SYNOPSIS:'):
             synopsis = line[9:].strip()
 
-    # If synopsis wasn't found on its own line, use everything after TYPE line
+    # If synopsis wasn't found on its own line, use everything after SYNOPSIS:
     if not synopsis:
         parts = content.split('SYNOPSIS:', 1)
         if len(parts) > 1:
             synopsis = parts[1].strip()
 
-    return classification, synopsis[:SYNOPSIS_CONFIG['max_synopsis_length']]
+    # If headline wasn't found, use first title as fallback
+    if not headline and titles:
+        headline = titles[0]
+
+    # Clean up headline (remove trailing periods, ensure no truncation markers)
+    headline = headline.rstrip('.')
+    if headline.endswith('...'):
+        headline = headline[:-3].rstrip()
+    if headline.endswith('…'):
+        headline = headline[:-1].rstrip()
+
+    return classification, synopsis[:SYNOPSIS_CONFIG['max_synopsis_length']], headline[:150]
 
 
 # =============================================================================
@@ -1887,7 +1912,7 @@ def generate_investor_digest(
         story = Story(
             story_id="",
             primary_url=primary.url,
-            primary_title=primary.title,
+            primary_title=primary.title,  # Temporary, will be replaced by LLM headline
             other_urls=other_urls,
             articles=cluster,
             company_id=primary.company_id,
@@ -1903,12 +1928,16 @@ def generate_investor_digest(
         # Sentiment (deterministic - do first for priority scoring)
         story.sentiment = analyze_sentiment(cluster)
 
-        # LLM classifies AND generates synopsis
-        story.classification, story.synopsis = classify_and_summarize_story(
+        # LLM classifies, generates synopsis, AND generates headline
+        story.classification, story.synopsis, llm_headline = classify_and_summarize_story(
             cluster,
             story.company_name,
             llm_call_count
         )
+
+        # Use LLM-generated headline if available, otherwise keep primary article title
+        if llm_headline:
+            story.primary_title = llm_headline
 
         # Compute story ID AFTER classification (uses company + classification + amount + week)
         story.story_id = story.compute_story_id()
