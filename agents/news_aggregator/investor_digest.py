@@ -873,8 +873,9 @@ def classify_and_summarize_story(
         except Exception as e:
             logger.warning(f"LLM classify/summarize failed: {e}")
 
-    # Fallback: simple classification, title as synopsis, first title as headline
-    return 'GENERAL', titles[0] if titles else '', titles[0] if titles else ''
+    # Fallback: simple classification with company-focused headline
+    fallback_headline = f"{company_name}: News Coverage"
+    return 'GENERAL', titles[0] if titles else '', fallback_headline
 
 
 def _llm_classify_and_summarize(
@@ -916,8 +917,10 @@ Classification guidelines:
 - GENERAL: other news
 
 Headline guidelines:
-- Be concise but complete (no truncation)
-- Include company name
+- Focus ONLY on news about {company_name} - ignore other companies mentioned
+- If the article mentions multiple companies, write about {company_name}'s role specifically
+- Be concise but complete (max 100 chars, no truncation)
+- Start with {company_name} when possible
 - Include key facts (funding amount, acquirer, product name, etc.)
 - Use active voice
 - No trailing ellipsis or periods
@@ -972,9 +975,9 @@ Classify, write headline, and summarize:"""
         if len(parts) > 1:
             synopsis = parts[1].strip()
 
-    # If headline wasn't found, use first title as fallback
-    if not headline and titles:
-        headline = titles[0]
+    # If headline wasn't found, construct a simple one with company name
+    if not headline:
+        headline = f"{company_name}: {classification.title()} News"
 
     # Clean up headline (remove trailing periods, ensure no truncation markers)
     headline = headline.rstrip('.')
@@ -1929,15 +1932,11 @@ def generate_investor_digest(
         story.sentiment = analyze_sentiment(cluster)
 
         # LLM classifies, generates synopsis, AND generates headline
-        story.classification, story.synopsis, llm_headline = classify_and_summarize_story(
+        story.classification, story.synopsis, story.primary_title = classify_and_summarize_story(
             cluster,
             story.company_name,
             llm_call_count
         )
-
-        # Use LLM-generated headline if available, otherwise keep primary article title
-        if llm_headline:
-            story.primary_title = llm_headline
 
         # Compute story ID AFTER classification (uses company + classification + amount + week)
         story.story_id = story.compute_story_id()
