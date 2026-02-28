@@ -273,35 +273,122 @@ class SignalDetector:
             raw_data=json.dumps(raw_data)
         )
 
+    def _get_harmonic_data(self, company: WatchedCompany):
+        """
+        Fetch Harmonic company data for enhanced search.
+
+        Returns HarmonicCompany object if available, None otherwise.
+        Uses cached harmonic_id when available to avoid lookup.
+        """
+        if not self.harmonic:
+            return None
+
+        try:
+            # Use cached Harmonic ID if available
+            if company.harmonic_id:
+                harmonic_company = self.harmonic.get_company(str(company.harmonic_id))
+                if harmonic_company:
+                    return harmonic_company
+
+            # Fallback: lookup by domain
+            domain = company.company_id.replace("https://", "").replace("http://", "").rstrip("/")
+            harmonic_company = self.harmonic.lookup_company(domain=domain)
+
+            # Cache the Harmonic ID for future use
+            if harmonic_company and harmonic_company.id:
+                update_company_harmonic_id(company.id, int(harmonic_company.id))
+
+            return harmonic_company
+
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Failed to fetch Harmonic data for {company.company_name}: {e}"
+            )
+            return None
+
     def _detect_parallel_signals(self, company: WatchedCompany, days: int = 7) -> List[CompanySignal]:
         """
         Detect signals from Parallel Search (news).
+
+        Uses Harmonic company data when available for enhanced search queries
+        that work better for smaller/niche companies.
 
         Filters applied:
         1. Only articles from the last N days
         2. Excludes homepage/non-article URLs
         3. Company name must appear in title or excerpts
+        4. Context validation to filter false positives for generic names
         """
         signals = []
 
-        results = self.parallel.search_company_news(company.company_name)
+        # Extract clean domain (e.g., "namespace.so" from "https://namespace.so")
+        domain = company.company_id.replace("https://", "").replace("http://", "").rstrip("/")
+
+        # Check if company name is potentially ambiguous (common words/short names)
+        needs_disambiguation = self._is_ambiguous_name(company.company_name)
+
+        # Try to get Harmonic data for enhanced search
+        harmonic_data = self._get_harmonic_data(company)
+
+        if harmonic_data:
+            # Use Harmonic-enhanced search for better results
+            results = self.parallel.search_company_news_enhanced(
+                company_name=harmonic_data.name,  # Use exact name from Harmonic
+                domain=harmonic_data.domain or domain,
+                description=harmonic_data.description,
+                investors=harmonic_data.investors,
+                tags=harmonic_data.tags,
+            )
+        elif needs_disambiguation:
+            # Fallback: Use domain-enhanced search for ambiguous names
+            results = self._search_with_domain_context(company.company_name, domain)
+        else:
+            # Standard search for non-ambiguous names
+            results = self.parallel.search_company_news(company.company_name)
 
         for result in results:
             url = result.url or ""
 
+            # Check if this is from the company's own domain
+            is_company_domain = domain in url.lower()
+
             # Filter: Skip homepage/non-article URLs
-            if self._is_homepage_url(url):
+            # Exception: Allow company's own domain (their blog, changelog, docs are valuable)
+            if not is_company_domain and self._is_homepage_url(url):
                 continue
 
+            # For company's own domain, only skip the actual homepage
+            if is_company_domain:
+                from urllib.parse import urlparse
+                path = urlparse(url).path.strip('/')
+                if not path:  # Actual homepage with no path
+                    continue
+
             # Filter: Skip articles older than N days
-            if not self._is_within_date_range(result.publish_date, days=days):
-                continue
+            # Exception: Company's own content is always relevant
+            if not is_company_domain:
+                if not self._is_within_date_range(result.publish_date, days=days):
+                    continue
 
             title = result.title or ""
             excerpts = result.excerpts or []
 
             # Filter: Company name must appear in title or excerpts
-            if not self._mentions_company(company.company_name, title, excerpts):
+            # Exception: Company's own domain doesn't need name mention
+            if not is_company_domain:
+                if not self._mentions_company(company.company_name, title, excerpts):
+                    continue
+
+            # Additional filter for ambiguous names: validate context
+            # Exception: Company's own domain is always valid
+            if needs_disambiguation and not is_company_domain:
+                if not self._validate_company_context(company, title, excerpts, url):
+                    continue
+
+            # Filter: Skip technical tutorials that just mention the term
+            # (e.g., "Docker namespaces explained" is not about the company)
+            if self._is_technical_tutorial(title, url):
                 continue
             summary = " ".join(excerpts)[:500] if excerpts else ""
             source = result.source_domain or "Web"
@@ -423,5 +510,364 @@ class SignalDetector:
             no_space = company_lower.replace(" ", "")
             if no_space in all_text.replace(" ", ""):
                 return True
+
+        return False
+
+    # =========================================================================
+    # DISAMBIGUATION HELPERS FOR GENERIC COMPANY NAMES
+    # =========================================================================
+
+    # Common programming/tech terms that could be company names
+    AMBIGUOUS_TERMS = {
+        'namespace', 'api', 'cloud', 'data', 'ai', 'ml', 'io', 'hub', 'lab',
+        'labs', 'studio', 'stack', 'base', 'kit', 'box', 'app', 'flow', 'sync',
+        'link', 'net', 'node', 'core', 'code', 'dev', 'ops', 'bit', 'byte',
+        'grid', 'mesh', 'matrix', 'vector', 'tensor', 'graph', 'edge', 'pipe',
+        'stream', 'queue', 'cache', 'store', 'vault', 'key', 'gate', 'port',
+        'helm', 'dock', 'pod', 'container', 'cluster', 'scale', 'load', 'test',
+    }
+
+    def _is_ambiguous_name(self, company_name: str) -> bool:
+        """
+        Check if a company name is potentially ambiguous (common tech term).
+
+        Returns True if the name could easily be confused with:
+        - Programming concepts (namespace, api, etc.)
+        - Generic tech terms (cloud, data, ai, etc.)
+        - Very short names (< 4 chars)
+        """
+        if not company_name:
+            return False
+
+        name_lower = company_name.lower().strip()
+
+        # Very short names are ambiguous
+        if len(name_lower) <= 3:
+            return True
+
+        # Single-word names that match common tech terms
+        words = name_lower.split()
+        if len(words) == 1 and name_lower in self.AMBIGUOUS_TERMS:
+            return True
+
+        # Names that start with common prefixes and are short
+        if len(name_lower) <= 10:
+            for term in self.AMBIGUOUS_TERMS:
+                if name_lower == term or name_lower.startswith(term):
+                    return True
+
+        return False
+
+    def _search_with_domain_context(self, company_name: str, domain: str) -> list:
+        """
+        Search with domain context for better disambiguation.
+
+        For companies with generic names, adds domain-based queries to find
+        more relevant results.
+        """
+        from core.clients.parallel_search import ParallelSearchResult
+
+        # Try domain-specific search first
+        domain_base = domain.split('.')[0] if '.' in domain else domain
+
+        # Build enhanced search queries
+        search_queries = [
+            f'"{company_name}" startup',
+            f'"{company_name}" company funding',
+            f'site:{domain}',
+            f'"{domain_base}" startup OR company OR raises OR launches',
+        ]
+
+        # Add industry context if available
+        # (industry_tags could be used here for even better results)
+
+        try:
+            # Use the parallel client's internal search method
+            response = self.parallel._client.beta.search(
+                objective=(
+                    f"Find news articles about the company {company_name} "
+                    f"(website: {domain}). Focus on company news, funding, "
+                    f"product launches, and business developments. Exclude "
+                    f"technical documentation or generic references."
+                ),
+                search_queries=search_queries,
+                max_results=10,
+                excerpts={"max_chars_per_result": 5000},
+            )
+
+            results = []
+            for item in response.results or []:
+                url = getattr(item, "url", "") or ""
+                result = ParallelSearchResult(
+                    url=url,
+                    title=getattr(item, "title", "") or "",
+                    publish_date=getattr(item, "publish_date", None),
+                    excerpts=getattr(item, "excerpts", []) or [],
+                    source_domain=self._extract_domain(url),
+                )
+                results.append(result)
+
+            return results
+
+        except Exception as e:
+            # Fall back to standard search on error
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Domain-enhanced search failed for {company_name}: {e}, "
+                f"falling back to standard search"
+            )
+            return self.parallel.search_company_news(company_name)
+
+    def _extract_domain(self, url: str) -> str:
+        """Extract domain from URL."""
+        from urllib.parse import urlparse
+        try:
+            return urlparse(url).netloc.replace("www.", "")
+        except Exception:
+            return ""
+
+    # Domains/patterns that indicate technical documentation, not company news
+    TECHNICAL_DOC_PATTERNS = [
+        'learn.microsoft.com', 'docs.microsoft.com', 'developer.mozilla.org',
+        'docs.python.org', 'docs.oracle.com', 'docs.aws.amazon.com',
+        'cloud.google.com/docs', 'kubernetes.io/docs', 'docs.docker.com',
+        'stackoverflow.com', 'github.com/docs', 'gitlab.com/docs',
+        'elastic.co/guide', 'wikipedia.org', 'w3schools.com',
+        'geeksforgeeks.org', 'tutorialspoint.com', 'medium.com',
+    ]
+
+    # Keywords that indicate technical documentation, not news
+    TECHNICAL_DOC_KEYWORDS = [
+        'documentation', 'reference', 'guide', 'tutorial', 'how to',
+        'api reference', 'syntax', 'examples', 'code sample',
+        'developer guide', 'user manual', 'specification',
+    ]
+
+    # Common words that have non-tech meanings and need stricter validation
+    # Maps word -> list of keywords that indicate non-company usage
+    COMMON_WORD_EXCLUSIONS = {
+        'port': [
+            'shipping', 'maritime', 'harbor', 'harbour', 'dock', 'cargo',
+            'container ship', 'freight', 'sea-intelligence', 'vessel',
+            'cruise', 'royal caribbean', 'maersk', 'hapag', 'zim',
+            'norfolk southern', 'union pacific', 'railroad', 'rail',
+            'port of', 'seaport', 'airport', 'sports', '$ports',
+        ],
+        'cloud': [
+            'weather', 'cloudy', 'rain', 'storm', 'meteorology',
+        ],
+        'stream': [
+            'river', 'creek', 'brook', 'fishing', 'salmon', 'trout',
+        ],
+        'base': [
+            'military', 'air force', 'army', 'naval base', 'baseball',
+            'home base', 'base camp', 'base of',
+        ],
+        'hub': [
+            'airport hub', 'transit hub', 'bicycle hub', 'wheel hub',
+        ],
+        'grid': [
+            'power grid', 'electrical grid', 'national grid', 'grid operator',
+        ],
+        'edge': [
+            'cutting edge', 'on the edge', 'edge of',
+        ],
+        'gate': [
+            'airport gate', 'gate agent', 'boarding gate', 'golden gate',
+        ],
+        'key': [
+            'florida keys', 'key west', 'key largo', 'piano key',
+        ],
+        'scale': [
+            'fish scale', 'musical scale', 'weighing scale', 'scale model',
+        ],
+        'core': [
+            'apple core', 'core workout', 'core strength', "earth's core",
+        ],
+    }
+
+    def _validate_company_context(
+        self,
+        company: WatchedCompany,
+        title: str,
+        excerpts: List[str],
+        url: str
+    ) -> bool:
+        """
+        Validate that an article is actually about the company, not just
+        mentioning a generic term.
+
+        For ambiguous company names, checks for contextual signals that
+        indicate this is about the actual company:
+        - Domain mentioned in text
+        - Company-related keywords (startup, company, raises, CEO, etc.)
+        - Industry context matches
+        - NOT technical documentation
+        """
+        combined_text = f"{title} {' '.join(excerpts)}".lower()
+        url_lower = url.lower()
+
+        # FIRST: Exclude technical documentation sites
+        for pattern in self.TECHNICAL_DOC_PATTERNS:
+            if pattern in url_lower:
+                return False
+
+        # Exclude articles that look like technical documentation
+        title_lower = title.lower()
+        for keyword in self.TECHNICAL_DOC_KEYWORDS:
+            if keyword in title_lower:
+                return False
+
+        # Check for common word exclusions (e.g., "port" in shipping context)
+        company_name_lower = company.company_name.lower().strip()
+        if company_name_lower in self.COMMON_WORD_EXCLUSIONS:
+            exclusion_keywords = self.COMMON_WORD_EXCLUSIONS[company_name_lower]
+            for exclusion in exclusion_keywords:
+                if exclusion in combined_text:
+                    # Found a non-company usage indicator
+                    # Only allow if company's domain is explicitly mentioned
+                    domain = company.company_id.replace("https://", "").replace("http://", "").rstrip("/")
+                    if domain not in combined_text and domain not in url_lower:
+                        return False
+
+        # Check if another company is the primary subject of the article
+        # (e.g., "Guardant Health Announces..." - Guardant is the subject, not NameSpace)
+        company_name_lower = company.company_name.lower()
+        if not self._is_primary_subject(company_name_lower, title_lower):
+            return False
+
+        # Extract domain for matching (e.g., "namespace.so" -> "namespace.so")
+        domain = company.company_id.replace("https://", "").replace("http://", "").rstrip("/")
+        domain_base = domain.split('.')[0] if '.' in domain else domain
+
+        # Check if domain is mentioned
+        if domain in combined_text or f"{domain_base}.so" in combined_text or f"{domain_base}.io" in combined_text:
+            return True
+
+        # Check if URL is from company's own domain
+        if domain in url:
+            return True
+
+        # Look for company-context keywords near the company name
+        company_context_keywords = [
+            'startup', 'company', 'raises', 'raised', 'funding', 'series',
+            'ceo', 'founder', 'founded', 'announces', 'launches', 'launched',
+            'headquartered', 'based in', 'employees', 'valuation', 'investors',
+            'venture', 'backed', 'seed', 'round', 'investment', 'profile',
+            'crunchbase', 'pitchbook', 'techcrunch', 'acquisition',
+        ]
+
+        company_name_lower = company.company_name.lower()
+        name_pos = combined_text.find(company_name_lower)
+
+        if name_pos != -1:
+            # Check surrounding context (100 chars before and after)
+            context_start = max(0, name_pos - 100)
+            context_end = min(len(combined_text), name_pos + len(company_name_lower) + 100)
+            context = combined_text[context_start:context_end]
+
+            for keyword in company_context_keywords:
+                if keyword in context:
+                    return True
+
+        # Check if the full company name + "Labs" or similar suffix appears
+        # (e.g., "Namespace Labs" for company "NameSpace")
+        common_suffixes = ['labs', 'inc', 'corp', 'co', 'technologies', 'tech', 'ai', 'io']
+        for suffix in common_suffixes:
+            full_name = f"{company_name_lower} {suffix}"
+            if full_name in combined_text:
+                return True
+
+        # Check for industry tag matches (if available)
+        if company.industry_tags:
+            for tag in company.industry_tags:
+                tag_lower = tag.lower()
+                # Check for key industry words
+                tag_words = [w for w in tag_lower.split() if len(w) > 3]
+                for word in tag_words[:2]:  # Check first 2 significant words
+                    if word in combined_text:
+                        return True
+
+        # If we get here, the article likely isn't about the company
+        return False
+
+    def _is_primary_subject(self, company_name: str, title: str) -> bool:
+        """
+        Check if the company appears to be the primary subject of the article.
+
+        Returns False if another entity clearly appears as the main subject.
+        This helps filter out articles like "Guardant Health Announces...
+        Namespace Group" where NameSpace is mentioned but not the subject.
+        """
+        # If company name appears at the very start of the title, it's the subject
+        if title.startswith(company_name):
+            return True
+
+        # Check if company name appears in title at all
+        company_pos = title.find(company_name)
+        if company_pos == -1:
+            # Company name not in title - check excerpts later
+            return True  # Be permissive, let other checks handle it
+
+        # Look for patterns where another entity is the subject
+        # Pattern: "[Other Company] announces/launches/raises... [our company name]"
+        announcement_verbs = [
+            'announces', 'announced', 'launches', 'launched', 'raises',
+            'raised', 'acquires', 'acquired', 'partners', 'partnered',
+            'joins', 'joined', 'releases', 'released',
+        ]
+
+        for verb in announcement_verbs:
+            verb_pos = title.find(verb)
+            if verb_pos != -1 and verb_pos < company_pos:
+                # Something announced something about our company
+                # Check if there's another proper noun before the verb
+                text_before_verb = title[:verb_pos].strip()
+                # If text before verb is substantial (> 3 words), likely another company
+                words_before = [w for w in text_before_verb.split() if len(w) > 2]
+                if len(words_before) >= 2:
+                    # Check if this looks like a company name (capitalized words)
+                    # In lowercase title, we can't check capitalization, but
+                    # substantial text before the verb suggests another subject
+                    return False
+
+        # Company appears in title and no clear indication of being secondary
+        return True
+
+    def _is_technical_tutorial(self, title: str, url: str) -> bool:
+        """
+        Check if an article is a technical tutorial about a concept
+        rather than news about a company.
+
+        Filters out articles like "Docker namespaces explained" or
+        "Understanding Linux namespaces" which use the term technically.
+        """
+        title_lower = title.lower()
+        url_lower = url.lower()
+
+        # Tutorial site patterns
+        tutorial_sites = [
+            'dev.to', 'medium.com', 'towardsdatascience.com',
+            'freecodecamp.org', 'hackernoon.com', 'dzone.com',
+            'baeldung.com', 'tutorialspoint.com', 'geeksforgeeks.org',
+        ]
+        if any(site in url_lower for site in tutorial_sites):
+            # Check if it's educational content vs company news
+            tutorial_indicators = [
+                'how to', 'tutorial', 'explained', 'understanding',
+                'introduction to', 'guide to', 'learn', 'basics',
+                'what is', 'what are', 'deep dive', 'under the hood',
+                'build your own', 'from scratch', 'step by step',
+            ]
+            if any(indicator in title_lower for indicator in tutorial_indicators):
+                return True
+
+        # Technical documentation sites
+        doc_sites = [
+            'developer.', 'docs.', 'documentation.',
+            'learn.microsoft', 'cloud.google', 'aws.amazon',
+        ]
+        if any(site in url_lower for site in doc_sites):
+            return True
 
         return False

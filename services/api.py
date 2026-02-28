@@ -70,8 +70,8 @@ app = FastAPI(
 )
 
 # Version marker for debugging Railway deployments
-API_VERSION = "1.0.2"
-logger.info(f"=== NEA API VERSION {API_VERSION} - SYNOPSIS FIX DEPLOYED ===")
+API_VERSION = "1.0.3"
+logger.info(f"=== NEA API VERSION {API_VERSION} - WATCHLIST FIX DEPLOYED ===")
 
 # CORS - allow Lovable frontend
 app.add_middleware(
@@ -526,12 +526,11 @@ async def get_watchlist():
     Returns portfolio companies with their discovered competitors.
     """
     from agents.news_aggregator.database import (
-        init_db, get_companies, get_portfolio_companies,
+        get_companies, get_portfolio_companies,
         get_competitors_for_company
     )
 
     try:
-        init_db()
 
         portfolio = get_portfolio_companies()
         all_companies = get_companies()
@@ -590,12 +589,11 @@ async def add_to_watchlist(request: WatchlistAddRequest):
     - category: "portfolio" or "competitor"
     """
     from agents.news_aggregator.database import (
-        init_db, add_company, get_or_create_default_investor,
+        add_company, get_or_create_default_investor,
         link_investor_to_company, get_company_by_domain
     )
 
     try:
-        init_db()
 
         # Validate category
         if request.category not in ["portfolio", "competitor"]:
@@ -653,11 +651,10 @@ async def remove_from_watchlist(domain: str, hard_delete: bool = False):
     - hard_delete: If true, permanently delete. Otherwise just deactivate.
     """
     from agents.news_aggregator.database import (
-        init_db, get_company_by_domain, remove_company, deactivate_company
+        get_company_by_domain, remove_company, deactivate_company
     )
 
     try:
-        init_db()
 
         company = get_company_by_domain(domain)
         if not company:

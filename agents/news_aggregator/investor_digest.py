@@ -847,14 +847,14 @@ def classify_and_summarize_story(
     articles: List[ArticleRef],
     company_name: str,
     llm_call_count: Dict[str, int] = None
-) -> Tuple[str, str]:
+) -> Tuple[str, str, str]:
     """
-    Use LLM to classify story type AND generate synopsis in a single call.
+    Use LLM to classify story type, generate headline, AND generate synopsis in a single call.
 
-    Returns (classification, synopsis)
+    Returns (classification, synopsis, headline)
     """
     if not articles:
-        return 'GENERAL', ''
+        return 'GENERAL', '', ''
 
     if llm_call_count is None:
         llm_call_count = {'count': 0}
@@ -864,7 +864,7 @@ def classify_and_summarize_story(
     snippets = [a.snippet for a in articles[:5] if a.snippet]
     sources = [a.source_domain for a in articles[:5]]
 
-    # Try LLM classification + synopsis
+    # Try LLM classification + synopsis + headline
     if SYNOPSIS_CONFIG['use_llm'] and os.getenv("OPENAI_API_KEY"):
         try:
             result = _llm_classify_and_summarize(company_name, titles, snippets, sources)
@@ -873,8 +873,9 @@ def classify_and_summarize_story(
         except Exception as e:
             logger.warning(f"LLM classify/summarize failed: {e}")
 
-    # Fallback: simple classification and title as synopsis
-    return 'GENERAL', titles[0] if titles else ''
+    # Fallback: simple classification with company-focused headline
+    fallback_headline = f"{company_name}: News Coverage"
+    return 'GENERAL', titles[0] if titles else '', fallback_headline
 
 
 def _llm_classify_and_summarize(
@@ -882,9 +883,11 @@ def _llm_classify_and_summarize(
     titles: List[str],
     snippets: List[str],
     sources: List[str]
-) -> Tuple[str, str]:
+) -> Tuple[str, str, str]:
     """
-    Single LLM call to classify type AND generate synopsis.
+    Single LLM call to classify type, generate headline, AND generate synopsis.
+
+    Returns (classification, synopsis, headline)
     """
     from langchain_openai import ChatOpenAI
     from langchain_core.messages import SystemMessage, HumanMessage
@@ -895,7 +898,8 @@ def _llm_classify_and_summarize(
 
 Your task:
 1. Classify the story into ONE of these types: {types_str}
-2. Write a 2-3 sentence synopsis for investors
+2. Write a clear, complete headline (max 100 chars) that captures the key news
+3. Write a 2-3 sentence synopsis for investors
 
 Classification guidelines:
 - FUNDING: fundraising, Series A/B/C, seed rounds, valuations
@@ -912,8 +916,22 @@ Classification guidelines:
 - MARKET: industry trends, macro analysis
 - GENERAL: other news
 
+Headline guidelines:
+- ALWAYS start headline with "{company_name}:" or "{company_name} "
+- If the article is DIRECTLY about {company_name}, describe what they did (raised, launched, partnered)
+- If the article is about a competitor or market trend relevant to {company_name}, frame it from {company_name}'s perspective:
+  * "Competitor X raised $Y" → "{company_name}: Competitor X Raises $Y"
+  * "Industry trend Z" → "{company_name}: Market Sees Z Trend"
+- NEVER just copy the raw article title - always rewrite to focus on {company_name}
+- DO NOT include source names like "| TechCrunch", "- Forbes", "| Reuters"
+- DO NOT include generic phrases like "Press and News", "Latest News", "Company Profile"
+- Include specific facts (funding amounts, valuations, partner names)
+- Be concise (max 80 chars)
+- No trailing ellipsis, periods, or pipe characters
+
 Respond in this exact format:
 TYPE: [classification]
+HEADLINE: [clear, complete headline]
 SYNOPSIS: [2-3 sentence synopsis]"""
 
     # Build context from articles
@@ -930,9 +948,9 @@ SYNOPSIS: [2-3 sentence synopsis]"""
 Articles:
 {chr(10).join(context_lines)}
 
-Classify and summarize:"""
+Classify, write headline, and summarize:"""
 
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, max_tokens=200)
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, max_tokens=300)
     response = llm.invoke([
         SystemMessage(content=system_prompt),
         HumanMessage(content=user_prompt),
@@ -941,6 +959,7 @@ Classify and summarize:"""
     # Parse response
     content = response.content.strip()
     classification = 'GENERAL'
+    headline = ''
     synopsis = ''
 
     for line in content.split('\n'):
@@ -949,16 +968,60 @@ Classify and summarize:"""
             type_val = line[5:].strip().upper()
             if type_val in VALID_TYPES:
                 classification = type_val
+        elif line.upper().startswith('HEADLINE:'):
+            headline = line[9:].strip()
         elif line.upper().startswith('SYNOPSIS:'):
             synopsis = line[9:].strip()
 
-    # If synopsis wasn't found on its own line, use everything after TYPE line
+    # If synopsis wasn't found on its own line, use everything after SYNOPSIS:
     if not synopsis:
         parts = content.split('SYNOPSIS:', 1)
         if len(parts) > 1:
             synopsis = parts[1].strip()
 
-    return classification, synopsis[:SYNOPSIS_CONFIG['max_synopsis_length']]
+    # If headline wasn't found, construct a simple one with company name
+    if not headline:
+        headline = f"{company_name}: {classification.title()} News"
+
+    # Clean up headline
+    headline = headline.rstrip('.')
+    if headline.endswith('...'):
+        headline = headline[:-3].rstrip()
+    if headline.endswith('…'):
+        headline = headline[:-1].rstrip()
+
+    # Remove source suffixes (e.g., "| TechCrunch", "- TechCrunch", "| Forbes")
+    source_names = [
+        'TechCrunch', 'Forbes', 'Reuters', 'Bloomberg', 'WSJ', 'Wall Street Journal',
+        'VentureBeat', 'The Verge', 'Wired', 'CNBC', 'Yahoo', 'Yahoo Finance',
+        'Business Insider', 'The Information', 'Axios', 'Semafor', 'NYT', 'New York Times',
+    ]
+    for source in source_names:
+        # Handle both pipe and dash separators
+        for sep in [' | ', ' - ', ' — ', ' – ']:
+            suffix = f"{sep}{source}"
+            if suffix in headline:
+                headline = headline.split(suffix)[0].strip()
+    # Also handle any remaining pipe/dash separated suffixes
+    if ' | ' in headline:
+        headline = headline.split(' | ')[0].strip()
+    if ' - ' in headline and len(headline.split(' - ')[-1]) < 30:
+        # Only strip if the suffix is short (likely a source name)
+        headline = headline.rsplit(' - ', 1)[0].strip()
+
+    # Ensure headline starts with company name (critical for competitor stories)
+    company_lower = company_name.lower()
+    headline_lower = headline.lower()
+    if not headline_lower.startswith(company_lower):
+        # Headline doesn't start with company name - prepend it
+        # First, clean up the existing headline
+        headline = headline.strip()
+        if headline:
+            headline = f"{company_name}: {headline}"
+        else:
+            headline = f"{company_name}: {classification.title()} News"
+
+    return classification, synopsis[:SYNOPSIS_CONFIG['max_synopsis_length']], headline[:100]
 
 
 # =============================================================================
@@ -1074,12 +1137,29 @@ def calculate_priority_score(story: Story) -> Tuple[float, List[str]]:
         reasons.append("Industry news")
 
     # Source credibility (0-15)
+    # Bonus: Company's own domain is a primary source for their announcements
+    is_company_domain = False
+    if story.articles and story.company_id:
+        primary_url = story.primary_url.lower()
+        # Extract company domain from company_id (stored as URL or domain)
+        from agents.news_aggregator.database import get_company_by_id
+        company = get_company_by_id(story.company_id)
+        if company:
+            company_domain = company.company_id.replace("https://", "").replace("http://", "").rstrip("/")
+            if company_domain in primary_url:
+                is_company_domain = True
+
     if story.articles:
-        max_source_priority = max(a.source_priority for a in story.articles)
-        source_score = min(15, max_source_priority * 0.15)
+        if is_company_domain:
+            # Company's own blog/announcements are authoritative primary sources
+            source_score = 15
+            reasons.append("Company announcement")
+        else:
+            max_source_priority = max(a.source_priority for a in story.articles)
+            source_score = min(15, max_source_priority * 0.15)
+            if max_source_priority >= 85:
+                reasons.append("Tier-1 source")
         score += source_score
-        if max_source_priority >= 85:
-            reasons.append("Tier-1 source")
 
     # Engagement (0-15)
     if story.max_engagement > 0:
@@ -1774,20 +1854,38 @@ def generate_investor_digest(
         if not url:
             continue
 
-        # Filter: Homepage/non-article URLs
-        if is_homepage_url(url):
+        # Get company early to check if URL is from company's own domain
+        company = companies.get(signal.company_id)
+        if not company:
             continue
 
-        # Date filter - strict: require valid date within range
-        if not is_within_date_range(signal.published_date, days=days, strict=True):
-            # Fallback: check detected_at if no published_date
-            if signal.detected_at:
-                if not is_within_date_range(signal.detected_at, days=days, strict=True):
-                    continue
-            else:
+        # Check if URL is from company's own domain (blog posts, changelog, etc.)
+        company_domain = company.company_id.replace("https://", "").replace("http://", "").rstrip("/")
+        is_company_domain = company_domain in url.lower()
+
+        # Filter: Homepage/non-article URLs
+        # Exception: Allow company's own domain content (their blog, docs, changelog)
+        if not is_company_domain and is_homepage_url(url):
+            continue
+
+        # For company's own domain, only skip the actual homepage
+        if is_company_domain:
+            path = urlparse(url).path.strip('/')
+            if not path:  # Actual homepage with no path
                 continue
 
-        company = companies.get(signal.company_id)
+        # Date filter - strict: require valid date within range
+        # Exception: Company's own content is always relevant (may not have dates)
+        if not is_company_domain:
+            if not is_within_date_range(signal.published_date, days=days, strict=True):
+                # Fallback: check detected_at if no published_date
+                if signal.detected_at:
+                    if not is_within_date_range(signal.detected_at, days=days, strict=True):
+                        continue
+                else:
+                    continue
+
+        # Company already fetched above
         if not company:
             continue
 
@@ -1852,7 +1950,7 @@ def generate_investor_digest(
         story = Story(
             story_id="",
             primary_url=primary.url,
-            primary_title=primary.title,
+            primary_title=primary.title,  # Temporary, will be replaced by LLM headline
             other_urls=other_urls,
             articles=cluster,
             company_id=primary.company_id,
@@ -1868,8 +1966,8 @@ def generate_investor_digest(
         # Sentiment (deterministic - do first for priority scoring)
         story.sentiment = analyze_sentiment(cluster)
 
-        # LLM classifies AND generates synopsis
-        story.classification, story.synopsis = classify_and_summarize_story(
+        # LLM classifies, generates synopsis, AND generates headline
+        story.classification, story.synopsis, story.primary_title = classify_and_summarize_story(
             cluster,
             story.company_name,
             llm_call_count
@@ -1936,7 +2034,7 @@ def generate_investor_digest(
             industry_tags=story.industry_tags,
             priority_score=story.priority_score,
             priority_reasons=story.priority_reasons,
-            published_date=story.published_date,
+            published_date=story.published_date or datetime.now(timezone.utc).strftime("%Y-%m-%d"),
             max_engagement=story.max_engagement,
             source_count=story.source_count,
             article_signal_ids=[a.signal_id for a in story.articles],

@@ -249,6 +249,25 @@ def _extract_source_domain(url: str) -> str:
         return ""
 
 
+def _clean_truncated_title(title: str) -> str:
+    """
+    Clean up titles that were truncated by the API.
+
+    Removes trailing "..." or " ..." that indicate truncation.
+    This makes display cleaner even though full title isn't recoverable.
+    """
+    if not title:
+        return title
+    # Strip trailing whitespace first
+    cleaned = title.rstrip()
+    # Remove trailing ellipsis variations
+    if cleaned.endswith('...'):
+        cleaned = cleaned[:-3].rstrip()
+    elif cleaned.endswith('…'):  # Unicode ellipsis
+        cleaned = cleaned[:-1].rstrip()
+    return cleaned
+
+
 def _classify_signal_type(title: str, excerpts: list[str]) -> str:
     """Classify news into signal type based on content keywords."""
     combined = (title + " " + " ".join(excerpts)).lower()
@@ -434,9 +453,10 @@ class ParallelSearchClient:
         results = []
         for item in response.results or []:
             url = getattr(item, "url", "") or ""
+            raw_title = getattr(item, "title", "") or ""
             result = ParallelSearchResult(
                 url=url,
-                title=getattr(item, "title", "") or "",
+                title=_clean_truncated_title(raw_title),
                 publish_date=getattr(item, "publish_date", None),
                 excerpts=getattr(item, "excerpts", []) or [],
                 source_domain=_extract_source_domain(url),
@@ -444,6 +464,124 @@ class ParallelSearchClient:
             results.append(result)
 
         logger.info(f"Parallel Search: fetched {len(results)} results for '{company_name}'")
+        return results
+
+    def search_company_news_enhanced(
+        self,
+        company_name: str,
+        domain: str,
+        description: Optional[str] = None,
+        investors: Optional[list[str]] = None,
+        tags: Optional[list[str]] = None,
+        max_results: int = 10,
+        max_chars_per_result: int = 5000,
+    ) -> list[ParallelSearchResult]:
+        """
+        Enhanced search using Harmonic company data for better results.
+
+        Uses description keywords, domain, and investors to create
+        targeted search queries that work better for smaller companies.
+
+        Args:
+            company_name: Company name (use exact casing from Harmonic)
+            domain: Company domain (e.g., "namespace.so")
+            description: Harmonic company description (for keyword extraction)
+            investors: List of investor names (for funding news)
+            tags: Industry tags (for context)
+            max_results: Maximum results to return
+            max_chars_per_result: Excerpt length limit
+
+        Returns:
+            List of ParallelSearchResult
+        """
+        # Extract key terms from description for disambiguation
+        description_keywords = []
+        if description:
+            # Extract meaningful terms (products, technologies, etc.)
+            import re
+            # Look for capitalized terms, tech keywords
+            tech_terms = re.findall(r'\b(?:Docker|GitHub|Kubernetes|CI/CD|API|SDK|SaaS|AI|ML|Cloud|AWS|GCP|Azure)\b', description, re.IGNORECASE)
+            description_keywords = list(set(term.lower() for term in tech_terms))[:3]
+
+        # Build enhanced search queries
+        search_queries = []
+
+        # 1. Company blog/announcements (direct from source)
+        clean_domain = domain.replace("https://", "").replace("http://", "").rstrip("/")
+        search_queries.append(f'site:{clean_domain} announcement OR launch OR funding OR news')
+
+        # 2. Company name with description context (disambiguation)
+        if description_keywords:
+            context = " ".join(description_keywords[:2])
+            search_queries.append(f'"{company_name}" {context} startup OR company')
+        else:
+            search_queries.append(f'"{company_name}" startup company news')
+
+        # 3. Funding news with investor names (if available)
+        if investors and len(investors) > 0:
+            top_investors = investors[:2]
+            investor_query = " OR ".join(f'"{inv}"' for inv in top_investors)
+            search_queries.append(f'"{company_name}" ({investor_query}) funding OR raises')
+        else:
+            search_queries.append(f'"{company_name}" funding raises Series seed')
+
+        # 4. Product/launch news in tech publications
+        search_queries.append(f'"{company_name}" TechCrunch OR VentureBeat OR Hacker News')
+
+        # 5. Domain-based search for any coverage mentioning the domain
+        search_queries.append(f'"{clean_domain}" OR "{company_name}" launch OR announces')
+
+        # Build a rich objective using company context
+        objective = f"Find recent news articles about {company_name}"
+        if description:
+            # Add first sentence of description for context
+            first_sentence = description.split('.')[0]
+            objective = f"Find recent news about {company_name}, a company that {first_sentence.lower()}. Look for funding announcements, product launches, partnerships, and company updates."
+
+        start = time.time()
+        try:
+            response = self._client.beta.search(
+                objective=objective,
+                search_queries=search_queries,
+                max_results=max_results,
+                excerpts={"max_chars_per_result": max_chars_per_result},
+            )
+            latency = int((time.time() - start) * 1000)
+
+            self._tracker.log_api_call(
+                service="parallel",
+                endpoint="/search",
+                method="POST",
+                status_code=200,
+                latency_ms=latency,
+            )
+
+        except Exception as e:
+            latency = int((time.time() - start) * 1000)
+            self._tracker.log_api_call(
+                service="parallel",
+                endpoint="/search",
+                method="POST",
+                status_code=500,
+                latency_ms=latency,
+            )
+            logger.error(f"Parallel Search API error for '{company_name}': {e}")
+            raise ParallelSearchError(f"API request failed: {e}")
+
+        results = []
+        for item in response.results or []:
+            url = getattr(item, "url", "") or ""
+            raw_title = getattr(item, "title", "") or ""
+            result = ParallelSearchResult(
+                url=url,
+                title=_clean_truncated_title(raw_title),
+                publish_date=getattr(item, "publish_date", None),
+                excerpts=getattr(item, "excerpts", []) or [],
+                source_domain=_extract_source_domain(url),
+            )
+            results.append(result)
+
+        logger.info(f"Parallel Search (enhanced): fetched {len(results)} results for '{company_name}' using domain={clean_domain}, {len(description_keywords)} keywords, {len(investors or [])} investors")
         return results
 
     def classify_result(self, result: ParallelSearchResult) -> str:
@@ -535,9 +673,10 @@ class ParallelSearchClient:
             if "techcrunch" not in domain.lower():
                 continue
 
+            raw_title = getattr(item, "title", "") or ""
             result = ParallelSearchResult(
                 url=url,
-                title=getattr(item, "title", "") or "",
+                title=_clean_truncated_title(raw_title),
                 publish_date=getattr(item, "publish_date", None),
                 excerpts=getattr(item, "excerpts", []) or [],
                 source_domain=domain,
@@ -636,9 +775,10 @@ class ParallelSearchClient:
             if not is_tier1:
                 continue
 
+            raw_title = getattr(item, "title", "") or ""
             result = ParallelSearchResult(
                 url=url,
-                title=getattr(item, "title", "") or "",
+                title=_clean_truncated_title(raw_title),
                 publish_date=getattr(item, "publish_date", None),
                 excerpts=getattr(item, "excerpts", []) or [],
                 source_domain=domain,
@@ -741,7 +881,7 @@ class ParallelSearchClient:
 
             result = ParallelSearchResult(
                 url=url,
-                title=title,
+                title=_clean_truncated_title(title),
                 publish_date=getattr(item, "publish_date", None),
                 excerpts=excerpts,
                 source_domain=_extract_source_domain(url),
@@ -824,9 +964,10 @@ class ParallelSearchClient:
         results = []
         for item in response.results or []:
             url = getattr(item, "url", "") or ""
+            raw_title = getattr(item, "title", "") or ""
             result = ParallelSearchResult(
                 url=url,
-                title=getattr(item, "title", "") or "",
+                title=_clean_truncated_title(raw_title),
                 publish_date=getattr(item, "publish_date", None),
                 excerpts=getattr(item, "excerpts", []) or [],
                 source_domain=_extract_source_domain(url),
