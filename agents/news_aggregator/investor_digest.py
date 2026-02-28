@@ -917,13 +917,13 @@ Classification guidelines:
 - GENERAL: other news
 
 Headline guidelines:
-- Focus ONLY on news about {company_name} - ignore other companies mentioned
-- If the article mentions multiple companies, write about {company_name}'s role specifically
-- Be concise but complete (max 100 chars, no truncation)
-- Start with {company_name} when possible
-- Include key facts (funding amount, acquirer, product name, etc.)
-- Use active voice
-- No trailing ellipsis or periods
+- Start with {company_name}
+- Focus ONLY on what {company_name} did (raised, launched, partnered, etc.)
+- DO NOT include source names like "| TechCrunch", "| Forbes", "| Reuters"
+- DO NOT include generic phrases like "Press and News", "Latest News", "Company Profile"
+- Include specific facts (funding amounts, valuations, partner names)
+- Be concise (max 80 chars)
+- No trailing ellipsis, periods, or pipe characters
 
 Respond in this exact format:
 TYPE: [classification]
@@ -979,14 +979,26 @@ Classify, write headline, and summarize:"""
     if not headline:
         headline = f"{company_name}: {classification.title()} News"
 
-    # Clean up headline (remove trailing periods, ensure no truncation markers)
+    # Clean up headline
     headline = headline.rstrip('.')
     if headline.endswith('...'):
         headline = headline[:-3].rstrip()
     if headline.endswith('…'):
         headline = headline[:-1].rstrip()
 
-    return classification, synopsis[:SYNOPSIS_CONFIG['max_synopsis_length']], headline[:150]
+    # Remove source suffixes (e.g., "| TechCrunch", "| Forbes")
+    source_suffixes = [
+        '| TechCrunch', '| Forbes', '| Reuters', '| Bloomberg', '| WSJ',
+        '| VentureBeat', '| The Verge', '| Wired', '| CNBC', '| Yahoo',
+    ]
+    for suffix in source_suffixes:
+        if suffix in headline:
+            headline = headline.split(suffix)[0].strip()
+    # Also handle company name suffixes (e.g., "| Slash", "| Harness")
+    if ' | ' in headline:
+        headline = headline.split(' | ')[0].strip()
+
+    return classification, synopsis[:SYNOPSIS_CONFIG['max_synopsis_length']], headline[:100]
 
 
 # =============================================================================
