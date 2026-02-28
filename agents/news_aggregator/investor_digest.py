@@ -2011,7 +2011,7 @@ def generate_investor_digest(
             industry_tags=story.industry_tags,
             priority_score=story.priority_score,
             priority_reasons=story.priority_reasons,
-            published_date=story.published_date,
+            published_date=story.published_date or datetime.now(timezone.utc).strftime("%Y-%m-%d"),
             max_engagement=story.max_engagement,
             source_count=story.source_count,
             article_signal_ids=[a.signal_id for a in story.articles],
