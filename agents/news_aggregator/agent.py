@@ -779,7 +779,7 @@ Examples:
             # Auto-fetch new signals unless --no-fetch is specified
             if not args.no_fetch:
                 print("Fetching latest signals...\n")
-                cmd_check(investor_id=args.investor_id, refresh_competitors=False, quiet=True)
+                cmd_check(investor_id=args.investor_id, refresh_competitors=True, quiet=True)
                 print("")
 
             digest = generate_investor_digest(

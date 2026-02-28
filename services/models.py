@@ -254,7 +254,7 @@ class JobRunResponse(BaseModel):
 class NewsRefreshRequest(BaseModel):
     """Request to trigger a news refresh."""
     days: int = Field(default=7, ge=1, le=30, description="Days to look back for signals")
-    refresh_competitors: bool = Field(default=False, description="Discover competitors (disabled by default)")
+    refresh_competitors: bool = Field(default=True, description="Discover competitors for new portfolio companies")
 
 
 class NewsRefreshResponse(BaseModel):
