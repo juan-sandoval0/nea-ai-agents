@@ -273,9 +273,46 @@ class SignalDetector:
             raw_data=json.dumps(raw_data)
         )
 
+    def _get_harmonic_data(self, company: WatchedCompany):
+        """
+        Fetch Harmonic company data for enhanced search.
+
+        Returns HarmonicCompany object if available, None otherwise.
+        Uses cached harmonic_id when available to avoid lookup.
+        """
+        if not self.harmonic:
+            return None
+
+        try:
+            # Use cached Harmonic ID if available
+            if company.harmonic_id:
+                harmonic_company = self.harmonic.get_company(str(company.harmonic_id))
+                if harmonic_company:
+                    return harmonic_company
+
+            # Fallback: lookup by domain
+            domain = company.company_id.replace("https://", "").replace("http://", "").rstrip("/")
+            harmonic_company = self.harmonic.lookup_company(domain=domain)
+
+            # Cache the Harmonic ID for future use
+            if harmonic_company and harmonic_company.id:
+                update_company_harmonic_id(company.id, int(harmonic_company.id))
+
+            return harmonic_company
+
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Failed to fetch Harmonic data for {company.company_name}: {e}"
+            )
+            return None
+
     def _detect_parallel_signals(self, company: WatchedCompany, days: int = 7) -> List[CompanySignal]:
         """
         Detect signals from Parallel Search (news).
+
+        Uses Harmonic company data when available for enhanced search queries
+        that work better for smaller/niche companies.
 
         Filters applied:
         1. Only articles from the last N days
@@ -285,42 +322,74 @@ class SignalDetector:
         """
         signals = []
 
-        # Use enhanced search for companies with generic names
         # Extract clean domain (e.g., "namespace.so" from "https://namespace.so")
         domain = company.company_id.replace("https://", "").replace("http://", "").rstrip("/")
 
         # Check if company name is potentially ambiguous (common words/short names)
         needs_disambiguation = self._is_ambiguous_name(company.company_name)
 
-        if needs_disambiguation:
-            # Use domain-enhanced search for better results
+        # Try to get Harmonic data for enhanced search
+        harmonic_data = self._get_harmonic_data(company)
+
+        if harmonic_data:
+            # Use Harmonic-enhanced search for better results
+            results = self.parallel.search_company_news_enhanced(
+                company_name=harmonic_data.name,  # Use exact name from Harmonic
+                domain=harmonic_data.domain or domain,
+                description=harmonic_data.description,
+                investors=harmonic_data.investors,
+                tags=harmonic_data.tags,
+            )
+        elif needs_disambiguation:
+            # Fallback: Use domain-enhanced search for ambiguous names
             results = self._search_with_domain_context(company.company_name, domain)
         else:
+            # Standard search for non-ambiguous names
             results = self.parallel.search_company_news(company.company_name)
 
         for result in results:
             url = result.url or ""
 
+            # Check if this is from the company's own domain
+            is_company_domain = domain in url.lower()
+
             # Filter: Skip homepage/non-article URLs
-            if self._is_homepage_url(url):
+            # Exception: Allow company's own domain (their blog, changelog, docs are valuable)
+            if not is_company_domain and self._is_homepage_url(url):
                 continue
 
+            # For company's own domain, only skip the actual homepage
+            if is_company_domain:
+                from urllib.parse import urlparse
+                path = urlparse(url).path.strip('/')
+                if not path:  # Actual homepage with no path
+                    continue
+
             # Filter: Skip articles older than N days
-            if not self._is_within_date_range(result.publish_date, days=days):
-                continue
+            # Exception: Company's own content is always relevant
+            if not is_company_domain:
+                if not self._is_within_date_range(result.publish_date, days=days):
+                    continue
 
             title = result.title or ""
             excerpts = result.excerpts or []
 
             # Filter: Company name must appear in title or excerpts
-            # For ambiguous names, also check that it's about the actual company
-            if not self._mentions_company(company.company_name, title, excerpts):
-                continue
+            # Exception: Company's own domain doesn't need name mention
+            if not is_company_domain:
+                if not self._mentions_company(company.company_name, title, excerpts):
+                    continue
 
             # Additional filter for ambiguous names: validate context
-            if needs_disambiguation:
+            # Exception: Company's own domain is always valid
+            if needs_disambiguation and not is_company_domain:
                 if not self._validate_company_context(company, title, excerpts, url):
                     continue
+
+            # Filter: Skip technical tutorials that just mention the term
+            # (e.g., "Docker namespaces explained" is not about the company)
+            if self._is_technical_tutorial(title, url):
+                continue
             summary = " ".join(excerpts)[:500] if excerpts else ""
             source = result.source_domain or "Web"
             published = result.publish_date
@@ -709,3 +778,41 @@ class SignalDetector:
 
         # Company appears in title and no clear indication of being secondary
         return True
+
+    def _is_technical_tutorial(self, title: str, url: str) -> bool:
+        """
+        Check if an article is a technical tutorial about a concept
+        rather than news about a company.
+
+        Filters out articles like "Docker namespaces explained" or
+        "Understanding Linux namespaces" which use the term technically.
+        """
+        title_lower = title.lower()
+        url_lower = url.lower()
+
+        # Tutorial site patterns
+        tutorial_sites = [
+            'dev.to', 'medium.com', 'towardsdatascience.com',
+            'freecodecamp.org', 'hackernoon.com', 'dzone.com',
+            'baeldung.com', 'tutorialspoint.com', 'geeksforgeeks.org',
+        ]
+        if any(site in url_lower for site in tutorial_sites):
+            # Check if it's educational content vs company news
+            tutorial_indicators = [
+                'how to', 'tutorial', 'explained', 'understanding',
+                'introduction to', 'guide to', 'learn', 'basics',
+                'what is', 'what are', 'deep dive', 'under the hood',
+                'build your own', 'from scratch', 'step by step',
+            ]
+            if any(indicator in title_lower for indicator in tutorial_indicators):
+                return True
+
+        # Technical documentation sites
+        doc_sites = [
+            'developer.', 'docs.', 'documentation.',
+            'learn.microsoft', 'cloud.google', 'aws.amazon',
+        ]
+        if any(site in url_lower for site in doc_sites):
+            return True
+
+        return False

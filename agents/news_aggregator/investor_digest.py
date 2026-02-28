@@ -1074,12 +1074,29 @@ def calculate_priority_score(story: Story) -> Tuple[float, List[str]]:
         reasons.append("Industry news")
 
     # Source credibility (0-15)
+    # Bonus: Company's own domain is a primary source for their announcements
+    is_company_domain = False
+    if story.articles and story.company_id:
+        primary_url = story.primary_url.lower()
+        # Extract company domain from company_id (stored as URL or domain)
+        from agents.news_aggregator.database import get_company_by_id
+        company = get_company_by_id(story.company_id)
+        if company:
+            company_domain = company.company_id.replace("https://", "").replace("http://", "").rstrip("/")
+            if company_domain in primary_url:
+                is_company_domain = True
+
     if story.articles:
-        max_source_priority = max(a.source_priority for a in story.articles)
-        source_score = min(15, max_source_priority * 0.15)
+        if is_company_domain:
+            # Company's own blog/announcements are authoritative primary sources
+            source_score = 15
+            reasons.append("Company announcement")
+        else:
+            max_source_priority = max(a.source_priority for a in story.articles)
+            source_score = min(15, max_source_priority * 0.15)
+            if max_source_priority >= 85:
+                reasons.append("Tier-1 source")
         score += source_score
-        if max_source_priority >= 85:
-            reasons.append("Tier-1 source")
 
     # Engagement (0-15)
     if story.max_engagement > 0:
@@ -1774,20 +1791,38 @@ def generate_investor_digest(
         if not url:
             continue
 
-        # Filter: Homepage/non-article URLs
-        if is_homepage_url(url):
+        # Get company early to check if URL is from company's own domain
+        company = companies.get(signal.company_id)
+        if not company:
             continue
 
-        # Date filter - strict: require valid date within range
-        if not is_within_date_range(signal.published_date, days=days, strict=True):
-            # Fallback: check detected_at if no published_date
-            if signal.detected_at:
-                if not is_within_date_range(signal.detected_at, days=days, strict=True):
-                    continue
-            else:
+        # Check if URL is from company's own domain (blog posts, changelog, etc.)
+        company_domain = company.company_id.replace("https://", "").replace("http://", "").rstrip("/")
+        is_company_domain = company_domain in url.lower()
+
+        # Filter: Homepage/non-article URLs
+        # Exception: Allow company's own domain content (their blog, docs, changelog)
+        if not is_company_domain and is_homepage_url(url):
+            continue
+
+        # For company's own domain, only skip the actual homepage
+        if is_company_domain:
+            path = urlparse(url).path.strip('/')
+            if not path:  # Actual homepage with no path
                 continue
 
-        company = companies.get(signal.company_id)
+        # Date filter - strict: require valid date within range
+        # Exception: Company's own content is always relevant (may not have dates)
+        if not is_company_domain:
+            if not is_within_date_range(signal.published_date, days=days, strict=True):
+                # Fallback: check detected_at if no published_date
+                if signal.detected_at:
+                    if not is_within_date_range(signal.detected_at, days=days, strict=True):
+                        continue
+                else:
+                    continue
+
+        # Company already fetched above
         if not company:
             continue
 
