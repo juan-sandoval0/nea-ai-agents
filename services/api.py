@@ -70,8 +70,8 @@ app = FastAPI(
 )
 
 # Version marker for debugging Railway deployments
-API_VERSION = "1.0.2"
-logger.info(f"=== NEA API VERSION {API_VERSION} - SYNOPSIS FIX DEPLOYED ===")
+API_VERSION = "1.0.3"
+logger.info(f"=== NEA API VERSION {API_VERSION} - WATCHLIST FIX DEPLOYED ===")
 
 # CORS - allow Lovable frontend
 app.add_middleware(
