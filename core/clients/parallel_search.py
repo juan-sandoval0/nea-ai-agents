@@ -249,6 +249,25 @@ def _extract_source_domain(url: str) -> str:
         return ""
 
 
+def _clean_truncated_title(title: str) -> str:
+    """
+    Clean up titles that were truncated by the API.
+
+    Removes trailing "..." or " ..." that indicate truncation.
+    This makes display cleaner even though full title isn't recoverable.
+    """
+    if not title:
+        return title
+    # Strip trailing whitespace first
+    cleaned = title.rstrip()
+    # Remove trailing ellipsis variations
+    if cleaned.endswith('...'):
+        cleaned = cleaned[:-3].rstrip()
+    elif cleaned.endswith('…'):  # Unicode ellipsis
+        cleaned = cleaned[:-1].rstrip()
+    return cleaned
+
+
 def _classify_signal_type(title: str, excerpts: list[str]) -> str:
     """Classify news into signal type based on content keywords."""
     combined = (title + " " + " ".join(excerpts)).lower()
@@ -434,9 +453,10 @@ class ParallelSearchClient:
         results = []
         for item in response.results or []:
             url = getattr(item, "url", "") or ""
+            raw_title = getattr(item, "title", "") or ""
             result = ParallelSearchResult(
                 url=url,
-                title=getattr(item, "title", "") or "",
+                title=_clean_truncated_title(raw_title),
                 publish_date=getattr(item, "publish_date", None),
                 excerpts=getattr(item, "excerpts", []) or [],
                 source_domain=_extract_source_domain(url),
@@ -551,9 +571,10 @@ class ParallelSearchClient:
         results = []
         for item in response.results or []:
             url = getattr(item, "url", "") or ""
+            raw_title = getattr(item, "title", "") or ""
             result = ParallelSearchResult(
                 url=url,
-                title=getattr(item, "title", "") or "",
+                title=_clean_truncated_title(raw_title),
                 publish_date=getattr(item, "publish_date", None),
                 excerpts=getattr(item, "excerpts", []) or [],
                 source_domain=_extract_source_domain(url),
@@ -652,9 +673,10 @@ class ParallelSearchClient:
             if "techcrunch" not in domain.lower():
                 continue
 
+            raw_title = getattr(item, "title", "") or ""
             result = ParallelSearchResult(
                 url=url,
-                title=getattr(item, "title", "") or "",
+                title=_clean_truncated_title(raw_title),
                 publish_date=getattr(item, "publish_date", None),
                 excerpts=getattr(item, "excerpts", []) or [],
                 source_domain=domain,
@@ -753,9 +775,10 @@ class ParallelSearchClient:
             if not is_tier1:
                 continue
 
+            raw_title = getattr(item, "title", "") or ""
             result = ParallelSearchResult(
                 url=url,
-                title=getattr(item, "title", "") or "",
+                title=_clean_truncated_title(raw_title),
                 publish_date=getattr(item, "publish_date", None),
                 excerpts=getattr(item, "excerpts", []) or [],
                 source_domain=domain,
@@ -858,7 +881,7 @@ class ParallelSearchClient:
 
             result = ParallelSearchResult(
                 url=url,
-                title=title,
+                title=_clean_truncated_title(title),
                 publish_date=getattr(item, "publish_date", None),
                 excerpts=excerpts,
                 source_domain=_extract_source_domain(url),
@@ -941,9 +964,10 @@ class ParallelSearchClient:
         results = []
         for item in response.results or []:
             url = getattr(item, "url", "") or ""
+            raw_title = getattr(item, "title", "") or ""
             result = ParallelSearchResult(
                 url=url,
-                title=getattr(item, "title", "") or "",
+                title=_clean_truncated_title(raw_title),
                 publish_date=getattr(item, "publish_date", None),
                 excerpts=getattr(item, "excerpts", []) or [],
                 source_domain=_extract_source_domain(url),
