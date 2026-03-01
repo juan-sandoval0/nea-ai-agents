@@ -85,6 +85,7 @@ class BriefingHistoryDB:
         """Save a briefing to history."""
         supabase = get_supabase()
         data = {
+            "id": record.id,
             "company_id": record.company_id,
             "company_name": record.company_name,
             "markdown": record.markdown,
