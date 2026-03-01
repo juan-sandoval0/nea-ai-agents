@@ -243,6 +243,56 @@ def format_news_data(news: list[NewsArticle]) -> str:
     return "\n".join(lines)
 
 
+def fetch_nea_portfolio_companies() -> list[dict]:
+    """Fetch NEA portfolio companies from watched_companies table."""
+    try:
+        from core.clients import get_supabase
+        supabase = get_supabase()
+        result = (
+            supabase.table("watched_companies")
+            .select("company_id, company_name, industry_tags")
+            .eq("category", "portfolio")
+            .eq("is_active", True)
+            .execute()
+        )
+        return result.data or []
+    except Exception as e:
+        logger.warning(f"Failed to fetch portfolio companies for NEA connections: {e}")
+        return []
+
+
+def format_nea_connections_data(founders: list, portfolio_companies: list[dict]) -> str:
+    """Format NEA portfolio companies and founder backgrounds for connection analysis."""
+    lines = []
+
+    if portfolio_companies:
+        lines.append("NEA PORTFOLIO COMPANIES:")
+        for co in portfolio_companies:
+            name = co.get("company_name", "")
+            domain = co.get("company_id", "")
+            tags = co.get("industry_tags") or []
+            tag_str = f" [{', '.join(tags[:3])}]" if tags else ""
+            lines.append(f"- {name} ({domain}){tag_str}")
+    else:
+        lines.append("NEA PORTFOLIO COMPANIES: None found in table.")
+
+    lines.append("")
+
+    if founders:
+        lines.append("FOUNDER BACKGROUNDS (for cross-reference):")
+        for f in founders:
+            lines.append(f"\n{f.name} ({f.role_title or 'Founder'}):")
+            if f.background:
+                bg_text = f.background.split("\n---\n")[0].strip()
+                lines.append(bg_text)
+            else:
+                lines.append("Background not yet available.")
+    else:
+        lines.append("FOUNDER BACKGROUNDS: No founders found.")
+
+    return "\n".join(lines)
+
+
 def format_competitors_data(competitors: list[CompetitorSnapshot]) -> str:
     """Format competitor data for LLM context."""
     if not competitors:
@@ -362,12 +412,17 @@ def generate_briefing(company_id: str, model: str = DEFAULT_LLM_MODEL) -> dict:
     result["data_sources"]["news"] = len(bundle.news)
     result["data_sources"]["competitors"] = len(bundle.competitors)
 
+    # Fetch NEA portfolio companies for connections analysis
+    portfolio_companies = fetch_nea_portfolio_companies()
+    result["data_sources"]["nea_portfolio_companies"] = len(portfolio_companies)
+
     # Format data for LLM
     company_data, snapshot_last_updated = format_company_snapshot_data(bundle.company_core)
     founders_data = format_founders_data(bundle.founders)
     signals_data = format_signals_data(bundle.key_signals)
     news_data = format_news_data(bundle.news)
     competitors_data = format_competitors_data(bundle.competitors)
+    nea_connections_data = format_nea_connections_data(bundle.founders, portfolio_companies)
 
     # Sanitize all external data before inserting into prompt
     # This prevents prompt injection from malicious data in external APIs
@@ -377,6 +432,7 @@ def generate_briefing(company_id: str, model: str = DEFAULT_LLM_MODEL) -> dict:
     safe_signals_data = sanitize_for_prompt(signals_data, escape_markdown=False)
     safe_news_data = sanitize_for_prompt(news_data, escape_markdown=False)
     safe_competitors_data = sanitize_for_prompt(competitors_data, escape_markdown=False)
+    safe_nea_connections_data = sanitize_for_prompt(nea_connections_data, escape_markdown=False)
 
     # Check for prompt injection in the data
     for field_name, field_data in [
@@ -385,6 +441,7 @@ def generate_briefing(company_id: str, model: str = DEFAULT_LLM_MODEL) -> dict:
         ("signals_data", signals_data),
         ("news_data", news_data),
         ("competitors_data", competitors_data),
+        ("nea_connections_data", nea_connections_data),
     ]:
         detection = detect_prompt_injection(field_data)
         if detection.is_suspicious:
@@ -417,6 +474,9 @@ def generate_briefing(company_id: str, model: str = DEFAULT_LLM_MODEL) -> dict:
 
 ### Table: competitors
 {safe_competitors_data}
+
+### Table: nea_connections
+{safe_nea_connections_data}
 
 ---
 
@@ -489,6 +549,23 @@ If no competitor data: "Competitive landscape data not available"
 - Key risks to probe
 - Recommended next steps
 - ALL must be grounded in table data
+
+### 9) NEA Connections
+Using ONLY the nea_connections table data above, identify any connections between this company/founders and the NEA ecosystem.
+
+**Prior Portco Employment:**
+Cross-reference each founder's background against the NEA PORTFOLIO COMPANIES list. For each match found:
+- **[Founder Name]** → Previously at **[Portfolio Company Name]** ([role/title if visible in background])
+
+**Shared Schools:**
+If founder backgrounds mention universities/schools, note any that appear for multiple founders (useful for warm intros via NEA network).
+
+**Other NEA Ecosystem Signals:**
+Any other observable connections to the NEA portfolio or network visible in the data.
+
+If no connections are found in the data: "No direct NEA ecosystem connections identified from available founder background data."
+
+IMPORTANT: Only cite connections that are explicitly stated in the founder background text. Do not infer or guess.
 
 ---
 

@@ -306,6 +306,7 @@ BRIEFING_REQUIRED_SECTIONS = [
     "In the News",
     "Competitive Landscape",
     "For This Meeting",
+    "NEA Connections",
 ]
 
 # Minimum expected length for a complete briefing
@@ -372,6 +373,8 @@ def validate_briefing_content(
             variations.extend(["competitors", "competition", "competitive analysis"])
         elif section_lower == "for this meeting":
             variations.extend(["meeting prep", "meeting preparation", "questions"])
+        elif section_lower == "nea connections":
+            variations.extend(["nea connection", "nea ecosystem", "portco connection", "portfolio connections"])
 
         found = any(var in content_lower for var in variations)
         if not found:
