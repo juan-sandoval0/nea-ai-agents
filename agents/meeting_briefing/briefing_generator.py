@@ -244,20 +244,19 @@ def format_news_data(news: list[NewsArticle]) -> str:
 
 
 def fetch_nea_portfolio_companies() -> list[dict]:
-    """Fetch NEA portfolio companies from watched_companies table."""
+    """Fetch NEA portfolio companies from nea_portfolio table."""
     try:
         from core.clients import get_supabase
         supabase = get_supabase()
         result = (
-            supabase.table("watched_companies")
-            .select("company_id, company_name, industry_tags")
-            .eq("category", "portfolio")
+            supabase.table("nea_portfolio")
+            .select("slug, company_name, domain, sector")
             .eq("is_active", True)
             .execute()
         )
         return result.data or []
     except Exception as e:
-        logger.warning(f"Failed to fetch portfolio companies for NEA connections: {e}")
+        logger.warning(f"Failed to fetch NEA portfolio companies: {e}")
         return []
 
 
@@ -269,10 +268,14 @@ def format_nea_connections_data(founders: list, portfolio_companies: list[dict])
         lines.append("NEA PORTFOLIO COMPANIES:")
         for co in portfolio_companies:
             name = co.get("company_name", "")
-            domain = co.get("company_id", "")
-            tags = co.get("industry_tags") or []
-            tag_str = f" [{', '.join(tags[:3])}]" if tags else ""
-            lines.append(f"- {name} ({domain}){tag_str}")
+            domain = co.get("domain") or ""
+            sector = co.get("sector") or ""
+            parts = [name]
+            if domain:
+                parts.append(domain)
+            if sector:
+                parts.append(sector)
+            lines.append(f"- {' | '.join(parts)}")
     else:
         lines.append("NEA PORTFOLIO COMPANIES: None found in table.")
 
