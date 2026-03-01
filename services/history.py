@@ -9,6 +9,7 @@ Stores:
 - Digest runs (news_aggregator agent)
 - Outreach messages (outreach agent)
 - Audit logs (all agents)
+- Job runs (all agents)
 
 All records older than 30 days are automatically cleaned up.
 """
@@ -568,6 +569,17 @@ def cleanup_old_audit_logs(keep_days: int = DEFAULT_RETENTION_DAYS) -> int:
     return count
 
 
+def cleanup_old_job_runs(keep_days: int = DEFAULT_RETENTION_DAYS) -> int:
+    """Delete job runs older than N days. Returns count deleted."""
+    supabase = get_supabase()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=keep_days)).isoformat()
+    result = supabase.table("job_runs").delete().lt("created_at", cutoff).execute()
+    count = len(result.data)
+    if count > 0:
+        logger.info(f"Cleaned up {count} job runs older than {keep_days} days")
+    return count
+
+
 def cleanup_old_embeddings(keep_days: int = DEFAULT_RETENTION_DAYS) -> int:
     """Delete embedding cache entries older than N days. Returns count deleted."""
     import sqlite3
@@ -613,6 +625,7 @@ def cleanup_all(keep_days: int = DEFAULT_RETENTION_DAYS) -> dict:
         "stories": cleanup_old_stories(keep_days),
         "outreach": cleanup_old_outreach(keep_days),
         "audit_logs": cleanup_old_audit_logs(keep_days),
+        "job_runs": cleanup_old_job_runs(keep_days),
         "embeddings": cleanup_old_embeddings(keep_days),
     }
 

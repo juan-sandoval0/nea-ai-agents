@@ -49,6 +49,7 @@ def get_record_counts() -> dict:
         ("stories", "created_at"),
         ("outreach_history", "created_at"),
         ("audit_logs", "created_at"),
+        ("job_runs", "created_at"),
     ]
 
     for table, _ in tables:
@@ -75,6 +76,7 @@ def get_old_record_counts(keep_days: int) -> dict:
         ("stories", "created_at"),
         ("outreach_history", "created_at"),
         ("audit_logs", "created_at"),
+        ("job_runs", "created_at"),
     ]
 
     for table, date_col in tables:

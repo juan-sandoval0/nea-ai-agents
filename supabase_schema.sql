@@ -212,25 +212,6 @@ CREATE INDEX idx_stories_classification ON stories(classification);
 CREATE INDEX idx_stories_priority ON stories(priority_score DESC);
 
 -- =============================================================================
--- STORY CLUSTERS (for investor digest)
--- =============================================================================
-CREATE TABLE story_clusters (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cluster_key TEXT UNIQUE NOT NULL,
-  title TEXT NOT NULL,
-  summary TEXT,
-  signal_ids JSONB DEFAULT '[]',
-  company_ids JSONB DEFAULT '[]',
-  primary_signal_type TEXT,
-  sentiment TEXT,
-  relevance_score INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE INDEX idx_clusters_created ON story_clusters(created_at DESC);
-
--- =============================================================================
 -- FOUNDERS (key team members with enriched backgrounds)
 -- =============================================================================
 CREATE TABLE founders (
@@ -306,7 +287,6 @@ ALTER TABLE investors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE investor_companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE briefing_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE employee_snapshots ENABLE ROW LEVEL SECURITY;
-ALTER TABLE story_clusters ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE digest_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE outreach_history ENABLE ROW LEVEL SECURITY;
@@ -320,7 +300,6 @@ ALTER TABLE briefing_news ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON watched_companies FOR SELECT USING (true);
 CREATE POLICY "Public read" ON company_signals FOR SELECT USING (true);
 CREATE POLICY "Public read" ON briefing_history FOR SELECT USING (true);
-CREATE POLICY "Public read" ON story_clusters FOR SELECT USING (true);
 CREATE POLICY "Public read" ON investors FOR SELECT USING (true);
 CREATE POLICY "Public read" ON stories FOR SELECT USING (true);
 CREATE POLICY "Public read" ON digest_history FOR SELECT USING (true);
