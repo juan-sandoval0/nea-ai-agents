@@ -511,9 +511,9 @@ Display as a formatted table or list:
 ### 4) Founder Information
 For each founder, display:
 - **Name** - Title | [LinkedIn](url)
-- Background summary (the 2-3 sentence summary from the data)
+- 2 bullet points max: most relevant prior role/company, and one notable credential or fact (e.g., domain expertise, prior exit, notable school)
 
-IMPORTANT: You MUST include the background text for each founder. Do not omit it.
+IMPORTANT: Do NOT copy the raw background text. Synthesize it into 2 tight bullets. Omit anything not directly relevant to the investment context.
 If background is missing: "Background not yet available"
 If no founders: "No founder data available"
 
@@ -536,15 +536,12 @@ If no news: "No recent news available (source not yet implemented)"
 Using data from the competitors table:
 
 **Startup Competitors** (top 1-3):
-For each startup competitor:
-- **[Name]** | [Stage] | Total Raised: $[amount] | Last Round: $[amount] ([date])
-  - [One sentence: what they do and how they compete with {safe_company_name}]
+- **[Name]** | [Stage] | Raised: $[total] | [One clause: how they compete]
 
 **Incumbent Competitors** (top 1-3):
-For each incumbent competitor:
-- **[Name]** | [Headcount] employees
-  - [One sentence: what they do and how they compete with {safe_company_name}]
+- **[Name]** | [One clause: how they compete]
 
+Keep each entry to a single line. No multi-sentence descriptions.
 If no competitor data: "Competitive landscape data not available"
 
 ### 8) For This Meeting
