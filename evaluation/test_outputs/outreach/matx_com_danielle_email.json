@@ -1,0 +1,245 @@
+{
+  "test_case_id": "outreach_matx.com_danielle_email",
+  "agent": "outreach",
+  "timestamp": "2026-03-01T23:20:44.755314",
+  "company_id": "matx.com",
+  "investor_key": "danielle",
+  "output_format": "email",
+  "success": true,
+  "error": null,
+  "company_bundle": {
+    "company_core": {
+      "company_id": "matx.com",
+      "company_name": "MatX",
+      "founding_date": "2022-01-01T00:00:00Z",
+      "hq": "Mountain View, California",
+      "employee_count": 78,
+      "total_funding": 624908675.0,
+      "products": "MatX specializes in high-throughput chips designed for the training and inference of large language models, prioritizing performance-per-dollar and cost efficiency. Their technology accommodates various model architectures and allows for the scaling of chip clusters to support the deployment of sophisticated AI models.",
+      "customers": "Business (B2B)",
+      "arr_apr": null,
+      "last_round_date": "2026-02-24T00:00:00Z",
+      "last_round_funding": 500000000.0,
+      "web_traffic_trend": "+77.6% (30d)",
+      "website_update": null,
+      "hiring_firing": "+8.3% (90d)",
+      "observed_at": "2026-02-27T16:15:08.715996",
+      "source_map": {
+        "company_name": "harmonic",
+        "founding_date": "harmonic",
+        "hq": "harmonic",
+        "employee_count": "harmonic",
+        "total_funding": "harmonic",
+        "products": "harmonic",
+        "customers": "harmonic",
+        "last_round_date": "harmonic",
+        "last_round_funding": "harmonic",
+        "web_traffic_trend": "pending_key_signals",
+        "hiring_firing": "pending_key_signals",
+        "website_update": "pending_tavily",
+        "arr_apr": "not_available"
+      }
+    },
+    "founders": [
+      {
+        "company_id": "matx.com",
+        "name": "Reiner Pope",
+        "role_title": "Founder and CEO",
+        "linkedin_url": "https://linkedin.com/in/reiner-pope-08064345",
+        "background": "Notable: Previously Backed Founder, US Immigrant\n\nPrior experience:\n- Senior Staff Software Engineer at Google Research at Google (2021-2022)\n  I trained Google's largest-scale Transformer models, including PaLM, and I was the software/hardware efficiency lead for PaLM.\n\nI designed and...\n- Tech Lead and Architect at Google (2019-2021)\n  I was hardware architect for two generations of ML chips, and was the person primarily responsible for the second generation. On the team, I had the...\n- Software Engineer and Architect at X&Y research (2017-2018)\n- Software Engineer (large scale Machine Learning software) at Google (2015-2017)\n  Designed and implemented parts of Sibyl, a large-scale machine learning software system. This system is used in hundreds of pipelines, some of which...\n\nEducation:\n- Bachelor of Philosophy (Honours) in Mathematics from The Australian National University\n\nBio: www.reiner.org\n\n10 years of software experience, specializing in neural networks, high performance software, and hardware architecture.\n\n---\nSources: linkedin.com/in/reiner-pope-08064345, x.com/reinerpope",
+        "observed_at": "2026-02-27T16:15:10.971442",
+        "source": "swarm"
+      },
+      {
+        "company_id": "matx.com",
+        "name": "Mike Gunter",
+        "role_title": "Founder and CTO",
+        "linkedin_url": "https://linkedin.com/in/mike-gunter-0bb3228b",
+        "background": "Notable: Previously Backed Founder\n\nPrior experience:\n- Principal Engineer at Google (2019-2022)\n- Tech Lead and Architect at X&Y research (2016-2020)\n- Senior Staff Engineer at Google (2019-2019)\n- Senior Staff Engineer (large-scale ML project) at Google (2011-2016)\n  Designed, implemented, and applied parts of Sibyl, a large-scale machine-learning system.\nThis system is used in hundreds of pipelines, some of which...\n\nEducation:\n- University of California, Berkeley\n\n---\nSources: linkedin.com/in/mike-gunter-0bb3228b, x.com/MikeGunter_",
+        "observed_at": "2026-02-27T16:15:11.054165",
+        "source": "swarm"
+      }
+    ],
+    "news": [
+      {
+        "company_id": "matx.com",
+        "article_headline": "$500 Million Series B Raised To Accelerate MatX One LLM Chip ...",
+        "outlet": "pulse2.com",
+        "url": "https://pulse2.com/matx-500-million-series-b-raised-to-accelerate-matx-one-llm-chip-development/amp/",
+        "published_date": "2026-02-26",
+        "excerpts": "MatX, an AI chip startup founded by former Google hardware engineers, announced that it has raised a $500 million Series B funding round to ...",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:15:16.953496",
+        "source": "parallel"
+      },
+      {
+        "company_id": "matx.com",
+        "article_headline": "AI chip startup MatX raises $500m for development of LLM training chip - DCD",
+        "outlet": "datacenterdynamics.com",
+        "url": "https://www.datacenterdynamics.com/en/news/ai-chip-startup-matx-raises-500m-for-development-of-llm-training-chip/",
+        "published_date": "2026-02-25",
+        "excerpts": "The Investment & Markets Channel. AI chip startup MatX raises $500m for development of LLM training chip. Company founded by two ex-Googlers plans to start shipping MatX One chip next year. AI chip startup MatX has raised $500 million in a Series B funding round led by an investment fund founded by a former OpenAI researcher.. Leopold Aschenbrenner\u2019s Situational Awareness co-led the round with Jane Street. Other investors include Spark Capital, Triatomic Capital, Harpoon, Alchip Technologies,...",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:15:16.952776",
+        "source": "parallel"
+      },
+      {
+        "company_id": "matx.com",
+        "article_headline": "Nvidia challenger AI chip startup MatX raised $500M - TechCrunch",
+        "outlet": "techcrunch.com",
+        "url": "https://techcrunch.com/2026/02/24/nvidia-challenger-ai-chip-startup-matx-raised-500m/",
+        "published_date": "2026-02-25",
+        "excerpts": "Nvidia challenger AI chip startup MatX raised $500M. MatX, a chip startup founded by two former Google hardware engineers, has raised a $500 million Series B led by Jane Street and Situational Awareness, an investment fund formed by former OpenAI researcher Leopold Aschenbrenner.. The company\u2019s goal is to make its processors 10 times better at training LLMs and delivering results than Nvidia\u2019s GPUs.. Other investors in the round include Marvell Technology, NFDG, Spark Capital, and Stripe...",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:15:16.950040",
+        "source": "parallel"
+      },
+      {
+        "company_id": "matx.com",
+        "article_headline": "MatX AI Chip Startup Secures Stunning $500M Funding to Challenge Nvidia\u2019s Dominance | MEXC News",
+        "outlet": "mexc.co",
+        "url": "https://www.mexc.co/news/792451",
+        "published_date": "2026-02-25",
+        "excerpts": "MatX AI Chip Startup Secures Stunning $500M Funding to Challenge Nvidia\u2019s Dominance. MatX AI Chip Startup Secures Stunning $500M Funding to Challenge Nvidia\u2019s Dominance. In a significant development for the artificial intelligence hardware sector, MatX, a promising semiconductor startup founded by former Google engineers, has secured a massive $500 million Series B funding round. This substantial investment, announced on February 24, 2026, positions the company as a serious contender in the...",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:15:16.948644",
+        "source": "parallel"
+      },
+      {
+        "company_id": "matx.com",
+        "article_headline": "AI Chip Startup MatX Raises $500M in Funding Round | Intellectia.AI",
+        "outlet": "intellectia.ai",
+        "url": "https://intellectia.ai/news/stock/ai-chip-startup-matx-raises-500m-in-funding-round",
+        "published_date": "2026-02-24",
+        "excerpts": "AI Chip Startup MatX Raises $500M in Funding Round. Thompson, Senior Investment Analyst. AI Chip Startup MatX Raises $500M in Funding Round. Large Funding Round : AI chip startup MatX has raised approximately $500 million in a Series B funding round led by Jane Street and Situational Awareness, with participation from notable investors like Spark Capital, indicating strong market confidence in its technology. Technological Innovation : MatX is developing a chip called MatX One that delivers...",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:15:16.951907",
+        "source": "parallel"
+      },
+      {
+        "company_id": "matx.com",
+        "article_headline": "MatX Raises $500 Million To Develop AI Chips Competing With Nvidia",
+        "outlet": "ventureburn.com",
+        "url": "https://ventureburn.com/matx-raises-500m/",
+        "published_date": "2026-02-24",
+        "excerpts": "MatX Raises $500 Million To Develop AI Chips Competing With Nvidia. MatX secured $500 million in Series B funding to develop large language model chips.. The startup plans to finalise chip design this year and begin shipping in 2027 via TSMC.. Funding led by Jane Street and Situational Awareness, with backing from Marvell, Spark Capital, and Stripe co-founders.. AI chip startup MatX has raised over $500 million to develop hardware that can compete directly with Nvidia. The company was founded...",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:15:16.951096",
+        "source": "parallel"
+      },
+      {
+        "company_id": "matx.com",
+        "article_headline": "AI chip startup MatX, founded by Google alums, raises Series A at $300M+ valuation, sources say | TechCrunch",
+        "outlet": "techcrunch.com",
+        "url": "https://techcrunch.com/2024/11/22/ai-chip-startup-matx-founded-by-google-alums-raises-series-a-at-300m-valuation-sources-say/",
+        "published_date": "2024-11-22",
+        "excerpts": "AI chip startup MatX, founded by Google alums, raises Series A at $300M+ valuation, sources say. AI chip startup MatX, founded by Google alums, raises Series A at $300M+ valuation, sources say. MatX, a startup designing chips that support large language models, has raised a Series A of approximately $80 million, three sources say, less than a year after raising its $25 million seed round.. Spark Capital led the investment, valuing the company at a pre-money valuation in the mid-$200 million...",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:15:16.949264",
+        "source": "parallel"
+      },
+      {
+        "company_id": "matx.com",
+        "article_headline": "Transformative tech coverage that matters - VentureBeat",
+        "outlet": "venturebeat.com",
+        "url": "https://venturebeat.com/about",
+        "published_date": null,
+        "excerpts": "VentureBeat is the premier destination for technology leaders navigating the rapidly evolving landscape of transformative technologies. We specialize in delivering insightful coverage, analysis, and practical guidance on the technologies shaping the future of business.. About VentureBeat  Our Focus. At the heart of VentureBeat\u2019s mission is our commitment to empowering decision-makers in the tech industry. We provide in-depth coverage and expert analysis on:. Artificial Intelligence and Machine...",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:15:16.953461",
+        "source": "parallel"
+      },
+      {
+        "company_id": "matx.com",
+        "article_headline": "MatX, an AI chip startup founded by former Google ...",
+        "outlet": "facebook.com",
+        "url": "https://www.facebook.com/rundownnewsletter/posts/matx-an-ai-chip-startup-founded-by-former-google-semiconductor-engineers-reiner-/794391993682588/",
+        "published_date": null,
+        "excerpts": "MatX is building a chip designed for large language models , targeting both training and inference workloads, with plans to begin shipping in\u00a0..",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:15:16.952829",
+        "source": "parallel"
+      },
+      {
+        "company_id": "matx.com",
+        "article_headline": "VentureBeat | Transformative tech coverage that matters",
+        "outlet": "venturebeat.com",
+        "url": "https://venturebeat.com/",
+        "published_date": null,
+        "excerpts": "MCP shipped without authentication. Clawdbot shows why that's a problem.. Knostic found 1,862 MCP servers exposed with zero authentication. Here are five actions CISOs should take now.. Deep insights for enterprise AI, data, and security leaders. Data Infrastructure Weekly. By submitting your email, you agree to our Terms and Privacy Notice .. You're in! Our latest news will be hitting your inbox soon.. MCP shipped without authentication. Clawdbot shows why that's a problem. Credit: VentureBeat...",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:15:16.947301",
+        "source": "parallel"
+      }
+    ],
+    "key_signals": [
+      {
+        "company_id": "matx.com",
+        "signal_type": "web_traffic",
+        "description": "Strong traffic growth: +77.6% in 30 days",
+        "observed_at": "2026-02-27T16:15:11.717926",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "matx.com",
+        "signal_type": "hiring",
+        "description": "Growing team: +8.3% headcount in 90 days (78 employees)",
+        "observed_at": "2026-02-27T16:15:11.717926",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "matx.com",
+        "signal_type": "funding",
+        "description": "Last funding: $500,000,000 on 2026-02-24T00:00:00Z (SERIES_B)",
+        "observed_at": "2026-02-27T16:15:11.717926",
+        "source": "harmonic"
+      }
+    ],
+    "competitors": []
+  },
+  "agent_output": {
+    "subject": "MatX One chip architecture",
+    "message": "Hi Reiner,\n\nBy way of introduction, my name is Danielle and I'm a partner at NEA. We've been grateful to be Series A / B lead investors in companies like Plaid, Databricks, Robinhood, Cloudflare, and many others.\n\nI've been following the MatX One launch and was particularly interested in the architectural decisions you've made around high-throughput training workloads. The performance-per-dollar positioning is compelling, but what really caught my attention was the flexibility to accommodate different model architectures. I'm curious how you're thinking about the tradeoffs between specialization for transformer models versus maintaining that architectural flexibility as new model types emerge.\n\nWould love to understand more about your roadmap as you scale chip clusters and how you're thinking about the software stack that sits on top of the hardware. The $500M round suggests you're moving quickly on deployment.\n\nNyle, Hunter and I would love to find a time to get to know you better, learn more about the vision, and tell you a little bit about NEA. Let us know if you'd be open to meeting.\n\nNEA is a venture capital firm. We lead early rounds in big ideas and work with generational founders. We're partners to companies such as Perplexity (Series A lead), Databricks (Series B lead), Plaid (Series A lead), Robinhood (Series B lead), Cloudflare (Series B lead), and many others. Our team is based in Menlo Park, CA and NYC.\n\nDanielle",
+    "context_type": "cold_technical_interest",
+    "investor_key": "danielle",
+    "output_format": "email",
+    "contact_name": "Reiner Pope",
+    "contact_title": "Founder and CEO",
+    "contact_linkedin": "https://linkedin.com/in/reiner-pope-08064345",
+    "company_name": "MatX",
+    "data_sources": {
+      "company_core": true,
+      "founders": 2,
+      "signals": 3,
+      "news": 10
+    },
+    "generated_at": "2026-03-01T23:20:44.755495"
+  },
+  "context_tags": {
+    "investor": "danielle",
+    "format": "email",
+    "data_richness": "high",
+    "feedback_state": "no_feedback",
+    "investor_context": "cold_technical_interest"
+  }
+}

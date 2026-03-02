@@ -1,0 +1,229 @@
+{
+  "test_case_id": "outreach_namespace.com_danielle_email",
+  "agent": "outreach",
+  "timestamp": "2026-03-01T23:20:27.175795",
+  "company_id": "namespace.com",
+  "investor_key": "danielle",
+  "output_format": "email",
+  "success": true,
+  "error": null,
+  "company_bundle": {
+    "company_core": {
+      "company_id": "namespace.com",
+      "company_name": "Namespace Group",
+      "founding_date": "2002-01-01T00:00:00Z",
+      "hq": "Esch-sur-Alzette, Esch-sur-Alzette, Luxembourg",
+      "employee_count": 10,
+      "total_funding": null,
+      "products": "Namespace offers a variety of internet services, including domain registration, online brand protection, colocation, and cloud business applications, which can be tailored to meet specific operational requirements. The technologies utilized include diverse hosting solutions and security measures designed to enhance online identity management.",
+      "customers": "Business (B2B)",
+      "arr_apr": null,
+      "last_round_date": null,
+      "last_round_funding": null,
+      "web_traffic_trend": "+18.6% (30d)",
+      "website_update": null,
+      "hiring_firing": "0.0% (90d)",
+      "observed_at": "2026-02-27T16:13:56.134176",
+      "source_map": {
+        "company_name": "harmonic",
+        "founding_date": "harmonic",
+        "hq": "harmonic",
+        "employee_count": "harmonic",
+        "total_funding": "harmonic",
+        "products": "harmonic",
+        "customers": "harmonic",
+        "last_round_date": "harmonic",
+        "last_round_funding": "harmonic",
+        "web_traffic_trend": "pending_key_signals",
+        "hiring_firing": "pending_key_signals",
+        "website_update": "pending_tavily",
+        "arr_apr": "not_available"
+      }
+    },
+    "founders": [
+      {
+        "company_id": "namespace.com",
+        "name": "Xavier Buck",
+        "role_title": "Founder & Chairman",
+        "linkedin_url": "https://linkedin.com/in/xavierbuck",
+        "background": "Prior experience:\n- Independent Director at Groupe HLD (2015)\n  I serve as an Independent Director at HLD Group, a unique evergreen investment fund backed and governed exclusively by entrepreneurs.\n\nHLD\u2019s approach...\n- Founder at EBRAND (2006)\n  I\u2019m highlighting my role as one of the Founders of ebrand.com to reflect the ongoing success and impact of the company \u2014 especially in the field of...\n- Founder & Chairman at Datacenter.eu (2000)\n  Datacenter.eu is an independent datacenter and carrier neutral service provider member. Datacenter.eu was founded in 2000. The company provides...\n- Board Member at DomainTools (2010-2020)\n  DomainTools helps security analysts turn threat data into threat intelligence. We take indicators from your network, including domains and IPs, and...\n\n---\nSources: linkedin.com/in/xavierbuck, x.com/XavierBuck",
+        "observed_at": "2026-02-27T16:13:58.771765",
+        "source": "swarm"
+      }
+    ],
+    "news": [
+      {
+        "company_id": "namespace.com",
+        "article_headline": "TechCrunch | Startup and Technology News",
+        "outlet": "techcrunch.com",
+        "url": "https://techcrunch.com/",
+        "published_date": "2026-01-23",
+        "excerpts": "StrictlyVC 2026 EventsJanuary 1 \u2013 December 31, 2026Waitlist NowBe the first to know when StrictlyVC events go live. StrictlyVC San Francisco 2026April 30, 2026Register NowLimited Capacity. TechCrunch Founder Summit 2026Boston, Massachusetts June 9, 2026Register NowExhibit NowSave up to $300 with Super Early Bird rates. TechCrunch Disrupt 2026San Francisco, CA October 13 \u2013 15, 2026Register NowExhibit NowSave up to $680 until. Upcoming Events  Newsletters. Upcoming Events  Newsletters  TechCrunch...",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:14:06.552407",
+        "source": "parallel"
+      },
+      {
+        "company_id": "namespace.com",
+        "article_headline": "While everyone talks about an AI bubble, Salesforce quietly added 6,000 enterprise customers in 3 months | VentureBeat",
+        "outlet": "venturebeat.com",
+        "url": "https://venturebeat.com/technology/while-everyone-talks-about-an-ai-bubble-salesforce-quietly-added-6-000",
+        "published_date": "2025-12-23",
+        "excerpts": "While everyone talks about an AI bubble, Salesforce quietly added 6,000 enterprise customers in 3.... Michael Nu\u00f1ez December 22, 2025. Credit: VentureBeat made with Midjourney. While Silicon Valley debates whether artificial intelligence has become an overinflated bubble , Salesforce's enterprise AI platform quietly added 6,000 new customers in a single quarter \u2014 a 48% increase that executives say demonstrates a widening gap between speculative AI hype and deployed enterprise solutions...",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:14:06.556996",
+        "source": "parallel"
+      },
+      {
+        "company_id": "namespace.com",
+        "article_headline": "News - thatDot",
+        "outlet": "thatdot.com",
+        "url": "https://www.thatdot.com/news/",
+        "published_date": "2025-05-25",
+        "excerpts": "View the latest release of thatDot Streaming Graph (v1.6.1), highlighting new features such as data persistence in ClickHouse, namespace management, robust Kafka integration, simplified queries, and error fixes related to Cypher query compilation.. In this article on eWeek, thatDot's Rob Malnati discusses why it'd difficult or even impossible to analyze really large datasets using graph databases. The difficulty is compounded by the modern need to respond to everything in real time. \"Much has...",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:14:06.556144",
+        "source": "parallel"
+      },
+      {
+        "company_id": "namespace.com",
+        "article_headline": "Braincube, Litmus, and Seeq Hit 3 Milestones in 3 Months",
+        "outlet": "blog.lnsresearch.com",
+        "url": "https://blog.lnsresearch.com/braincube-litmus-and-seeq-hit-three-milestones-in-three-months-0",
+        "published_date": "2024-12-10",
+        "excerpts": "Braincube, Litmus, and Seeq Hit 3 Milestones in 3 Months. Braincube, Litmus, and Seeq Hit 3 Milestones in 3 Months. The industrial data and analytics software sector has matured significantly over the last 12-18 months. During this period, the pace of change in technology innovation and customer expectations have both accelerated in tandem, feeding off of each other and propelling the industry forward through a series of milestones\u2014product launches, capital raises, partnership announcements,...",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:14:06.558493",
+        "source": "parallel"
+      },
+      {
+        "company_id": "namespace.com",
+        "article_headline": "HighByte Launches Namespaces, Releases Next-Generation Industrial DataOps Solution for Global Manufacturers",
+        "outlet": "prnewswire.com",
+        "url": "https://www.prnewswire.com/news-releases/highbyte-launches-namespaces-releases-next-generation-industrial-dataops-solution-for-global-manufacturers-302270788.html",
+        "published_date": "2024-10-09",
+        "excerpts": "Industrial software company announces HighByte Intelligence Hub version 4.0, accelerating adoption of Unified Namespace architectures. 9, 2024 /PRNewswire/ -- HighByte \u00ae , an industrial software company, today announced the release of HighByte Intelligence Hub version 4.0 with new Namespaces and Smart Query capabilities that advance the Unified Namespace (UNS) architectural pattern and address the key challenges to its adoption. Together, Namespaces and Smart Query enable data engineers to...",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:14:06.555601",
+        "source": "parallel"
+      },
+      {
+        "company_id": "namespace.com",
+        "article_headline": "Bootstrapped for over a decade, this Dallas company just secured $110M to help people pay bills by text | TechCrunch",
+        "outlet": "techcrunch.com",
+        "url": "https://techcrunch.com/2024/05/29/bootstrapped-for-over-a-decade-this-dallas-company-just-secured-110m-to-help-people-pay-bills-by-text/",
+        "published_date": "2024-05-29",
+        "excerpts": "Bootstrapped for over a decade, this Dallas company just secured $110M to help people pay bills b.... Bootstrapped for over a decade, this Dallas company just secured $110M to help people pay bills b.... Solutions by Text, a company that gives people a way to pay their bills and apply for loans via text messaging, has secured $110 million in new growth funding.. Edison Partners and StepStone Group co-led the equity portion of the raise while Stifel Venture Bank provided a lending facility,...",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:14:06.557619",
+        "source": "parallel"
+      },
+      {
+        "company_id": "namespace.com",
+        "article_headline": "Investor Frank Thelen on Unified Namespace - New data standard for the industry with UMH | Podcast",
+        "outlet": "iotusecase.com",
+        "url": "https://iotusecase.com/en/podcast/investor-frank-thelen-on-unified-namespace-new-data-standard-for-the-industry-with-umh/",
+        "published_date": "2024-02-14",
+        "excerpts": "Investor Frank Thelen on Unified Namespace \u2013 New data standard for the industry with UMH. Alexander Kr\u00fcger - UMH Systems GmbH. Frank Thelen, the entrepreneur, bestselling author, investor, known from the TV show \u201cDie H\u00f6hle der L\u00f6wen\u201d (\u201cShark Tank\u201d), is a guest of Madeleine Mickeleit with his latest IIoT investment United Manufacturing Hub (UMH) in the 122nd episode of the IoT Use Case Podcast! Together with Alexander Kr\u00fcger (CEO and Co-Founder at UMH), they discuss topics such as the use of...",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:14:06.553652",
+        "source": "parallel"
+      },
+      {
+        "company_id": "namespace.com",
+        "article_headline": "Streaming object cloud storage startup LucidLink nabs $12M | VentureBeat",
+        "outlet": "venturebeat.com",
+        "url": "https://venturebeat.com/ai/streaming-object-cloud-storage-startup-lucidlink-nabs-12m",
+        "published_date": "2021-05-19",
+        "excerpts": "Streaming object cloud storage startup LucidLink nabs $12M. Cloud storage startup LucidLink today announced it has raised $12 million in a series A funding round led by Headline, with participation from Baseline Ventures, Bright Cap Ventures, and Adobe. LucidLink says the capital will be used to support its growth and customer experience.. Streaming object cloud storage startup LucidLink nabs $12M. With the shift to remote work, enterprises are restructuring how they do business, and the cloud...",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:14:06.554655",
+        "source": "parallel"
+      },
+      {
+        "company_id": "namespace.com",
+        "article_headline": "Enterprise News - TechCrunch",
+        "outlet": "techcrunch.com",
+        "url": "https://techcrunch.com/category/enterprise/",
+        "published_date": null,
+        "excerpts": "Save up to $680 on your pass with Super Early Bird rates. Save up to $680 on your Disrupt 2026 pass. Read the latest news on enterprise, from new products to large SaaS providers like Salesforce, Adobe, ServiceNow and Atlassian to funding for small SaaS companies and new products that help startups build their own SaaS.. Some areas of this page may shift around if you resize the browser window. Be sure to check heading and document order.",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:14:06.554791",
+        "source": "parallel"
+      },
+      {
+        "company_id": "namespace.com",
+        "article_headline": "VentureBeat | Transformative tech coverage that matters",
+        "outlet": "venturebeat.com",
+        "url": "https://venturebeat.com/",
+        "published_date": null,
+        "excerpts": "Shadow mode, drift alerts and audit logs: Inside the modern audit loop. Traditional software governance often uses static compliance checklists, quarterly audits and after-the-fact reviews. But this method can't keep up with AI systems that change in real time. A machine learning (ML) model might retrain or drift between quarterly operational syncs. This means that, by the time an issue is discovered, hundreds of bad decisions could already have been made. This can be almost impossible to...",
+        "synopsis": null,
+        "sentiment": null,
+        "news_type": null,
+        "observed_at": "2026-02-27T16:14:06.551001",
+        "source": "parallel"
+      }
+    ],
+    "key_signals": [
+      {
+        "company_id": "namespace.com",
+        "signal_type": "web_traffic",
+        "description": "Traffic growing: +18.6% in 30 days",
+        "observed_at": "2026-02-27T16:13:59.328574",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "namespace.com",
+        "signal_type": "hiring",
+        "description": "Team contraction: 0.0% headcount in 90 days (10 employees)",
+        "observed_at": "2026-02-27T16:13:59.328574",
+        "source": "harmonic"
+      }
+    ],
+    "competitors": []
+  },
+  "agent_output": {
+    "subject": "Namespace's infrastructure approach",
+    "message": "Hi Xavier,\n\nBy way of introduction, my name is Danielle and I'm a partner at NEA. We've been grateful to be Series A / B lead investors in companies like Plaid, Databricks, Robinhood, Cloudflare, and many others.\n\nI've been spending time understanding the infrastructure layer that powers online identity and brand protection, and Namespace's approach caught my attention. The combination of domain registration, brand protection, and cloud infrastructure in one platform is interesting, especially as companies need more integrated solutions to manage their digital presence across regions.\n\nI'm curious about the technical architecture behind your brand protection capabilities and how you're thinking about the roadmap as enterprises increasingly need real-time monitoring across a growing number of TLDs and digital channels. Would love to understand your long-term vision for the platform and where you see the biggest opportunities in this space.\n\nWould you be open to a conversation? Happy to work around your schedule.\n\nNEA is a venture capital firm. We lead early rounds in big ideas and work with generational founders. We're partners to companies such as Perplexity (Series A lead), Databricks (Series B lead), Plaid (Series A lead), Robinhood (Series B lead), Cloudflare (Series B lead), and many others. Our team is based in Menlo Park, CA and NYC.\n\nDanielle",
+    "context_type": "cold_technical_interest",
+    "investor_key": "danielle",
+    "output_format": "email",
+    "contact_name": "Xavier Buck",
+    "contact_title": "Founder & Chairman",
+    "contact_linkedin": "https://linkedin.com/in/xavierbuck",
+    "company_name": "Namespace Group",
+    "data_sources": {
+      "company_core": true,
+      "founders": 1,
+      "signals": 2,
+      "news": 10
+    },
+    "generated_at": "2026-03-01T23:20:27.175932"
+  },
+  "context_tags": {
+    "investor": "danielle",
+    "format": "email",
+    "data_richness": "high",
+    "feedback_state": "no_feedback",
+    "investor_context": "cold_technical_interest"
+  }
+}

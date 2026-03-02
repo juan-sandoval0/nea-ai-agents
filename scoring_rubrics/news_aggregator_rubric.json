@@ -1,0 +1,378 @@
+{
+  "agent": "News Aggregator Agent",
+  "version": "1.0",
+  "description": "Scoring rubric for the investor news digest produced by the News Aggregator Agent.",
+  "quality_bar": "Signal-to-noise ratio. Every signal in the digest must be there for a reason.",
+  "composite_formula": "Score = [(S1×15)+(S2×10)+(S3×10)+(S4×8)+(S5×8)+(S6×4)+(S7×8)+(S8×4)+(D1×12)+(D2×10)+(D3×6)+(D4×5)] / 5",
+  "composite_range": "0–100",
+  "pass_threshold": null,
+  "score_range": { "min": 1, "max": 5 },
+
+  "structure": {
+    "tier_A": "Individual signal quality (pipeline accuracy) — S1 through S8",
+    "tier_B": "Digest assembly quality (output quality) — D1 through D4",
+    "axes": ["Pipeline Accuracy", "Output Quality", "Data Availability"],
+    "separation_of_concerns": "A failure should never be penalized on more than one axis."
+  },
+
+  "context_tags": [
+    {
+      "tag": "run_mode",
+      "values": ["digest", "alerts", "signals"],
+      "note": "Alert mode evaluates only FUNDING, M&A, team_change. Digest mode evaluates the full pipeline. Signals mode has no minimum score filter."
+    },
+    {
+      "tag": "lookback_window",
+      "values": "N days (default 7)",
+      "note": "Shorter windows reduce available signals and affect recall expectations."
+    },
+    {
+      "tag": "api_coverage",
+      "values": ["Full", "Partial", "Degraded"],
+      "note": "Full = all APIs returned data. Partial = 1+ APIs timed out or returned empty. Degraded = majority of calls failed. Record which APIs were affected."
+    },
+    {
+      "tag": "watchlist_size",
+      "values": "N companies (portfolio + competitor)",
+      "note": "Larger watchlists increase curation difficulty and risk of misattribution."
+    },
+    {
+      "tag": "llm_mode",
+      "values": ["Enabled", "Disabled (--fast)"],
+      "note": "When LLM is disabled, all synopses are template-based. Synopsis hallucination checks are N/A."
+    },
+    {
+      "tag": "min_priority_threshold",
+      "values": "Score (default 40)",
+      "note": "Lower thresholds let in more noise; higher thresholds can risk missing important signals."
+    },
+    {
+      "tag": "embedding_availability",
+      "values": ["Available", "Unavailable"],
+      "note": "When embeddings are unavailable, classification falls back to hash-based pseudo-embeddings. Score classification dimension with more leniency."
+    }
+  ],
+
+  "global_scale": [
+    { "score": 5, "label": "Excellent", "definition": "Every featured signal is relevant, correctly classified, properly sourced. No false positives in the digest view. Major events for all portfolio companies are captured. Synopsis quality is good and investment-relevant." },
+    { "score": 4, "label": "Good", "definition": "Usable with minor issues. 1-2 borderline signals included or one notable signal buried below the fold. All critical events captured. Minor classification or sentiment error on a non-featured signal." },
+    { "score": 3, "label": "Acceptable", "definition": "Covers the important events but has noticeable quality gaps: a duplicate not merged, a competitor signal outranking a similar portfolio signal, or a synopsis that's too vague. Investor would need to cross-reference." },
+    { "score": 2, "label": "Below Standard", "definition": "Significant problems: multiple misattributed signals, a major event missing from featured stories, homepage URL in the digest, or widespread classification errors. Not trustworthy without manual review." },
+    { "score": 1, "label": "Poor", "definition": "Fundamental failure: wrong company signals dominate the digest, portfolio company with major news has zero signals, hallucinated synopsis content, or digest is empty/structurally broken." }
+  ],
+
+  "severity_matrix": {
+    "description": "Calibrates deduction severity across all dimensions when a signal is missed or mishandled.",
+    "matrix": [
+      { "signal_type": "FUNDING / M&A / IPO", "portfolio_company": "CRITICAL", "competitor": "HIGH" },
+      { "signal_type": "SECURITY / LEGAL / LAYOFFS", "portfolio_company": "CRITICAL", "competitor": "HIGH" },
+      { "signal_type": "HIRING / team_change (C-suite)", "portfolio_company": "HIGH", "competitor": "MEDIUM" },
+      { "signal_type": "PRODUCT / PARTNERSHIP / CUSTOMER", "portfolio_company": "MEDIUM", "competitor": "MEDIUM" },
+      { "signal_type": "EARNINGS / MARKET / GENERAL", "portfolio_company": "LOW", "competitor": "LOW" }
+    ]
+  },
+
+  "dimensions": [
+    {
+      "id": "S1",
+      "tier": "A",
+      "name": "Signal Attribution Accuracy",
+      "weight": 0.15,
+      "axis": "Pipeline",
+      "description": "Is each signal correctly attributed to the right company? A wrong-company signal is worse than a missing signal.",
+      "hard_failure": "Any Featured Story attributed to the wrong company = automatic S1 = 1 and composite = 0 (triggers HF2).",
+      "anchors": [
+        { "score": 5, "anchor": "100% of signals in the digest are correctly attributed to their target company. No cross-industry name collisions leaked. Known ambiguous names (Sana, Merge) handled correctly.", "example": "Digest for 'Sana Labs' contains zero articles about Sana Biotechnology." },
+        { "score": 4, "anchor": "99%+ attribution accuracy. One borderline signal where the article mentions the target company only tangentially (appears in a competitor list, not as the subject).", "example": "Article titled 'Top 10 AI startups' includes the target company in a list; signal is attributed but article isn't really 'about' the company." },
+        { "score": 3, "anchor": "95%+ accuracy. 1-2 signals attributed to the wrong company, but errors are in non-featured positions and involve genuinely ambiguous names.", "example": "One signal about 'Merge Labs' (BCI company) leaks into the digest for 'Merge' (API platform) in the More Headlines section." },
+        { "score": 2, "anchor": "90-94% accuracy. Multiple misattributed signals, or one misattributed signal in the Featured Stories section.", "example": "A featured story about 'Stripe' is actually about 'Stripe Climate' (a different product vertical), leading to a misleading synopsis." },
+        { "score": 1, "anchor": "Below 90% accuracy, or a Featured Story is about an entirely wrong company. Hard failure.", "example": "The #1 featured story for a portfolio company is actually about a competitor with a similar name." }
+      ]
+    },
+
+    {
+      "id": "S2",
+      "tier": "A",
+      "name": "Filter Quality (Noise Rejection)",
+      "weight": 0.10,
+      "axis": "Pipeline",
+      "description": "Did the filter stage correctly remove homepages, press releases, Wikipedia, listicles, stale articles, and non-article URLs? Any of these appearing in the digest is a filter failure.",
+      "hard_failure": "Homepage URL in Featured Stories = automatic HF4.",
+      "anchors": [
+        { "score": 5, "anchor": "Zero noise signals in the digest. All homepage URLs, press releases, Wikipedia articles, listicles, and stale articles were correctly filtered.", "example": "No signals with URLs matching /category/, /tag/, /press-releases/, or known non-article patterns." },
+        { "score": 4, "anchor": "Zero noise in Featured Stories or More Headlines. One borderline item in industry trends.", "example": "A Crunchbase profile page appears at position 11 in a long signal list but not in the digest view." },
+        { "score": 3, "anchor": "One noise signal leaked into More Headlines (not Featured). Or one stale article (>7 days) appears in the digest.", "example": "A 'Press Release: Company X Announces...' article appears at position 6 in More Headlines." },
+        { "score": 2, "anchor": "Multiple noise signals in the digest, or one noise signal in Featured Stories.", "example": "A Wikipedia article about the company appears as Featured Story #3." },
+        { "score": 1, "anchor": "3+ non-article URLs, press releases, or stale signals in the digest. Hard failure if homepage URL appears in Featured.", "example": "Homepage URL (stripe.com with no path) appears as a featured story." }
+      ]
+    },
+
+    {
+      "id": "S3",
+      "tier": "A",
+      "name": "Classification Accuracy",
+      "weight": 0.10,
+      "axis": "Pipeline",
+      "description": "Is each signal assigned the correct signal type? A FUNDING article classified as PRODUCT distorts priority ordering.",
+      "hard_failure": "A FUNDING/M&A signal classified as GENERAL and consequently excluded from the digest entirely = hard failure.",
+      "anchors": [
+        { "score": 5, "anchor": "All signals in the digest have the correct signal type. Rule-based classifications match the article content. Embedding-based classifications are appropriate.", "example": "'Company raises $50M Series B' correctly classified as FUNDING with confidence 0.95." },
+        { "score": 4, "anchor": "One minor misclassification on a non-featured signal where the distinction is ambiguous (e.g., PARTNERSHIP vs. CUSTOMER for a joint venture announcement).", "example": "A 'strategic partnership' that includes a customer deal component is classified as PARTNERSHIP instead of CUSTOMER. Reasonable ambiguity." },
+        { "score": 3, "anchor": "One misclassification on a featured signal (e.g., a CEO hire classified as GENERAL instead of HIRING), or 2-3 misclassifications on non-featured signals.", "example": "CEO appointment article classified as GENERAL because rule patterns didn't match the phrasing 'elevated to CEO.'" },
+        { "score": 2, "anchor": "Multiple featured signals misclassified, or a CRITICAL-severity signal type is wrong (FUNDING classified as PRODUCT).", "example": "'Company acquired by BigCorp for $2B' classified as PARTNERSHIP instead of M&A." },
+        { "score": 1, "anchor": "Widespread misclassification (>20% of digest signals wrong). Or a FUNDING/M&A signal classified as GENERAL and consequently scored below the digest threshold, making it invisible. Hard failure.", "example": "A $100M Series C for a portfolio company is classified GENERAL, scored at 35, and excluded from the digest entirely." }
+      ]
+    },
+
+    {
+      "id": "S4",
+      "tier": "A",
+      "name": "Deduplication Quality",
+      "weight": 0.08,
+      "axis": "Pipeline",
+      "description": "Are same-event articles correctly merged? Are distinct events incorrectly merged? Source selection for primary URL matters.",
+      "anchors": [
+        { "score": 5, "anchor": "All same-event articles merged. No false merges. Primary URL selected from highest-quality source.", "example": "TechCrunch, Bloomberg, and Reuters articles about the same $50M raise are merged. TechCrunch selected as primary (highest priority score)." },
+        { "score": 4, "anchor": "All merges correct. One primary URL selection is not optimal but the correct article is still accessible.", "example": "Primary URL is from a lesser-known outlet when TechCrunch also covered the story, due to URL normalization selecting the blog's cleaner URL." },
+        { "score": 3, "anchor": "One duplicate not merged (same event appears twice in the digest), or one false merge (two distinct events combined into one signal).", "example": "Reuters and Bloomberg articles about the same funding round appear as separate signals in More Headlines." },
+        { "score": 2, "anchor": "Multiple duplicates visible in the digest. Or a false merge combined a funding announcement with an unrelated product launch because title similarity exceeded 60%.", "example": "Two featured stories are actually the same M&A announcement from different outlets." },
+        { "score": 1, "anchor": "Deduplication essentially non-functional: 3+ duplicate events in Featured Stories, or critical false merges that erase distinct signals.", "example": "Featured Stories #1 and #2 are the same event. A funding announcement was merged with a layoff article because both headlines mentioned the company name." }
+      ]
+    },
+
+    {
+      "id": "S5",
+      "tier": "A",
+      "name": "Scoring & Ranking Accuracy",
+      "weight": 0.08,
+      "axis": "Pipeline",
+      "description": "Are signals ranked in the correct order? Incorrect ranking buries important signals below less important ones.",
+      "anchors": [
+        { "score": 5, "anchor": "Featured stories are the 3 most important signals. Portfolio companies correctly prioritized. Recency bonus properly applied. Score breakdowns are consistent with the documented formula.", "example": "Portfolio company's $50M funding (rank=95) correctly featured above competitor's product launch (rank=65)." },
+        { "score": 4, "anchor": "Ranking is correct for Featured Stories. One minor ordering issue in More Headlines.", "example": "More Headlines has a minor recency inversion between two MEDIUM-severity signals." },
+        { "score": 3, "anchor": "One Featured Story is arguably not top-3. Or a competitor signal of medium importance outranks a portfolio signal of equal importance.", "example": "A competitor's product launch is Featured Story #3 when a portfolio company's partnership announcement (same day, similar importance) is in More Headlines." },
+        { "score": 2, "anchor": "A clearly low-importance signal (MARKET or GENERAL) appears in Featured Stories while a CRITICAL-severity signal is buried in More Headlines.", "example": "GENERAL industry overview article featured while a portfolio company's Series C is at position 7." },
+        { "score": 1, "anchor": "Ranking is random. Critical portfolio signals missing from top positions. Score inflation.", "example": "A competitor's listicle mention (rank=85 due to scoring bug) outranks a portfolio company's acquisition announcement." }
+      ]
+    },
+
+    {
+      "id": "S6",
+      "tier": "A",
+      "name": "Sentiment Accuracy",
+      "weight": 0.04,
+      "axis": "Pipeline",
+      "description": "Is the sentiment label (positive/negative/neutral) correct for each signal? Lower weight because sentiment is supplementary information and not a primary decision driver.",
+      "anchors": [
+        { "score": 5, "anchor": "All signals have correct sentiment. Funding correctly marked positive. Layoffs correctly marked negative. Ambiguous events correctly marked neutral." },
+        { "score": 4, "anchor": "One minor sentiment error on a genuinely ambiguous signal (e.g., 'acquisition' marked neutral when it could be positive or negative depending on context)." },
+        { "score": 3, "anchor": "1-2 sentiment errors on non-featured signals. Or a featured signal's sentiment is correct but the wrong intensity (a massive funding round marked neutral instead of positive)." },
+        { "score": 2, "anchor": "A featured signal has inverted sentiment (layoff article marked positive, or funding article marked negative)." },
+        { "score": 1, "anchor": "Widespread sentiment errors (>30% wrong). Or a portfolio company's critical negative event (data breach) is marked positive." }
+      ]
+    },
+
+    {
+      "id": "S7",
+      "tier": "A",
+      "name": "Synopsis Quality (LLM-Enhanced)",
+      "weight": 0.08,
+      "axis": "Output",
+      "description": "Applies only when LLM mode is enabled and synopsis was LLM-generated (featured stories with confidence ≥ 0.7). If LLM is disabled, score N/A and redistribute weight equally to S8 and D1.",
+      "hard_failure": "Any hallucinated fact in an LLM synopsis = S7 = 1 and automatic flag. If the hallucinated synopsis appears in a Featured Story, composite = 0 (triggers HF1).",
+      "anchors": [
+        { "score": 5, "anchor": "Synopsis is 1-2 sentences. States what happened, why it matters, and includes key numbers. Every claim is traceable to the headline/excerpt. Investment-relevant framing and concise.", "example": "'Stripe raised a $50M Series B led by Sequoia, bringing total funding to $75M. The round suggests strong enterprise traction following a 3x revenue year.' (Numbers match excerpt.)" },
+        { "score": 4, "anchor": "Synopsis is accurate and concise. Slightly generic framing but no hallucination. All facts traceable.", "example": "Synopsis accurately describes the event but says 'this could be meaningful for the space' instead of citing a specific metric from the excerpt." },
+        { "score": 3, "anchor": "Synopsis is accurate but reads as a paraphrase of the headline (low synthesis effort). Or is 3-4 sentences (slightly too long).", "example": "Synopsis essentially restates the headline with minor wording changes and no investment framing." },
+        { "score": 2, "anchor": "Synopsis contains one claim not clearly supported by the headline/excerpt (borderline hallucination). Or is an echo of the input.", "example": "Synopsis mentions 'a $2B valuation' when the excerpt only says 'raised $50M' with no valuation mentioned." },
+        { "score": 1, "anchor": "Synopsis contains a fabricated fact (clear hallucination). Automatic hard failure.", "example": "Synopsis claims 'the acquisition was completed for $500M' when the article only mentions 'acquisition talks.'" }
+      ]
+    },
+
+    {
+      "id": "S8",
+      "tier": "A",
+      "name": "Synopsis Quality (Template-Based)",
+      "weight": 0.04,
+      "axis": "Output",
+      "description": "Template synopses have near-zero hallucination risk but can be too vague or fail to extract key details.",
+      "anchors": [
+        { "score": 5, "anchor": "Template correctly populated all slots: company name, amount, series, context. Synopsis is specific and informative despite being formulaic.", "example": "'Stripe raised $50M in Series B funding. The round was led by Sequoia Capital.' (All slots filled from article data.)" },
+        { "score": 4, "anchor": "Template mostly populated. One optional slot missing but core information present.", "example": "'Stripe raised $50M in Series B funding.' (Lead investor not extracted but available in excerpt.)" },
+        { "score": 3, "anchor": "Template produced a vague result because extraction failed on key details. Synopsis is technically correct but uninformative.", "example": "'Stripe announced funding details.' (Amount and series not extracted.)" },
+        { "score": 2, "anchor": "Template produced a near-empty synopsis for a signal where rich data was available in the excerpt.", "example": "'Acme announced details.' for a $100M Series C with extensive excerpt data." },
+        { "score": 1, "anchor": "Template synopsis is factually wrong (wrong amount extracted, wrong company name inserted) or completely empty.", "example": "Template says 'raised $5M' when excerpt clearly states '$50M.' (Regex extraction error.)" }
+      ]
+    },
+
+    {
+      "id": "D1",
+      "tier": "B",
+      "name": "Digest Precision",
+      "weight": 0.12,
+      "axis": "Output",
+      "description": "What percentage of signals in the digest view are truly relevant to the target companies? Evaluated on the full digest (Featured + More Headlines + Industry Trends).",
+      "hard_failure": "Precision < 70% = digest is more noise than signal. Hard failure.",
+      "anchors": [
+        { "score": 5, "anchor": "Precision ≥ 95%. Every signal in the digest is clearly about the correct company, is a genuine news article (not noise), and is within the date range.", "example": "20 signals in digest; 20/20 are relevant, correctly attributed, and timely." },
+        { "score": 4, "anchor": "Precision 90-94%. 1-2 borderline signals (tangential mention, or company appears only in a list within the article).", "example": "20 signals; 18-19 clearly relevant; 1-2 are 'about' the company but only tangentially." },
+        { "score": 3, "anchor": "Precision 80-89%. 3-4 irrelevant or borderline signals. Noise is visible but concentrated in More Headlines, not Featured.", "example": "20 signals; 4 are press releases or tangential articles that passed the filter." },
+        { "score": 2, "anchor": "Precision 70-79%. Noise is visible in Featured Stories or comprises >20% of digest.", "example": "15 signals; 4 are about wrong companies or are non-article URLs." },
+        { "score": 1, "anchor": "Precision < 70%. The digest is more noise than signal. Investor cannot trust it. Hard failure.", "example": "10 signals; 4 are about wrong companies, 2 are Wikipedia articles." }
+      ]
+    },
+
+    {
+      "id": "D2",
+      "tier": "B",
+      "name": "Digest Recall",
+      "weight": 0.10,
+      "axis": "Output",
+      "description": "What percentage of major real-world events surfaced? Evaluated against the severity matrix. Critical events for portfolio companies must be captured. Requires external verification for D2.",
+      "data_availability_note": "If Parallel Search did not return any articles about an event (API Coverage = Partial/Degraded), the missed event is a data availability issue, not a digest quality failure. Record in context tags and do not penalize D2.",
+      "hard_failure": "Critical portfolio event was missed entirely despite being available in the API data.",
+      "anchors": [
+        { "score": 5, "anchor": "Recall ≥ 90%. All critical events for portfolio companies captured. All high events for portfolio and competitors captured. At most 1 medium event missed.", "example": "Portfolio company announced Series C (captured), competitor had layoffs (captured), portfolio company hired new CTO (captured)." },
+        { "score": 4, "anchor": "Recall 80-89%. All critical events captured. 1-2 high events missed (e.g., a competitor's VP hire not surfaced).", "example": "All funding and M&A events captured; one competitor's product launch missed because Parallel Search didn't return it." },
+        { "score": 3, "anchor": "Recall 70-79%. One critical event for a competitor missed, or 2-3 high events missed. All critical portfolio events captured.", "example": "Competitor's $200M acquisition missed entirely. But all portfolio company events captured." },
+        { "score": 2, "anchor": "Recall 60-69%. One critical event for a portfolio company missed (but the API returned the article and it was filtered incorrectly).", "example": "Portfolio company's Series B was in the raw fetch but filtered out because the company name appeared only in the excerpt, not the headline." },
+        { "score": 1, "anchor": "Recall < 60%, or a critical portfolio event was missed entirely despite being available in the API data. Hard failure.", "example": "Portfolio company announced acquisition; Parallel Search returned the TechCrunch article; filter excluded it. Investor learned about it from Twitter instead." }
+      ]
+    },
+
+    {
+      "id": "D3",
+      "tier": "B",
+      "name": "Digest Ordering & Curation",
+      "weight": 0.06,
+      "axis": "Output",
+      "description": "Are Featured Stories the right 3? Is portfolio prioritized over competitors of equal importance? Is recency reflected?",
+      "anchors": [
+        { "score": 5, "anchor": "Featured Stories are unambiguously the 3 most important signals. Portfolio signals ranked above competitor signals of equal importance. Recency properly reflected. Industry Trends section adds useful context. Overview stats are accurate." },
+        { "score": 4, "anchor": "Featured Stories are correct. One minor curation issue: a competitor signal ranked above a portfolio signal of similar (not identical) importance, or Industry Trends section is thin." },
+        { "score": 3, "anchor": "One Featured Story is arguably not top-3 (a more important signal is in More Headlines). Or portfolio/competitor prioritization is inconsistent. Or overview stats are slightly off." },
+        { "score": 2, "anchor": "Featured Stories include a clearly low-priority signal while a CRITICAL event is buried. Or the digest is competitor-heavy when portfolio companies had significant news." },
+        { "score": 1, "anchor": "Featured Stories are essentially random. No coherent prioritization. Portfolio company with major news has zero featured signals while competitors dominate." }
+      ]
+    },
+
+    {
+      "id": "D4",
+      "tier": "B",
+      "name": "Structural & Format Compliance",
+      "weight": 0.05,
+      "axis": "Output",
+      "description": "Does the digest follow the documented Markdown format? Are source links present? Dates present? Section limits respected?",
+      "section_limits": { "featured_stories": 3, "more_headlines": 8, "industries": 5 },
+      "anchors": [
+        { "score": 5, "anchor": "All sections present (Overview, Featured Stories, More Headlines, optionally Industry Trends). Source URLs present and functional for every signal. Published dates present. Section caps respected (≤3 featured, ≤8 more headlines, ≤5 industries). Generation timestamp present." },
+        { "score": 4, "anchor": "All sections present. One minor formatting issue (e.g., sentiment icon missing, date format inconsistent). All source URLs present." },
+        { "score": 3, "anchor": "One non-critical section missing (e.g., Industry Trends). Or 1-2 signals missing source URLs. Or section caps slightly exceeded." },
+        { "score": 2, "anchor": "Multiple format violations: missing source URLs for featured stories, no overview stats, or significantly exceeded section caps." },
+        { "score": 1, "anchor": "Digest is structurally broken: missing Featured Stories section, empty output, or output in wrong format (JSON instead of Markdown for --digest mode)." }
+      ]
+    }
+  ],
+
+  "hard_failure_conditions": [
+    {
+      "id": "HF1",
+      "name": "Synopsis Hallucination",
+      "definition": "An LLM-generated synopsis contains a factual claim (number, date, company name, event) not present in the article headline or excerpt. A single instance in a Featured Story is sufficient.",
+      "consequence": "composite = 0"
+    },
+    {
+      "id": "HF2",
+      "name": "Featured Wrong-Company",
+      "definition": "A Featured Story (top 3) is attributed to the wrong company. The article is clearly about a different entity than the target company.",
+      "consequence": "S1 = 1 and composite = 0"
+    },
+    {
+      "id": "HF3",
+      "name": "Portfolio CRITICAL Miss",
+      "definition": "A CRITICAL-severity event (FUNDING, M&A, IPO, SECURITY, LEGAL, LAYOFFS) for a portfolio company was present in the raw API data but absent from the digest due to a pipeline failure (filter, classification, or scoring error).",
+      "consequence": "composite = 0"
+    },
+    {
+      "id": "HF4",
+      "name": "Homepage in Digest",
+      "definition": "A homepage URL (domain with no article path) appears anywhere in the digest view (Featured or More Headlines).",
+      "consequence": "composite = 0"
+    },
+    {
+      "id": "HF5",
+      "name": "Empty Digest",
+      "definition": "The digest is empty, truncated, or structurally broken (no parseable sections) when the raw data contained signals above the minimum threshold.",
+      "consequence": "composite = 0"
+    }
+  ],
+
+  "failure_mode_severity_mapping": [
+    { "error_type": "wrong_company", "severity": "Critical", "dimension": "S1", "impact": "S1 = 1. If in Featured, HF2 → composite = 0." },
+    { "error_type": "homepage_leaked", "severity": "High", "dimension": "S2", "impact": "S2 deduct 2. If in Featured, HF4 → composite = 0." },
+    { "error_type": "noise_leaked", "severity": "High", "dimension": "S2", "impact": "S2 deduct 1-2 per noise signal in digest." },
+    { "error_type": "stale_signal", "severity": "High", "dimension": "S2", "impact": "S2 deduct 1 per stale signal. Featured stale = deduct 2." },
+    { "error_type": "duplicate_not_merged", "severity": "High", "dimension": "S4", "impact": "S4 deduct 1 per unmerged duplicate. Featured duplicate = deduct 2." },
+    { "error_type": "wrong_classification", "severity": "High", "dimension": "S3", "impact": "S3 deduct 1-2 per misclassification. CRITICAL type misclassified = deduct 2." },
+    { "error_type": "low_confidence_featured", "severity": "Medium", "dimension": "S3", "impact": "Note in scoring. Do not penalize if rule-based classification was correct." },
+    { "error_type": "sentiment_mismatch", "severity": "Medium", "dimension": "S6", "impact": "S6 deduct 1 per mismatch. Inverted sentiment on Featured = deduct 2." },
+    { "error_type": "score_inflation", "severity": "Medium", "dimension": "S5", "impact": "S5 deduct 1-2 per inflation that affected Featured selection." },
+    { "error_type": "competitor_over_portfolio", "severity": "Medium", "dimensions": ["S5", "D3"], "impact": "S5 deduct 1. D3 deduct 1 if it displaced a portfolio Featured story." },
+    { "error_type": "recency_not_reflected", "severity": "Low", "dimension": "S5", "impact": "S5 deduct 0.5 per inversion in same-importance tier." },
+    { "error_type": "synopsis_hallucination", "severity": "Critical", "dimension": "S7", "impact": "S7 = 1. If in Featured, HF1 → composite = 0." },
+    { "error_type": "synopsis_echo", "severity": "High", "dimension": "S7", "impact": "S7 deduct 2. Verbatim echo is a synthesis failure." },
+    { "error_type": "synopsis_generic", "severity": "Medium", "dimensions": ["S7", "S8"], "impact": "S7 or S8 deduct 1. Vague but accurate is better than hallucinated." },
+    { "error_type": "synopsis_too_long", "severity": "Low", "dimensions": ["S7", "S8"], "impact": "Deduct 0.5. Minor formatting concern." },
+    { "error_type": "missing_source_link", "severity": "High", "dimension": "D4", "impact": "D4 deduct 1 per missing link. Featured missing link = deduct 2." },
+    { "error_type": "missing_date", "severity": "Medium", "dimension": "D4", "impact": "D4 deduct 0.5 per missing date." },
+    { "error_type": "industry_misattributed", "severity": "Medium", "dimension": "D3", "impact": "D3 deduct 1 per misattributed industry tag." },
+    { "error_type": "competitor_not_discovered", "severity": "High", "dimension": "D2", "impact": "D2 deduct 1-2 depending on competitor's significance." },
+    { "error_type": "no_signals_generated", "severity": "Critical", "dimension": "D2", "impact": "If portfolio company: HF3 if events existed. D2 = 1." },
+    { "error_type": "template_synopsis_generic", "severity": "Low", "dimension": "S8", "impact": "S8 deduct 0.5. Expected limitation of template approach." },
+    { "error_type": "date_parse_failure", "severity": "Medium", "dimension": "S2", "impact": "S2 deduct 1 if it caused a valid article to be excluded." }
+  ],
+
+  "edge_cases": [
+    { "scenario": "Company has no news in the time window (API returned 0 articles)", "correct_behavior": "Digest omits the company or notes 'No recent signals.' This is correct behavior when data is unavailable.", "scoring_guidance": "Do not penalize D2. Record API Coverage = Partial. If ALL companies have 0 signals, investigate API failure." },
+    { "scenario": "Cross-industry name collision: filter correctly excludes wrong-company article", "correct_behavior": "Article is filtered out. No signal generated. This is correct.", "scoring_guidance": "S1 = 5 and S2 = 5 for this event. Do not penalize recall — the article was correctly identified as irrelevant." },
+    { "scenario": "Cross-industry name collision: filter FAILS and includes wrong-company article", "correct_behavior": "Wrong-company signal appears in digest.", "scoring_guidance": "S1 deducted. If in Featured, HF2 triggered." },
+    { "scenario": "Featured story has confidence = 0.65 (below 0.7 LLM threshold), classified correctly by rules", "correct_behavior": "Signal gets template synopsis instead of LLM synopsis. Classification is correct. Expected behavior.", "scoring_guidance": "Do not penalize S3 or S7. Score S8 based on template quality." },
+    { "scenario": "Deduplicator selects lower-quality source as primary due to URL normalization", "correct_behavior": "The correct event is represented but with a suboptimal source link.", "scoring_guidance": "S4 = 4 (merge was correct, source selection was suboptimal). D4 not penalized unless source link is broken." },
+    { "scenario": "A competitor's FUNDING announcement is #1 story when a portfolio company's PRODUCT launch also occurred", "correct_behavior": "FUNDING (+40 importance) should outrank PRODUCT (+20) regardless of company category, because signal importance > company type in the scoring formula.", "scoring_guidance": "This is CORRECT behavior per the scoring formula. S5 = 5. Do not penalize for competitor outranking portfolio when the signal type importance differential is large." },
+    { "scenario": "--min-priority set to 60 by investor, causing a portfolio PARTNERSHIP signal (rank=55) to be excluded", "correct_behavior": "Signal correctly excluded per investor's threshold configuration.", "scoring_guidance": "Record min-priority threshold in context tags. Do not penalize D2 for signals excluded by explicit investor configuration." }
+  ],
+
+  "llm_judge_instructions": {
+    "chain_of_thought": true,
+    "scoring_style": "smooth (1-5 range per dimension, calibrated against severity matrix)",
+    "hard_failure_check_first": true,
+    "output_format": {
+      "context_tags": {
+        "run_mode": "digest | alerts | signals",
+        "lookback_window": "N days",
+        "api_coverage": "Full | Partial | Degraded",
+        "watchlist_size": "N companies",
+        "llm_mode": "Enabled | Disabled",
+        "min_priority_threshold": "integer",
+        "embedding_availability": "Available | Unavailable"
+      },
+      "hard_failures_detected": ["list of HF IDs or empty list"],
+      "dimensions": {
+        "S1": { "score": "float 1-5", "reasoning": "string", "violations": [] },
+        "S2": { "score": "float 1-5", "reasoning": "string", "violations": [] },
+        "S3": { "score": "float 1-5", "reasoning": "string", "violations": [] },
+        "S4": { "score": "float 1-5", "reasoning": "string", "violations": [] },
+        "S5": { "score": "float 1-5", "reasoning": "string", "violations": [] },
+        "S6": { "score": "float 1-5", "reasoning": "string", "violations": [] },
+        "S7": { "score": "float 1-5 or 'N/A'", "reasoning": "string", "violations": [] },
+        "S8": { "score": "float 1-5", "reasoning": "string", "violations": [] },
+        "D1": { "score": "float 1-5", "reasoning": "string", "precision_estimate": "percentage" },
+        "D2": { "score": "float 1-5", "reasoning": "string", "recall_estimate": "percentage" },
+        "D3": { "score": "float 1-5", "reasoning": "string" },
+        "D4": { "score": "float 1-5", "reasoning": "string", "violations": [] }
+      },
+      "composite_score": "float 0-100",
+      "failure_modes_detected": ["list of error_type strings from failure_mode_severity_mapping"]
+    }
+  }
+}
