@@ -1121,7 +1121,22 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
 
     # Signal: Funding
     if company.funding_last_date and company.funding_last_amount:
-        description = f"Last funding: ${company.funding_last_amount:,.0f} on {company.funding_last_date}"
+        # Format date from ISO timestamp (e.g. "2025-06-18T00:00:00Z") to "June 18, 2025"
+        try:
+            from datetime import datetime as _dt
+            raw_date = company.funding_last_date
+            for fmt in ("%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
+                try:
+                    parsed = _dt.strptime(raw_date, fmt)
+                    formatted_date = parsed.strftime("%B %-d, %Y")
+                    break
+                except ValueError:
+                    continue
+            else:
+                formatted_date = raw_date
+        except Exception:
+            formatted_date = company.funding_last_date
+        description = f"Last funding: ${company.funding_last_amount:,.0f} on {formatted_date}"
         if company.funding_stage:
             description += f" ({company.funding_stage})"
 
@@ -1204,22 +1219,8 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
                     conn.close()
         except TavilyAPIError as e:
             logger.error(f"Tavily API error for {normalized_id}: {e}")
-            signals.append(KeySignal(
-                company_id=normalized_id,
-                signal_type="website_update",
-                description=f"Website intelligence error: {str(e)[:100]}",
-                observed_at=now,
-                source="tavily",
-            ))
         except Exception as e:
             logger.error(f"Tavily unexpected error for {normalized_id}: {type(e).__name__}: {e}")
-            signals.append(KeySignal(
-                company_id=normalized_id,
-                signal_type="website_update",
-                description=f"Website intelligence error: {type(e).__name__}",
-                observed_at=now,
-                source="tavily",
-            ))
     else:
         signals.append(KeySignal(
             company_id=normalized_id,
