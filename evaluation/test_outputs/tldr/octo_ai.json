@@ -1,10 +1,10 @@
 {
   "test_case_id": "tldr_octo.ai",
   "agent": "tldr",
-  "timestamp": "2026-03-01T23:46:10.786345",
+  "timestamp": "2026-03-02T01:42:07.811134",
   "company_id": "octo.ai",
-  "success": false,
-  "error": "Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************bcIA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'code': 'invalid_api_key', 'param': None}, 'status': 401}",
+  "success": true,
+  "error": null,
   "company_bundle": {
     "company_core": {
       "company_id": "octo.ai",
@@ -234,11 +234,11 @@
     "competitors": []
   },
   "agent_output": {
-    "markdown": "# Error\n\nFailed to generate briefing for octo.ai: Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************bcIA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'code': 'invalid_api_key', 'param': None}, 'status': 401}",
-    "company_name": "octo.ai",
-    "run_id": "ae399b07-94dc-4b65-897d-43be91465b92",
-    "success": false,
-    "error": "Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************bcIA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'code': 'invalid_api_key', 'param': None}, 'status': 401}",
+    "markdown": "# OctoAI (Acquired by NVIDIA) | Meeting Brief\n*2026-03-01*\n\n## TL;DR\nOctoAI, recently acquired by NVIDIA, specializes in a generative AI inference platform that optimizes model serving for enterprises. With a strong leadership team and significant funding, the company is positioned to enhance NVIDIA's AI capabilities.\n\n## Company Overview\nOctoAI, founded in 2013, provides a generative AI inference platform that enables efficient and customizable model serving. The platform utilizes advanced technologies like XG Boost, TVM, and MLC to optimize performance across various hardware environments, facilitating scalable generative AI applications. The company has recently exited, having raised a total of $131.9 million, with its last funding round of $250 million completed in September 2024.\n\n## Key Points\n\u2022 **Innovative Technology**: OctoAI's platform automates the deployment and tuning of AI models, significantly improving enterprise performance and scalability in generative AI applications [[2]](https://console.harmonic.ai/companies/9000).  \n\u2022 **Strong Leadership**: The founding team includes experts with deep academic and industry backgrounds, such as CEO Luis Ceze and CTO Tianqi Chen, both of whom have extensive experience in machine learning and computer science [[3]](https://swarm.com).  \n\u2022 **Growth Metrics**: The company has seen a 9.1% increase in headcount over the last 90 days, indicating a positive growth trajectory [[4]](https://console.harmonic.ai/companies/9000).  \n\n## Recent Developments\n\u2022 OctoAI was acquired by NVIDIA, which is expected to enhance NVIDIA's AI offerings and expand its capabilities in generative AI [[1]](https://console.harmonic.ai/companies/9000).  \n\u2022 The company recently completed a significant funding round of $250 million, reflecting strong investor confidence and market demand for its technology [[2]](https://console.harmonic.ai/companies/9000).  \n\n## Signals & Trends\n\u2022 **Hiring Trends**: The company is actively growing its team, with a notable increase in headcount, suggesting a focus on scaling operations and enhancing product development [[4]](https://console.harmonic.ai/companies/9000).  \n\u2022 **Web Traffic**: Current web traffic metrics show a stable presence, although no significant changes have been reported recently [[4]](https://console.harmonic.ai/companies/9000).  \n\n## For This Meeting\n\u2022 **Key Questions**: What specific synergies does NVIDIA foresee with OctoAI's technology? How will the acquisition impact OctoAI's existing projects and team structure?  \n\u2022 **Risks or Opportunities**: Explore potential integration challenges with NVIDIA's existing AI products and the competitive landscape in generative AI.  \n\u2022 **Areas Needing Clarification**: Clarify the strategic vision for OctoAI post-acquisition and any anticipated changes in product direction or market focus.\n",
+    "company_name": "OctoAI (Acquired by NVIDIA)",
+    "run_id": "a4383997-e752-48b0-a013-75a12fb64626",
+    "success": true,
+    "error": null,
     "retrieval_counts": {
       "profile_k": 2,
       "news_k": 1,
@@ -256,7 +256,7 @@
         "harmonic_9000_signals"
       ]
     },
-    "total_elapsed_ms": 350766,
+    "total_elapsed_ms": 47992,
     "tldr": null,
     "why_it_matters": null,
     "company_snapshot": null,

@@ -532,7 +532,7 @@ def run_news_aggregator_cases(
                 "industry_summary": digest.get_industry_summary(),
                 # Timing (useful for performance analysis, not scoring)
                 "timing": {
-                    "total_ms": digest.timing.total_ms if digest.timing else None,
+                    "total_ms": digest.timing.total_time_ms if digest.timing else None,
                 },
             }
 

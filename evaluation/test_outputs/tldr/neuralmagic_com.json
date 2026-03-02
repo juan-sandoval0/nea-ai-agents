@@ -1,10 +1,10 @@
 {
   "test_case_id": "tldr_neuralmagic.com",
   "agent": "tldr",
-  "timestamp": "2026-03-01T23:52:01.537176",
+  "timestamp": "2026-03-02T01:42:58.352063",
   "company_id": "neuralmagic.com",
-  "success": false,
-  "error": "Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************bcIA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'code': 'invalid_api_key', 'param': None}, 'status': 401}",
+  "success": true,
+  "error": null,
   "company_bundle": {
     "company_core": {
       "company_id": "neuralmagic.com",
@@ -45,7 +45,7 @@
         "role_title": "Chief Scientist & Co-founder",
         "linkedin_url": "https://linkedin.com/in/alex-matveev-42bb8580",
         "background": null,
-        "observed_at": "2026-03-01T23:52:14.578372",
+        "observed_at": "2026-03-02T01:43:05.973451",
         "source": "harmonic"
       }
     ],
@@ -200,11 +200,11 @@
     "competitors": []
   },
   "agent_output": {
-    "markdown": "# Error\n\nFailed to generate briefing for neuralmagic.com: Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************bcIA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'code': 'invalid_api_key', 'param': None}, 'status': 401}",
-    "company_name": "neuralmagic.com",
-    "run_id": "6ddc1517-7bb5-4e0e-ab7b-52f57b08d408",
-    "success": false,
-    "error": "Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************bcIA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'code': 'invalid_api_key', 'param': None}, 'status': 401}",
+    "markdown": "# Neural Magic (Acquired by Red Hat) | Meeting Brief\n*2026-03-01*\n\n## TL;DR\nNeural Magic, recently acquired by Red Hat, specializes in optimizing AI model performance for hybrid cloud environments. The company has seen a significant surge in web traffic, indicating growing interest in its offerings.\n\n## Company Overview\nNeural Magic, founded in 2018, is a B2B software company focused on developer operations and AI building tools. It provides an open-source AI platform that enhances the development, deployment, and management of AI models, particularly in natural language processing and computer vision. The company has raised a total of $50 million from notable investors including Andreessen Horowitz and New Enterprise Associates (NEA) and currently has a headcount of 21.\n\n## Key Points\n\u2022 **Acquisition by Red Hat:** Neural Magic's acquisition enhances Red Hat's AI capabilities, integrating advanced model optimization techniques into its open-source platform [[2]](https://console.harmonic.ai/companies/72327).  \n\u2022 **Traffic Surge:** The company has experienced a remarkable 1102.3% increase in web traffic over the past 30 days, suggesting heightened interest and potential customer engagement [[3]](https://console.harmonic.ai/companies/72327).  \n\u2022 **Funding History:** Neural Magic has successfully raised $50 million, indicating strong investor confidence in its technology and market potential [[1]](https://console.harmonic.ai/companies/72327).\n\n## Recent Developments\n\u2022 Neural Magic has been integrated into Red Hat's offerings, although specific product updates post-acquisition have not been detailed yet [[1]](https://console.harmonic.ai/companies/72327).\n\n## Signals & Trends\n\u2022 **Web Traffic Growth:** The significant increase in web traffic may reflect a growing demand for AI optimization tools, positioning Neural Magic favorably in the competitive landscape [[3]](https://console.harmonic.ai/companies/72327).  \n\u2022 **Stable Team Size:** There have been no reported changes in headcount, suggesting stability within the team post-acquisition [[3]](https://console.harmonic.ai/companies/72327).\n\n## For This Meeting\n\u2022 **Key Questions to Ask:** What specific synergies are expected from the integration with Red Hat? How will Neural Magic's technology enhance Red Hat's existing AI offerings?  \n\u2022 **Risks or Opportunities to Probe:** What challenges might arise from the integration process? Are there potential market risks given the rapid changes in AI technology?  \n\u2022 **Areas Needing Clarification:** Clarify the roadmap for product development and any anticipated changes in team structure or focus areas following the acquisition.\n",
+    "company_name": "Neural Magic (Acquired by Red Hat)",
+    "run_id": "1c9db6bb-f344-492b-abf3-8bb0f7d77b59",
+    "success": true,
+    "error": null,
     "retrieval_counts": {
       "profile_k": 1,
       "news_k": 1,
@@ -221,7 +221,7 @@
         "harmonic_72327_signals"
       ]
     },
-    "total_elapsed_ms": 14754,
+    "total_elapsed_ms": 17409,
     "tldr": null,
     "why_it_matters": null,
     "company_snapshot": null,

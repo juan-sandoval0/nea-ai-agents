@@ -1,93 +1,44 @@
 {
-  "outreach_matx.com_ashley_email": {
-    "agent": "outreach",
+  "tldr_matx.com": {
+    "agent": "tldr",
     "company_id": "matx.com",
-    "investor_key": "ashley",
-    "output_format": "email",
+    "investor_key": null,
+    "output_format": null,
     "days": null
   },
-  "outreach_matx.com_danielle_email": {
-    "agent": "outreach",
-    "company_id": "matx.com",
-    "investor_key": "danielle",
-    "output_format": "email",
-    "days": null
-  },
-  "outreach_matx.com_madison_email": {
-    "agent": "outreach",
-    "company_id": "matx.com",
-    "investor_key": "madison",
-    "output_format": "email",
-    "days": null
-  },
-  "outreach_namespace.com_ashley_email": {
-    "agent": "outreach",
+  "tldr_namespace.com": {
+    "agent": "tldr",
     "company_id": "namespace.com",
-    "investor_key": "ashley",
-    "output_format": "email",
+    "investor_key": null,
+    "output_format": null,
     "days": null
   },
-  "outreach_namespace.com_danielle_email": {
-    "agent": "outreach",
-    "company_id": "namespace.com",
-    "investor_key": "danielle",
-    "output_format": "email",
-    "days": null
-  },
-  "outreach_namespace.com_madison_email": {
-    "agent": "outreach",
-    "company_id": "namespace.com",
-    "investor_key": "madison",
-    "output_format": "email",
-    "days": null
-  },
-  "outreach_neuralmagic.com_ashley_email": {
-    "agent": "outreach",
+  "tldr_neuralmagic.com": {
+    "agent": "tldr",
     "company_id": "neuralmagic.com",
-    "investor_key": "ashley",
-    "output_format": "email",
+    "investor_key": null,
+    "output_format": null,
     "days": null
   },
-  "outreach_neuralmagic.com_danielle_email": {
-    "agent": "outreach",
-    "company_id": "neuralmagic.com",
-    "investor_key": "danielle",
-    "output_format": "email",
-    "days": null
-  },
-  "outreach_neuralmagic.com_madison_email": {
-    "agent": "outreach",
-    "company_id": "neuralmagic.com",
-    "investor_key": "madison",
-    "output_format": "email",
-    "days": null
-  },
-  "outreach_octo.ai_ashley_email": {
-    "agent": "outreach",
+  "tldr_octo.ai": {
+    "agent": "tldr",
     "company_id": "octo.ai",
-    "investor_key": "ashley",
-    "output_format": "email",
+    "investor_key": null,
+    "output_format": null,
     "days": null
   },
-  "outreach_octo.ai_danielle_email": {
-    "agent": "outreach",
-    "company_id": "octo.ai",
-    "investor_key": "danielle",
-    "output_format": "email",
-    "days": null
+  "news_aggregator_30d": {
+    "agent": "news_aggregator",
+    "company_id": null,
+    "investor_key": null,
+    "output_format": null,
+    "days": 30
   },
-  "outreach_octo.ai_madison_email": {
-    "agent": "outreach",
-    "company_id": "octo.ai",
-    "investor_key": "madison",
-    "output_format": "email",
-    "days": null
-  },
-  "outreach_perplexity.ai_ashley_email": {
-    "agent": "outreach",
-    "company_id": "perplexity.ai",
-    "investor_key": "ashley",
-    "output_format": "email",
-    "days": null
+  "news_aggregator_7d": {
+    "agent": "news_aggregator",
+    "company_id": null,
+    "investor_key": null,
+    "output_format": null,
+    "days": 7
   }
 }

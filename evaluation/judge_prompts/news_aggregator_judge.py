@@ -328,10 +328,42 @@ def build_judge_prompt(
     min_priority = context_tags.get("min_priority_threshold", 40)
     embedding_avail = context_tags.get("embedding_availability", "Unknown")
 
-    featured = agent_output.get("featured_articles", [])
-    summary = agent_output.get("summary_articles", [])
+    # Support both the original format (featured_articles/summary_articles)
+    # and the actual InvestorDigest format (stories list with priority_score).
+    all_stories = agent_output.get("stories", [])
+    if all_stories and not agent_output.get("featured_articles"):
+        sorted_stories = sorted(all_stories, key=lambda s: s.get("priority_score", 0), reverse=True)
+        featured = [
+            {
+                "headline": s.get("primary_title", "?"),
+                "company": s.get("company_name", "?"),
+                "category": s.get("company_category", "?"),
+                "signal_type": s.get("classification", "?"),
+                "rank_score": s.get("priority_score", "?"),
+                "sentiment": s.get("sentiment", {}).get("label", "?") if isinstance(s.get("sentiment"), dict) else s.get("sentiment", "?"),
+                "published_date": s.get("published_date", "?"),
+                "source": s.get("other_urls", [{}])[0].get("source", "?") if s.get("other_urls") else "?",
+                "url": s.get("primary_url", "?"),
+                "synopsis": s.get("synopsis", "(none)"),
+            }
+            for s in sorted_stories[:3]
+        ]
+        summary = [
+            {
+                "headline": s.get("primary_title", "?"),
+                "company": s.get("company_name", "?"),
+                "signal_type": s.get("classification", "?"),
+                "rank_score": s.get("priority_score", "?"),
+            }
+            for s in sorted_stories[3:18]  # next 15
+        ]
+    else:
+        featured = agent_output.get("featured_articles", [])
+        summary = agent_output.get("summary_articles", [])
     stats = agent_output.get("stats", {})
-    markdown = agent_output.get("markdown", "")
+    # Truncate markdown to keep the prompt manageable (first 6000 chars is enough for structure checks)
+    markdown_raw = agent_output.get("markdown", "")
+    markdown = markdown_raw[:6000] + ("\n...[truncated for brevity]" if len(markdown_raw) > 6000 else "")
 
     user_prompt = f"""
 {RUBRIC_TEXT}
@@ -354,9 +386,9 @@ INPUT DATA
 ── WATCHLIST ──
 {_fmt_watchlist(watchlist)}
 
-── RAW SIGNALS (all fetched signals BEFORE filtering) ──
-  Total raw signals: {len(raw_signals)}
-{_fmt_raw_signals(raw_signals)}
+── RAW SIGNALS (top 50 by relevance score, BEFORE filtering) ──
+  Total raw signals: {len(raw_signals)} (showing top {min(50, len(raw_signals))})
+{_fmt_raw_signals(raw_signals[:50])}
 
 ═══════════════════════════════════════════════════════════
 AGENT OUTPUT

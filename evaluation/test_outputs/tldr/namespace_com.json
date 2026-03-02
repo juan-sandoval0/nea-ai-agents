@@ -1,10 +1,10 @@
 {
   "test_case_id": "tldr_namespace.com",
   "agent": "tldr",
-  "timestamp": "2026-03-01T23:52:16.294724",
+  "timestamp": "2026-03-02T01:43:16.518569",
   "company_id": "namespace.com",
-  "success": false,
-  "error": "Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************bcIA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'code': 'invalid_api_key', 'param': None}, 'status': 401}",
+  "success": true,
+  "error": null,
   "company_bundle": {
     "company_core": {
       "company_id": "namespace.com",
@@ -200,11 +200,11 @@
     "competitors": []
   },
   "agent_output": {
-    "markdown": "# Error\n\nFailed to generate briefing for namespace.com: Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************bcIA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'code': 'invalid_api_key', 'param': None}, 'status': 401}",
-    "company_name": "namespace.com",
-    "run_id": "c207bde2-35ac-45da-ace4-274bd889a290",
-    "success": false,
-    "error": "Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************bcIA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'code': 'invalid_api_key', 'param': None}, 'status': 401}",
+    "markdown": "# Namespace Group | Meeting Brief\n*2026-03-01*\n\n## TL;DR\nNamespace Group is a B2B provider of internet services, including domain registration and cloud applications, experiencing a notable 18.6% increase in web traffic over the past month. The company is led by experienced founder Xavier Buck, but its current funding stage remains unclear.\n\n## Company Overview\nNamespace Group, founded in 2002, specializes in a range of internet services such as domain registration, online brand protection, colocation, and tailored cloud business applications. The company operates in the B2B sector and utilizes advanced hosting solutions and security measures to enhance online identity management. \n\n- **Website:** [namespace.com](https://namespace.com)\n- **Headcount:** 10\n- **Web Traffic:** 3,110 (up 18.6% in the last 30 days)\n- **Funding Stage:** Venture Unknown\n\n## Key Points\n\u2022 **Diverse Service Offerings:** Namespace Group provides a comprehensive suite of internet services, which positions it well in the growing data infrastructure and cloud services market [[2]](https://console.harmonic.ai/companies/9728163).  \n\u2022 **Experienced Leadership:** Founder Xavier Buck has a strong background in the industry, having held leadership roles in various tech companies, which adds credibility and strategic insight to the company [[3]](https://swarm.com).  \n\u2022 **Positive Traffic Growth:** The company has seen an 18.6% increase in web traffic over the past month, indicating growing interest and potential customer engagement [[4]](https://console.harmonic.ai/companies/9728163).  \n\n## Recent Developments\n\u2022 No significant recent news or funding updates have been reported, but the company is actively tracking its data for future insights [[1]](https://console.harmonic.ai/companies/9728163).\n\n## Signals & Trends\n\u2022 **Web Traffic Growth:** The recent uptick in web traffic suggests a positive trend in customer interest and potential market expansion [[4]](https://console.harmonic.ai/companies/9728163).  \n\u2022 **Stable Team Size:** There have been no reported changes in headcount, indicating stability in the current team structure [[4]](https://console.harmonic.ai/companies/9728163).  \n\n## For This Meeting\n\u2022 **Key Questions to Ask:** What are the company's plans for scaling its services and increasing market share? How does Namespace Group differentiate itself from competitors in the crowded internet services space?  \n\u2022 **Risks or Opportunities to Probe:** Investigate potential risks related to funding and market competition, especially given the unclear funding stage. Explore opportunities for partnerships or expansions in service offerings.  \n\u2022 **Areas Needing Clarification:** Clarify the company's long-term growth strategy and any upcoming product launches or service enhancements that may impact its market position.\n",
+    "company_name": "Namespace Group",
+    "run_id": "43ff94cd-16ee-45c5-abf0-266f8347b12e",
+    "success": true,
+    "error": null,
     "retrieval_counts": {
       "profile_k": 2,
       "news_k": 1,
@@ -222,7 +222,7 @@
         "harmonic_9728163_signals"
       ]
     },
-    "total_elapsed_ms": 3284,
+    "total_elapsed_ms": 13067,
     "tldr": null,
     "why_it_matters": null,
     "company_snapshot": null,

@@ -1,10 +1,10 @@
 {
   "test_case_id": "tldr_matx.com",
   "agent": "tldr",
-  "timestamp": "2026-03-01T23:52:19.586852",
+  "timestamp": "2026-03-02T01:43:30.306044",
   "company_id": "matx.com",
-  "success": false,
-  "error": "Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************bcIA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'code': 'invalid_api_key', 'param': None}, 'status': 401}",
+  "success": true,
+  "error": null,
   "company_bundle": {
     "company_core": {
       "company_id": "matx.com",
@@ -216,11 +216,11 @@
     "competitors": []
   },
   "agent_output": {
-    "markdown": "# Error\n\nFailed to generate briefing for matx.com: Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************bcIA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'code': 'invalid_api_key', 'param': None}, 'status': 401}",
-    "company_name": "matx.com",
-    "run_id": "1d39732a-a883-4508-a076-1c84d37ab8e9",
-    "success": false,
-    "error": "Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-proj-********************************************************************************************************************************************************bcIA. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'code': 'invalid_api_key', 'param': None}, 'status': 401}",
+    "markdown": "# MatX | Meeting Brief\n*2026-03-01*\n\n## TL;DR\nMatX is a rapidly growing B2B company specializing in high-throughput chips for AI model training and inference, having raised nearly $625 million in funding. With a significant increase in web traffic and headcount, the company is well-positioned in the competitive AI hardware market.\n\n## Company Overview\nMatX, founded in 2022, focuses on developing high-throughput chips optimized for the training and inference of large language models. The company emphasizes cost efficiency and performance-per-dollar, allowing for scalable chip clusters that support advanced AI model deployment. Currently in the SERIES B funding stage, MatX has raised a total of $624,908,675, with its last funding round securing $500 million in February 2026. \n\n- **Website:** [matx.com](https://matx.com)\n- **Headcount:** 78 (+8.3% over the last 90 days)\n- **Web Traffic:** 7,682 (+77.6% over the last 30 days)\n\n## Key Points\n\u2022 MatX's technology supports various model architectures, enhancing its appeal to a broad range of AI applications [[2]](https://console.harmonic.ai/companies/11560818).  \n\u2022 The company has experienced a significant surge in web traffic, indicating growing interest and potential market demand [[4]](https://console.harmonic.ai/companies/11560818).  \n\u2022 The leadership team, including CEO Reiner Pope and CTO Mike Gunter, brings extensive experience from Google, particularly in machine learning and hardware architecture [[3]](https://swarm.com).  \n\n## Recent Developments\n\u2022 MatX has not reported any historical change data yet, but current metrics indicate strong growth in both headcount and web traffic, suggesting a positive trajectory for the company [[1]](https://console.harmonic.ai/companies/11560818).\n\n## Signals & Trends\n\u2022 **Hiring Trends:** The company has increased its headcount by 8.3% in the last 90 days, reflecting a commitment to scaling operations [[4]](https://console.harmonic.ai/companies/11560818).  \n\u2022 **Traffic Changes:** A remarkable 77.6% increase in web traffic over the past month suggests heightened interest in MatX's offerings [[4]](https://console.harmonic.ai/companies/11560818).  \n\u2022 **Competitive Dynamics:** As AI hardware becomes increasingly critical, MatX's focus on cost efficiency and performance may position it favorably against competitors in the market [[2]](https://console.harmonic.ai/companies/11560818).\n\n## For This Meeting\n\u2022 Key questions to ask: What specific applications or industries are driving the recent surge in interest? How does MatX plan to leverage its technology to differentiate from competitors?  \n\u2022 Risks or opportunities to probe: What challenges does MatX foresee in scaling production or meeting demand? Are there potential partnerships or collaborations on the horizon?  \n\u2022 Areas needing clarification: Clarify the timeline for future funding rounds and any anticipated product launches that could impact growth.\n",
+    "company_name": "MatX",
+    "run_id": "57f8eeda-8153-40b9-a1dd-b0249b4c947a",
+    "success": true,
+    "error": null,
     "retrieval_counts": {
       "profile_k": 2,
       "news_k": 1,
@@ -238,7 +238,7 @@
         "harmonic_11560818_signals"
       ]
     },
-    "total_elapsed_ms": 3880,
+    "total_elapsed_ms": 14521,
     "tldr": null,
     "why_it_matters": null,
     "company_snapshot": null,

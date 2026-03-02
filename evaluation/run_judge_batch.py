@@ -157,11 +157,14 @@ def build_batch_requests(records: list[dict]) -> list[dict]:
                 logger.warning(f"Unknown agent '{agent}' for {test_case_id} — skipping")
                 continue
 
+            # News aggregator has 12 rubric dimensions — needs more output space
+            max_tokens = 32000 if agent == "news_aggregator" else 8192
+
             batch_requests.append({
                 "custom_id": test_case_id,
                 "params": {
                     "model": JUDGE_MODEL,
-                    "max_tokens": 8192,
+                    "max_tokens": max_tokens,
                     "system": system_prompt,
                     "messages": [{"role": "user", "content": user_prompt}],
                 },
@@ -322,7 +325,17 @@ def _parse_judge_response(custom_id: str, text: str) -> dict:
     """
     import re
 
-    base = {"test_case_id": custom_id, "judge_success": False}
+    # Infer agent from custom_id prefix
+    if custom_id.startswith("news_aggregator"):
+        agent = "news_aggregator"
+    elif custom_id.startswith("tldr"):
+        agent = "tldr"
+    elif custom_id.startswith("outreach"):
+        agent = "outreach"
+    else:
+        agent = "unknown"
+
+    base = {"test_case_id": custom_id, "agent": agent, "judge_success": False}
 
     # Find the last ```json ... ``` block (chain-of-thought comes before it)
     matches = re.findall(r"```json\s*(.*?)\s*```", text, re.DOTALL)
@@ -336,6 +349,7 @@ def _parse_judge_response(custom_id: str, text: str) -> dict:
     try:
         parsed = json.loads(json_str)
         parsed["test_case_id"] = custom_id
+        parsed["agent"] = agent
         parsed["judge_success"] = True
         return parsed
     except json.JSONDecodeError as exc:
@@ -378,15 +392,28 @@ def run_realtime(
             raw_entry = {"custom_id": custom_id, "result_type": "succeeded"}
 
             try:
-                response = client.messages.create(
-                    model=params["model"],
-                    max_tokens=params["max_tokens"],
-                    system=params["system"],
-                    messages=params["messages"],
-                )
-                text = response.content[0].text
+                # Use streaming for large max_tokens (required by SDK for >10min ops)
+                if params["max_tokens"] > 16000:
+                    with client.messages.stream(
+                        model=params["model"],
+                        max_tokens=params["max_tokens"],
+                        system=params["system"],
+                        messages=params["messages"],
+                    ) as stream:
+                        text = stream.get_final_text()
+                        final_msg = stream.get_final_message()
+                    usage = final_msg.usage
+                else:
+                    response = client.messages.create(
+                        model=params["model"],
+                        max_tokens=params["max_tokens"],
+                        system=params["system"],
+                        messages=params["messages"],
+                    )
+                    text = response.content[0].text
+                    usage = response.usage
                 raw_entry["content"] = text
-                print(f"({response.usage.input_tokens}in/{response.usage.output_tokens}out tokens)")
+                print(f"({usage.input_tokens}in/{usage.output_tokens}out tokens)")
 
                 parsed = _parse_judge_response(custom_id, text)
                 score_records.append(parsed)
@@ -427,9 +454,20 @@ def build_manifest(records: list[dict]) -> dict:
 
 
 def save_scores_json(score_records: list[dict], output_dir: Path):
-    """Save all parsed scores as a single JSON file."""
+    """Save scores, merging with any existing results (new scores overwrite by test_case_id)."""
     path = output_dir / "scores.json"
-    path.write_text(json.dumps(score_records, indent=2, default=str))
+    existing: list[dict] = []
+    if path.exists():
+        try:
+            existing = json.loads(path.read_text())
+        except Exception:
+            existing = []
+    existing_by_id = {r["test_case_id"]: r for r in existing if "test_case_id" in r}
+    for r in score_records:
+        if "test_case_id" in r:
+            existing_by_id[r["test_case_id"]] = r
+    merged = sorted(existing_by_id.values(), key=lambda r: r.get("test_case_id", ""))
+    path.write_text(json.dumps(merged, indent=2, default=str))
     logger.info(f"Scores saved to {path}")
 
 
@@ -543,7 +581,7 @@ def save_dashboard_markdown(
     # Group by agent
     by_agent: dict[str, list[dict]] = {}
     for record in score_records:
-        agent = manifest.get(record.get("test_case_id", ""), {}).get("agent", "unknown")
+        agent = manifest.get(record.get("test_case_id", ""), {}).get("agent") or record.get("agent", "unknown")
         by_agent.setdefault(agent, []).append(record)
 
     for agent_name, agent_records in sorted(by_agent.items()):
@@ -678,12 +716,14 @@ Examples:
             raw_results, score_records = run_realtime(batch_requests, client, output_dir)
 
             save_scores_json(score_records, output_dir)
-            save_scores_csv(score_records, output_dir)
-            save_dashboard_markdown(score_records, manifest, output_dir)
+            # Reload merged scores so CSV and dashboard reflect all agents, not just this run
+            merged_scores = json.loads((output_dir / "scores.json").read_text())
+            save_scores_csv(merged_scores, output_dir)
+            save_dashboard_markdown(merged_scores, manifest, output_dir)
 
-            total = len(score_records)
-            judged = sum(1 for r in score_records if r.get("judge_success"))
-            passed = sum(1 for r in score_records if str(r.get("pass_fail", "")).lower() == "pass")
+            total = len(merged_scores)
+            judged = sum(1 for r in merged_scores if r.get("judge_success"))
+            passed = sum(1 for r in merged_scores if str(r.get("pass_fail", "")).lower() == "pass")
 
             print("=" * 65)
             print(f"  COMPLETE")
@@ -736,13 +776,15 @@ Examples:
     raw_results, score_records = fetch_and_parse_results(batch_ids, client, output_dir)
 
     save_scores_json(score_records, output_dir)
-    save_scores_csv(score_records, output_dir)
-    save_dashboard_markdown(score_records, manifest, output_dir)
+    # Reload merged scores so CSV and dashboard reflect all agents, not just this run
+    merged_scores = json.loads((output_dir / "scores.json").read_text())
+    save_scores_csv(merged_scores, output_dir)
+    save_dashboard_markdown(merged_scores, manifest, output_dir)
 
     # ── Summary ─────────────────────────────────────────────────────────────
-    total = len(score_records)
-    judged = sum(1 for r in score_records if r.get("judge_success"))
-    passed = sum(1 for r in score_records if str(r.get("pass_fail", "")).lower() == "pass")
+    total = len(merged_scores)
+    judged = sum(1 for r in merged_scores if r.get("judge_success"))
+    passed = sum(1 for r in merged_scores if str(r.get("pass_fail", "")).lower() == "pass")
 
     print("=" * 65)
     print(f"  COMPLETE")
