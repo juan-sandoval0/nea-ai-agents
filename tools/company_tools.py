@@ -642,16 +642,17 @@ def _summarize_founder_background(
         return raw_background
 
     system_prompt = """You are a VC research assistant creating concise founder backgrounds.
-Your task is to summarize a founder's background in 2-4 sentences.
+Your task is to summarize a founder's background as 2-3 short bullet points.
 
 Rules:
 - Focus on PRIOR experience (not their current role - that's already displayed elsewhere)
-- Highlight: previous companies, notable roles, education, achievements
+- Each bullet = one key fact (notable employer, education, prior exit, etc.)
 - Skip: current role details, generic skills lists, redundant info
-- Be factual and concise
+- Be terse — 5-10 words per bullet
 - If they were at notable companies (Google, Meta, OpenAI, etc.), mention it
 - If they have a technical background (PhD, engineering), mention it
-- If they previously founded or exited a company, mention it"""
+- If they previously founded or exited a company, mention it
+- Output ONLY the bullet points, no intro text"""
 
     user_prompt = f"""Summarize this founder's background for a VC meeting brief.
 
@@ -661,7 +662,7 @@ Current Role: {role_title} at {company_name}
 Raw Background Data:
 {raw_background}
 
-Write a 2-4 sentence summary focusing on their PRIOR experience and credentials (not their current role at {company_name})."""
+Write 2-3 bullet points (•) focusing on their PRIOR experience and credentials (not their current role at {company_name}). Each bullet should be 5-10 words."""
 
     try:
         llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
