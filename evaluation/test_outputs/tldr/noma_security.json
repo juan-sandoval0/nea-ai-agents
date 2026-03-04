@@ -1,7 +1,7 @@
 {
   "test_case_id": "tldr_noma.security",
   "agent": "tldr",
-  "timestamp": "2026-03-04T01:27:58.456165",
+  "timestamp": "2026-03-04T05:15:49.866050",
   "company_id": "noma.security",
   "success": true,
   "error": null,
@@ -55,7 +55,7 @@
         "Data Analytics"
       ],
       "customer_type": "Business (B2B)",
-      "fetched_at": "2026-03-04T01:28:16.625346"
+      "fetched_at": "2026-03-04T05:15:51.831683"
     },
     "founders": [
       {
@@ -64,8 +64,8 @@
         "role_title": "Co-Founder & CEO",
         "linkedin_url": "https://linkedin.com/in/niv-braun",
         "background": "Niv Braun served as a Group Manager at Verint from 2020 to 2022, where he led a 50-person team in developing a new cybersecurity product line. Prior to that, he held various roles at Verint, including Product Team Lead and Outbound Product Manager. His experience also includes serving as a Cyber Security Group Manager in the Israeli Military Intelligence - Unit 8200 from 2015 to 2016.\n\n---\nSources: linkedin.com/in/niv-braun",
-        "observed_at": "2026-03-04T00:03:01.837779",
-        "source": "swarm"
+        "observed_at": "2026-03-04T05:10:19.352604",
+        "source": "harmonic"
       },
       {
         "company_id": "noma.security",
@@ -73,8 +73,8 @@
         "role_title": "Co-Founder & CTO",
         "linkedin_url": "https://linkedin.com/in/alon-tron",
         "background": "Alon Tron served as the Data Science Lead at Interai from 2020 to 2022, where he utilized machine learning models and computer vision algorithms to enhance enterprise applications. Prior to that, he held multiple roles at Israeli Military Intelligence, including Development Consultant and Tech Lead in Unit 8200, where he guided development teams in technology upgrades and requirement design. He holds dual Bachelor of Science degrees in Computer Science and Computational Biology from UC San Diego and The Hebrew University of Jerusalem.\n\n---\nSources: linkedin.com/in/alon-tron",
-        "observed_at": "2026-03-04T00:03:04.486353",
-        "source": "swarm"
+        "observed_at": "2026-03-04T05:10:19.540482",
+        "source": "harmonic"
       }
     ],
     "key_signals": [
@@ -98,12 +98,73 @@
       }
     ],
     "news": [],
-    "competitors": []
+    "competitors": [
+      {
+        "company_id": "noma.security",
+        "competitor_name": "HiddenLayer",
+        "competitor_domain": "hiddenlayer.com",
+        "competitor_type": "startup",
+        "description": "The company provides a security platform designed to protect AI applications, including agentic, generative, and predictive models, through real-time monitoring, vulnerability assessments, and automated red teaming. It utilizes technologies such as the MITRE ATLAS framework and offers seamless integ",
+        "funding_total": 56000000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": 50000000.0,
+        "funding_last_date": "2023-09-19T00:00:00Z",
+        "headcount": 146,
+        "tags": "Developer Operations & AI Building Tools, Communications & Information Technology, Security Software & Services, Business (B2B), Cybersecurity",
+        "harmonic_id": "7697979",
+        "observed_at": "2026-03-04T05:10:34.650478+00:00"
+      },
+      {
+        "company_id": "noma.security",
+        "competitor_name": "WitnessAI",
+        "competitor_domain": "witness.ai",
+        "competitor_type": "startup",
+        "description": "WitnessAI provides an AI-native security platform designed to ensure the safe deployment and governance of artificial intelligence within enterprises, utilizing intent-based machine learning engines for runtime defense and behavior-based controls. The platform offers comprehensive monitoring of AI a",
+        "funding_total": 85500000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": 58000000.0,
+        "funding_last_date": "2026-01-13T00:00:00Z",
+        "headcount": 87,
+        "tags": "Communications & Information Technology, Enterprise Productivity & Automation, Security Software & Services, Business Services, Business (B2B)",
+        "harmonic_id": "46785521",
+        "observed_at": "2026-03-04T05:10:34.650408+00:00"
+      },
+      {
+        "company_id": "noma.security",
+        "competitor_name": "Nagomi Security",
+        "competitor_domain": "nagomisecurity.com",
+        "competitor_type": "startup",
+        "description": "Nagomi Security offers a platform for threat exposure management that integrates with existing cybersecurity tools to identify vulnerabilities and optimize security configurations. The solution utilizes threat intelligence, machine learning, and automation to enhance proactive risk management and st",
+        "funding_total": 30000000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": 23000000.0,
+        "funding_last_date": "2024-04-24T00:00:00Z",
+        "headcount": 74,
+        "tags": "Security Software & Services, Business (B2B), Cybersecurity, Software, Service",
+        "harmonic_id": "52587243",
+        "observed_at": "2026-03-04T05:10:34.650515+00:00"
+      },
+      {
+        "company_id": "noma.security",
+        "competitor_name": "Harmonic Security",
+        "competitor_domain": "harmonic.security",
+        "competitor_type": "startup",
+        "description": "Harmonic Security provides an AI governance and control platform designed to enhance data security in Generative AI environments by detecting unauthorized applications and safeguarding sensitive, unstructured data. The platform employs advanced protective measures and human-like review techniques to",
+        "funding_total": 25961000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": 17500000.0,
+        "funding_last_date": "2024-10-02T00:00:00Z",
+        "headcount": 56,
+        "tags": "Data Infrastructure & Cloud Services, Communications & Information Technology, Security Software & Services, Business (B2B), Cybersecurity",
+        "harmonic_id": "36336799",
+        "observed_at": "2026-03-04T05:10:08.834497+00:00"
+      }
+    ]
   },
   "agent_output": {
-    "markdown": "# Noma Security | Meeting Brief\n*2026-03-03*\n\n## TL;DR\nNoma Security is a fast-moving AI security and governance platform that just closed a $100M Series B in July 2025, bringing total funding to $132M. Founded in 2023, the company is scaling aggressively \u2014 headcount up 30% in 90 days \u2014 and is positioned at the intersection of two high-urgency enterprise priorities: AI adoption and security/compliance. This is a company in rapid deployment mode.\n\n---\n\n## Company Overview\nNoma Security provides an AI security and governance platform covering the full AI lifecycle, from model development through application runtime. The platform uses API-based integrations and real-time threat detection to manage security and compliance risks across AI environments. [[2]](https://console.harmonic.ai/companies/56284489)\n\n- **Founded:** 2023 [[2]](https://console.harmonic.ai/companies/56284489)\n- **Stage:** Series B [[2]](https://console.harmonic.ai/companies/56284489)\n- **Total Raised:** $132M [[2]](https://console.harmonic.ai/companies/56284489)\n- **Headcount:** 91 employees (+30% in 90 days) [[2]](https://console.harmonic.ai/companies/56284489)[[4]](https://console.harmonic.ai/companies/56284489)\n- **Web Traffic:** ~50K/month (+4.7% in 30 days) [[2]](https://console.harmonic.ai/companies/56284489)[[4]](https://console.harmonic.ai/companies/56284489)\n- **Business Model:** B2B SaaS [[2]](https://console.harmonic.ai/companies/56284489)\n\n---\n\n## Key Points\n\u2022 **Massive recent capital infusion:** $100M Series B closed July 1, 2025 \u2014 a very large round for a ~2-year-old company, signaling strong investor conviction and likely aggressive go-to-market expansion ahead. [[2]](https://console.harmonic.ai/companies/56284489)\n\n\u2022 **High-conviction investor syndicate:** Backers include Evolution Equity Partners, Ballistic Ventures, Databricks Ventures, SVCI (Silicon Valley CISO Investments), and CCL (Cyber Club London) \u2014 a notably strategic mix of cybersecurity-focused funds and a strategic from the AI data infrastructure world (Databricks Ventures). [[2]](https://console.harmonic.ai/companies/56284489)\n\n\u2022 **Founders carry strong pedigree:** CEO Niv Braun led a 50-person cybersecurity product team at Verint and served in Israeli Military Intelligence Unit 8200. CTO Alon Tron brings ML/data science depth from Inter.ai and also served in Unit 8200. Both have relevant enterprise and technical credentials for this market. [[3]](https://swarm.com)\n\n\u2022 **Hypergrowth hiring signal:** 30% headcount growth in 90 days on a base of 91 employees is aggressive \u2014 roughly 20+ net new hires in a quarter. This suggests the Series B capital is already being deployed into team-building. [[4]](https://console.harmonic.ai/companies/56284489)\n\n\u2022 **Timely market positioning:** AI security and governance is an emerging but rapidly mandating category as enterprises deploy AI at scale. Noma's full-lifecycle approach (dev through runtime) differentiates from point solutions. [[2]](https://console.harmonic.ai/companies/56284489)\n\n---\n\n## Recent Developments\n\u2022 Closed $100M Series B on July 1, 2025, led by/including Evolution Equity Partners, Ballistic Ventures, Databricks Ventures, SVCI, and CCL. [[2]](https://console.harmonic.ai/companies/56284489)\n\u2022 Headcount surged 30% over the past 90 days, indicating active post-funding scaling. [[1]](https://console.harmonic.ai/companies/56284489)[[4]](https://console.harmonic.ai/companies/56284489)\n\u2022 Web traffic up 4.7% in the past 30 days, suggesting growing market awareness or demand generation activity. [[4]](https://console.harmonic.ai/companies/56284489)\n\n*Note: No additional historical news data was available in the provided sources.* [[1]](https://console.harmonic.ai/companies/56284489)\n\n---\n\n## Signals & Trends\n\u2022 **Hiring velocity** is the standout signal \u2014 30% growth in 90 days on a ~90-person base is exceptional and points to rapid go-to-market and/or engineering buildout post-Series B. [[4]](https://console.harmonic.ai/companies/56284489)\n\u2022 **Traffic growth** is modest but positive (+4.7% MoM), worth monitoring as a leading indicator of pipeline development. [[4]](https://console.harmonic.ai/companies/56284489)\n\u2022 **Databricks Ventures participation** is a notable strategic signal \u2014 Databricks is deeply embedded in enterprise AI infrastructure, potentially indicating a partnership angle or distribution opportunity. [[2]](https://console.harmonic.ai/companies/56284489)\n\n---\n\n## For This Meeting\n\n**Key questions to ask:**\n- What is the current ARR and growth rate? The funding scale implies significant revenue expectations \u2014 what's the baseline?\n- How is the $100M being allocated \u2014 GTM, R&D, geographic expansion?\n- What does the competitive landscape look like, and how does Noma differentiate from emerging AI security players?\n- What is the nature of the Databricks Ventures relationship \u2014 purely financial or is there a commercial/distribution component?\n\n**Risks to probe:**\n- **Category definition risk:** AI security/governance is nascent \u2014 are enterprise buyers actively budgeting for this, or is Noma still in market education mode?\n- **Burn rate concern:** A 30% headcount surge post-raise is bold. What are the unit economics and runway assumptions?\n- **Founder experience depth:** Both founders are relatively early in their post-military careers. Probe for enterprise sales leadership and GTM execution capability on the team.\n\n**Areas needing clarification:**\n- Customer count, logo quality, and retention metrics \u2014 not found in available data. [[2]](https://console.harmonic.ai/companies/56284489)\n- Revenue figures and growth trajectory \u2014 not found in available data. [[2]](https://console.harmonic.ai/companies/56284489)\n- Specific product capabilities and technical differentiation beyond high-level platform description \u2014 not found in available data. [[2]](https://console.harmonic.ai/companies/56284489)\n",
+    "markdown": "# Noma Security | Meeting Brief\n*2026-03-03*\n\n## TL;DR\nNoma Security is a B2B AI security and governance platform that provides visibility and control across the full AI lifecycle \u2014 from model development through application runtime \u2014 using API-based integrations and real-time threat detection. The company closed a $100M Series B on July 1, 2025, bringing total funding to $132M [[2]](https://console.harmonic.ai/companies/56284489). Headcount has surged 30% in 90 days, signaling aggressive post-raise scaling [[4]](https://console.harmonic.ai/companies/56284489).\n\n---\n\n## Why This Meeting Matters\n\u2022 **Massive, recent capital event:** A $100M Series B closed July 1, 2025 \u2014 this is a freshly funded company with significant runway and deployment plans worth understanding now [[2]](https://console.harmonic.ai/companies/56284489)\n\u2022 **Hypergrowth hiring signal:** 30% headcount growth in 90 days on a base of 91 employees suggests rapid team expansion, likely accelerating GTM and product buildout [[4]](https://console.harmonic.ai/companies/56284489)\n\u2022 **Strategic investor validation:** Backers include Databricks Ventures, Ballistic Ventures, Evolution Equity Partners, and SVCI (Silicon Valley CISO Investments) \u2014 a mix of strategic and specialist cyber investors that signals strong domain credibility [[2]](https://console.harmonic.ai/companies/56284489)\n\u2022 **Timely market positioning:** The platform targets AI security and governance, a category with rapidly expanding enterprise demand as AI deployments proliferate [[2]](https://console.harmonic.ai/companies/56284489)\n\n---\n\n## Company Snapshot\n| Field | Value |\n|---|---|\n| Founded | 2023 |\n| HQ | Not found in table |\n| Employees | 91 (+30.0% 90d) |\n| Products | AI security and governance platform; API-based integrations, real-time threat detection across AI lifecycle |\n| Customers | B2B enterprises |\n| Total Funding | $132,000,000 |\n| Last Round | $100,000,000 \u2014 July 1, 2025 |\n*Last updated: July 1, 2025*\n\n---\n\n## Founders\n\n**Niv Braun** \u2014 Co-Founder & CEO | linkedin.com/in/niv-braun\nBraun led a 50-person team at Verint (2020\u20132022) building a new cybersecurity product line, with prior roles as Product Team Lead and Outbound Product Manager at the same firm. He also served as a Cyber Security Group Manager in Israeli Military Intelligence Unit 8200 (2015\u20132016), providing deep offensive/defensive security grounding relevant to Noma's domain. [[2]](https://console.harmonic.ai/companies/56284489)\n\n**Alon Tron** \u2014 Co-Founder & CTO | linkedin.com/in/alon-tron\nTron served as Data Science Lead at Interai (2020\u20132022), applying machine learning and computer vision to enterprise applications. He previously held Development Consultant and Tech Lead roles in Israeli Military Intelligence Unit 8200, and holds dual B.S. degrees in Computer Science and Computational Biology from UC San Diego and The Hebrew University of Jerusalem. [[2]](https://console.harmonic.ai/companies/56284489)\n\n---\n\n## Key Signals\n\u2022 **[Hiring]** Headcount up 30.0% in 90 days (to 91 employees) \u2014 indicative of aggressive post-Series B scaling \u2014 Source: Noma Security Key Signals [[4]](https://console.harmonic.ai/companies/56284489)\n\u2022 **[Web Traffic]** Site traffic up 4.7% in 30 days (49,760 visits) \u2014 modest but positive demand signal \u2014 Source: Noma Security Key Signals [[4]](https://console.harmonic.ai/companies/56284489)\n\u2022 **[Funding]** Series B closed July 1, 2025; current stage: Series B \u2014 Source: Noma Security Key Signals [[4]](https://console.harmonic.ai/companies/56284489)\n\n---\n\n## In the News\nNo recent news available. [[1]](https://console.harmonic.ai/companies/56284489)\n\n---\n\n## Meeting Prep\n\n**Key questions to ask:**\n\u2022 The $100M Series B closed just weeks ago \u2014 what is the specific capital allocation plan, and what milestones (ARR, customer count, product milestones) is the team targeting before a Series C? [[2]](https://console.harmonic.ai/companies/56284489)\n\u2022 Headcount is up 30% in 90 days \u2014 which functions are being hired into most aggressively (GTM, engineering, research), and how does the team think about maintaining culture and execution quality at this pace? [[4]](https://console.harmonic.ai/companies/56284489)\n\u2022 With Databricks Ventures as a strategic backer, is there a formal partnership or distribution relationship with Databricks, and how does the platform integrate with data and AI infrastructure providers more broadly? [[2]](https://console.harmonic.ai/companies/56284489)\n\u2022 Both founders come from Unit 8200 and enterprise cybersecurity backgrounds \u2014 how does that inform the product's threat model, and what differentiates Noma's AI-specific detection from incumbents extending existing security platforms into AI? [[2]](https://console.harmonic.ai/companies/56284489)\n\n**Recommended next step:** Request a product demo focused on a live AI application security use case, and ask for early customer references \u2014 ideally from enterprises with mature AI deployments \u2014 to validate real-world efficacy and GTM traction post-Series B.\n",
     "company_name": "Noma Security",
-    "run_id": "efcc0ba1-44ac-4342-ad23-40bb68a4eaa2",
+    "run_id": "fefd1255-f1ff-4d87-9742-0b3122bbb105",
     "success": true,
     "error": null,
     "retrieval_counts": {
@@ -123,7 +184,7 @@
         "harmonic_56284489_signals"
       ]
     },
-    "total_elapsed_ms": 43937,
+    "total_elapsed_ms": 24230,
     "tldr": null,
     "why_it_matters": null,
     "company_snapshot": null,

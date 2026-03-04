@@ -1,7 +1,7 @@
 {
   "test_case_id": "tldr_genspark.ai",
   "agent": "tldr",
-  "timestamp": "2026-03-04T01:29:20.917142",
+  "timestamp": "2026-03-04T05:16:42.402416",
   "company_id": "genspark.ai",
   "success": true,
   "error": null,
@@ -46,7 +46,7 @@
         "Chatbots, Assistants, & AI Search"
       ],
       "customer_type": "Business (B2B)",
-      "fetched_at": "2026-03-04T01:29:33.578464"
+      "fetched_at": "2026-03-04T05:16:44.459983"
     },
     "founders": [
       {
@@ -55,8 +55,8 @@
         "role_title": "Co-founder, Software Engineer",
         "linkedin_url": "https://linkedin.com/in/ray-zhong-a3735627",
         "background": "Ray Zhong served as Chief Architect of DuerOS at Baidu, Inc. from 2017 to 2023, where he led the development of the conversational AI platform. Prior to that, he was a staff software engineer at Google for a decade, contributing to core search ranking algorithms and the Google Assistant's home automation features. He holds a Master's degree in Mathematics and Computer Science from Sun Yat-sen University.\n\n---\nSources: linkedin.com/in/ray-zhong-a3735627, x.com/ruradium",
-        "observed_at": "2026-03-04T00:05:50.899228",
-        "source": "swarm"
+        "observed_at": "2026-03-04T05:13:10.289915",
+        "source": "harmonic"
       },
       {
         "company_id": "genspark.ai",
@@ -64,16 +64,16 @@
         "role_title": "Co-Founder",
         "linkedin_url": "https://linkedin.com/in/lenjoy",
         "background": "Lenjoy Lin has over 12 years of experience in engineering leadership, having served as Head of Engineering for TikTok Ads Measurement & Targeting at ByteDance, where he founded and scaled the department. Prior to that, he led the Consumer Personalization Engineering Team at Houzz and was a Tech Lead for Homefeed Ads at Pinterest. He began his career as a Staff Software Engineer at YouTube, where he was a founding member responsible for rebuilding the ads serving and quality stack. Lenjoy holds a Bachelor's degree in Mathematics from Zhejiang University.\n\n---\nSources: linkedin.com/in/lenjoy, x.com/lenjoy",
-        "observed_at": "2026-03-04T00:05:53.857928",
-        "source": "swarm"
+        "observed_at": "2026-03-04T05:13:10.489788",
+        "source": "harmonic"
       },
       {
         "company_id": "genspark.ai",
         "name": "Wen S.",
         "role_title": "Co-Founder & COO",
         "linkedin_url": "https://linkedin.com/in/wen-s-3815b04b",
-        "background": null,
-        "observed_at": "2026-03-04T00:05:43.687408",
+        "background": "\u2022 Co-Founder & CEO of Smarking Inc. (acquired 2022)  \n\u2022 Chief Product and Technology Officer at JustPark  \n\u2022 B.S. in Automotive Engineering from Nanjing University\n\n---\nSources: linkedin.com/in/wen-sang, twitter.com/sang_wen",
+        "observed_at": "2026-03-04T05:13:10.655449",
         "source": "harmonic"
       },
       {
@@ -82,8 +82,8 @@
         "role_title": "Cofounder & CTO",
         "linkedin_url": "https://linkedin.com/in/kay-zhu-522b275",
         "background": "Kay Zhu is a seasoned technology leader with a strong background in AI and search technologies. Prior to co-founding Genspark, she served as CTO at Xiaodu Technology, where she initiated the company from the ground up and secured Series B financing, achieving a $5.1 billion valuation. Before that, she was the Chief Architect of Baidu Search, leading innovations in AI and launching the world's first DNN ranking model. Her experience also includes a role as a Staff Software Engineer at Google, where she contributed to core search ranking and web anti-spam technologies.\n\n---\nSources: linkedin.com/in/kay-zhu-522b275",
-        "observed_at": "2026-03-04T00:05:56.971916",
-        "source": "swarm"
+        "observed_at": "2026-03-04T05:13:10.837867",
+        "source": "harmonic"
       },
       {
         "company_id": "genspark.ai",
@@ -91,8 +91,8 @@
         "role_title": "Co-founder & CEO",
         "linkedin_url": "https://linkedin.com/in/eric-jing-5397a1b",
         "background": "Eric Jing is a seasoned entrepreneur and technology executive with a strong track record in AI and search technologies. He co-founded and served as CEO of Genspark in 2023, and previously led Xiaodu Technology, Inc. as CEO from 2020 to 2023, where he successfully closed Series B financing at a $5.5 billion valuation. Prior to that, he was the Chief Product Manager of Search and Corporate VP at Baidu, Inc., driving innovations in web search and AI products, and he also held a key role as Principal Development Manager of Bing Search at Microsoft, where he contributed to the launch of Bing.com.\n\n---\nSources: linkedin.com/in/eric-jing-5397a1b",
-        "observed_at": "2026-03-04T00:05:59.967369",
-        "source": "swarm"
+        "observed_at": "2026-03-04T05:13:11.017183",
+        "source": "harmonic"
       }
     ],
     "key_signals": [
@@ -116,12 +116,88 @@
       }
     ],
     "news": [],
-    "competitors": []
+    "competitors": [
+      {
+        "company_id": "genspark.ai",
+        "competitor_name": "SearchStax",
+        "competitor_domain": "searchstax.com",
+        "competitor_type": "startup",
+        "description": "The main product is a managed search solution that utilizes cloud-based technologies to enhance website search capabilities, featuring AI functionalities such as auto-complete suggestions, related searches, and detailed analytics. It is built on Solr infrastructure, enabling users to create more acc",
+        "funding_total": null,
+        "funding_stage": null,
+        "funding_last_amount": null,
+        "funding_last_date": "2023-07-24T00:00:00Z",
+        "headcount": 110,
+        "tags": "Analytics & Business Intelligence Platforms, Educational Technology - EdTech, Media & Entertainment, Life Sciences & Healthcare, Communications & Information Technology",
+        "harmonic_id": "672151",
+        "observed_at": "2026-03-04T05:13:33.326794+00:00"
+      },
+      {
+        "company_id": "genspark.ai",
+        "competitor_name": "Scrunch AI",
+        "competitor_domain": "scrunchai.com",
+        "competitor_type": "startup",
+        "description": "The main product is an AI search optimization platform that allows businesses to monitor, analyze, and enhance their visibility across AI platforms like ChatGPT and Perplexity. It utilizes advanced data processing techniques to track brand performance and provide actionable insights for optimization",
+        "funding_total": 19000000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": null,
+        "funding_last_date": "2025-11-03T00:00:00Z",
+        "headcount": 49,
+        "tags": "Analytics & Business Intelligence Platforms, Media & Entertainment, Communications & Information Technology, Consumer products and services, Communications and information technology",
+        "harmonic_id": "57216999",
+        "observed_at": "2026-03-04T05:13:33.326688+00:00"
+      },
+      {
+        "company_id": "genspark.ai",
+        "competitor_name": "New Generation",
+        "competitor_domain": "new-gen.ai",
+        "competitor_type": "startup",
+        "description": "The main product is an AI-native commerce platform that leverages natural language processing and generative AI to enhance product search and create personalized shopping experiences through context-aware interactions. It integrates product data with adaptive interfaces to enable real-time customer ",
+        "funding_total": 4500000.0,
+        "funding_stage": "SEED",
+        "funding_last_amount": 4500000.0,
+        "funding_last_date": "2025-05-20T00:00:00Z",
+        "headcount": 25,
+        "tags": "Media & Entertainment, Communications & Information Technology, Consumer Products & Services, E-commerce & Marketplaces, Business (B2B)",
+        "harmonic_id": "61375606",
+        "observed_at": "2026-03-04T05:13:33.326671+00:00"
+      },
+      {
+        "company_id": "genspark.ai",
+        "competitor_name": "DevRev",
+        "competitor_domain": "devrev.ai",
+        "competitor_type": "incumbent",
+        "description": "The main product is an AI-driven platform that integrates diverse data sources to streamline workflows and enhance user interactions through AI-powered search and task automation. It utilizes low latency analytics and customizable large language models to support product development and improve cust",
+        "funding_total": 185825000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": 100825000.0,
+        "funding_last_date": "2024-07-10T00:00:00Z",
+        "headcount": 873,
+        "tags": "Analytics & Business Intelligence Platforms, Product Hunt, Sales & Customer Service, Communications & Information Technology, Enterprise Productivity & Automation",
+        "harmonic_id": "2216035",
+        "observed_at": "2026-03-04T05:13:33.3267+00:00"
+      },
+      {
+        "company_id": "genspark.ai",
+        "competitor_name": "Algolia",
+        "competitor_domain": "algolia.com",
+        "competitor_type": "incumbent",
+        "description": "The main product is an AI search platform that utilizes hyperscale indexing and natural language understanding to efficiently manage a high volume of search queries through a unified API. It features vector search technology, dynamic re-ranking, personalization, and automatic query suggestions to im",
+        "funding_total": 334444000.0,
+        "funding_stage": "SERIES_D",
+        "funding_last_amount": 150000000.0,
+        "funding_last_date": "2021-07-28T00:00:00Z",
+        "headcount": 845,
+        "tags": "Analytics & Business Intelligence Platforms, Developer Operations & AI Building Tools, Communications & Information Technology, Consumer Products & Services, E-commerce & Marketplaces",
+        "harmonic_id": "626500",
+        "observed_at": "2026-03-04T05:13:33.326716+00:00"
+      }
+    ]
   },
   "agent_output": {
-    "markdown": "# Genspark | Meeting Brief\n*2026-03-03*\n\n## TL;DR\nGenspark is an AI-driven search engine and agent framework company that has raised $435M total, including a $275M Series B in November 2025. The company is growing aggressively \u2014 headcount up 55% in 90 days and web traffic approaching 15M monthly visits. The founding team carries exceptional pedigree from Baidu, Google, ByteDance, and Microsoft, making this a high-conviction bet on experienced operators.\n\n---\n\n## Company Overview\nGenspark builds an AI-powered search engine using advanced algorithms to improve result relevance, paired with an AI agent framework designed to deepen user engagement. Founded in 2023, the company is B2B-oriented and sits at the intersection of enterprise productivity, AI, and search. [[2]](https://console.harmonic.ai/companies/54909419)\n\n- **Stage:** Series B [[2]](https://console.harmonic.ai/companies/54909419)\n- **Total Raised:** $435M [[2]](https://console.harmonic.ai/companies/54909419)\n- **Headcount:** 45 (up 55.2% in 90 days) [[4]](https://console.harmonic.ai/companies/54909419)\n- **Monthly Web Traffic:** ~14.9M (up 16.3% in 30 days) [[4]](https://console.harmonic.ai/companies/54909419)\n\n---\n\n## Key Points\n\u2022 **Exceptional founding team with direct search and AI DNA.** Eric Jing (CEO) was Corporate VP and Chief Product Manager of Search at Baidu and a Principal Development Manager on Bing at Microsoft. Kay Zhu (CTO) was Chief Architect of Baidu Search and previously CTO at Xiaodu Technology, which reached a $5.1B valuation. Ray Zhong was Chief Architect of DuerOS at Baidu and a staff engineer at Google working on core search ranking. Lenjoy Lin led TikTok Ads Measurement & Targeting engineering at ByteDance. This is arguably one of the most search-credentialed founding teams in the market. [[2]](https://console.harmonic.ai/companies/54909419)\n\n\u2022 **Massive capital raised relative to headcount.** $435M raised with only 45 employees implies an extraordinarily high capital-per-employee ratio \u2014 either significant runway is being preserved, or substantial spend is going toward compute/infrastructure rather than headcount. [[2]](https://console.harmonic.ai/companies/54909419)[[4]](https://console.harmonic.ai/companies/54909419)\n\n\u2022 **Series B closed November 2025 at $275M.** Investors include Emergence Capital, LG Technology Ventures, SBI Investment, Lanchi Ventures, and UpHonest Capital. [[2]](https://console.harmonic.ai/companies/54909419)\n\n\u2022 **Traffic scale is notable for a 2023-founded company.** ~15M monthly visits with 16% month-over-month growth suggests real user traction, though the B2B tag raises questions about whether this traffic is converting to enterprise revenue. [[2]](https://console.harmonic.ai/companies/54909419)[[4]](https://console.harmonic.ai/companies/54909419)\n\n\u2022 **Headcount growth of 55% in 90 days signals active scaling.** At 45 people, the company is still small \u2014 this hiring pace suggests they are in a rapid build-out phase post-Series B. [[4]](https://console.harmonic.ai/companies/54909419)\n\n---\n\n## Recent Developments\n\u2022 Closed a $275M Series B round on November 20, 2025, bringing total funding to $435M. [[2]](https://console.harmonic.ai/companies/54909419)\n\u2022 Headcount surged 55.2% over the past 90 days, indicating aggressive post-funding hiring. [[4]](https://console.harmonic.ai/companies/54909419)\n\u2022 Web traffic grew 16.3% in the past 30 days, reaching approximately 14.9M monthly visits. [[4]](https://console.harmonic.ai/companies/54909419)\n\n---\n\n## Signals & Trends\n\u2022 **Hiring:** Rapid team expansion (+55.2% in 90 days) from a still-lean 45-person base \u2014 watch for where they are hiring (engineering vs. GTM) as a signal of product vs. commercialization focus. [[4]](https://console.harmonic.ai/companies/54909419)\n\u2022 **Traffic:** 14.9M monthly visits with continued growth is a strong signal of product-market fit at the consumer/prosumer level, though alignment with B2B positioning warrants scrutiny. [[2]](https://console.harmonic.ai/companies/54909419)[[4]](https://console.harmonic.ai/companies/54909419)\n\u2022 **Funding velocity:** Two rounds implied within the $435M total at Series B stage suggests investors are moving quickly and competitively to back this team. [[2]](https://console.harmonic.ai/companies/54909419)\n\n---\n\n## For This Meeting\n\u2022 **Revenue & monetization:** With $435M raised and ~15M monthly visitors, what does the revenue model look like? Is there enterprise ARR, and if so, what is it?\n\u2022 **B2B vs. consumer tension:** The company is tagged B2B, but 15M monthly web visits suggests significant consumer usage \u2014 clarify the go-to-market focus and whether consumer traction is a funnel into enterprise or a separate motion.\n\u2022 **Capital deployment:** What is the $275M Series B being used for \u2014 compute, hiring, GTM? The high capital-to-headcount ratio needs explanation.\n\u2022 **Competitive differentiation:** The AI search space is intensely competitive. Probe specifically what the AI agent framework does that incumbents (not named in data) cannot replicate quickly.\n\u2022 **Founder titles:** Only Eric Jing (CEO) and Kay Zhu (CTO) have explicit titles confirmed. Clarify roles of Ray Zhong and Lenjoy Lin within the current organization. [[2]](https://console.harmonic.ai/companies/54909419)\n\u2022 **Risk \u2014 team size vs. ambition:** 45 people building a search engine and agent framework at this scale is very lean. Execution risk is real; probe org structure and key hires planned.\n",
+    "markdown": "# Genspark | Meeting Brief\n*2026-03-03*\n\n# Genspark \u2014 Investor Meeting Briefing\n\n---\n\n## TL;DR\nGenspark is an AI-driven search engine and agent framework company targeting B2B enterprise productivity and automation. [[2]](https://console.harmonic.ai/companies/54909419) The company has raised $435M in total funding, including a $275M Series B closed in November 2025, signaling strong investor conviction. [[2]](https://console.harmonic.ai/companies/54909419) Headcount has surged 55.2% in 90 days and web traffic is up 16.3% in 30 days, pointing to aggressive scaling on both the team and product fronts. [[4]](https://console.harmonic.ai/companies/54909419)\n\n---\n\n## Why This Meeting Matters\n\u2022 **Exceptional hiring velocity:** 55.2% headcount growth in 90 days \u2014 from a base of 45 employees \u2014 indicates a company in rapid build-out mode, likely deploying fresh Series B capital at pace. [[4]](https://console.harmonic.ai/companies/54909419)\n\u2022 **Fresh, large-scale capital event:** A $275M Series B closed November 2025 is one of the larger recent AI search rounds, with backing from Emergence Capital, LG Technology Ventures, SBI Investment, UpHonest Capital, and Lanchi Ventures \u2014 suggesting institutional validation. [[2]](https://console.harmonic.ai/companies/54909419)\n\u2022 **Accelerating product traction:** 14.94M monthly web visits growing at 16.3% month-over-month demonstrates real user adoption, not just fundraising momentum. [[4]](https://console.harmonic.ai/companies/54909419)\n\u2022 **Deep founding team pedigree:** Founders bring direct experience from Baidu Search, Bing, Google, ByteDance, and Xiaodu Technology (a $5.5B valuation exit), giving the team rare full-stack credibility in AI search. [[2]](https://console.harmonic.ai/companies/54909419)\n\n---\n\n## Company Snapshot\n| Field | Value |\n|---|---|\n| Founded | 2023 |\n| HQ | Not found in table |\n| Employees | 45 (+55.2% 90d) |\n| Products | AI-driven search engine with advanced relevance algorithms; AI agent framework for user engagement |\n| Customers | B2B (enterprise) |\n| Total Funding | $435,000,000 |\n| Last Round | $275,000,000 (November 2025) |\n\n*Last updated: Data as of most recent signal retrieval [[4]](https://console.harmonic.ai/companies/54909419)*\n\n---\n\n## Founders\n\n**Eric Jing** \u2014 Co-founder & CEO | [linkedin.com/in/eric-jing-5397a1b](https://linkedin.com/in/eric-jing-5397a1b)\nPreviously CEO of Xiaodu Technology, where he closed a Series B at a $5.5B valuation. Before that, he was Chief Product Manager of Search and Corporate VP at Baidu, and Principal Development Manager of Bing Search at Microsoft, where he contributed to the launch of Bing.com. [[2]](https://console.harmonic.ai/companies/54909419)\n\n**Kay Zhu** \u2014 Co-founder & CTO | [linkedin.com/in/kay-zhu-522b275](https://linkedin.com/in/kay-zhu-522b275)\nServed as CTO at Xiaodu Technology, building the company from inception to a $5.1B Series B valuation. Prior to that, she was Chief Architect of Baidu Search \u2014 where she launched the world's first DNN ranking model \u2014 and a Staff Software Engineer at Google focused on core search ranking and web anti-spam. [[2]](https://console.harmonic.ai/companies/54909419)\n\n**Ray Zhong** \u2014 Co-founder, Software Engineer | [linkedin.com/in/ray-zhong-a3735627](https://linkedin.com/in/ray-zhong-a3735627)\nServed as Chief Architect of DuerOS at Baidu from 2017 to 2023, leading development of the conversational AI platform. Prior to Baidu, he spent a decade at Google as a staff software engineer contributing to core search ranking algorithms and Google Assistant's home automation features. [[2]](https://console.harmonic.ai/companies/54909419)\n\n**Lenjoy Lin** \u2014 Co-Founder | [linkedin.com/in/lenjoy](https://linkedin.com/in/lenjoy)\nLed engineering for TikTok Ads Measurement & Targeting at ByteDance, founding and scaling that department. Earlier held engineering leadership roles at Houzz, Pinterest (Homefeed Ads), and YouTube, where he was a founding member of the team that rebuilt the ads serving and quality stack. [[2]](https://console.harmonic.ai/companies/54909419)\n\n**Wen S.** \u2014 Co-Founder & COO | [linkedin.com/in/wen-sang](https://linkedin.com/in/wen-sang)\nPreviously Co-Founder & CEO of Smarking Inc., which was acquired in 2022, and Chief Product and Technology Officer at JustPark. Holds a B.S. in Automotive Engineering from Nanjing University. [[2]](https://console.harmonic.ai/companies/54909419)\n\n---\n\n## Key Signals\n\u2022 **[Hiring]** Headcount up 55.2% in 90 days \u2014 Source: Genspark Key Signals [[4]](https://console.harmonic.ai/companies/54909419), current\n\u2022 **[Web Traffic]** Monthly traffic at 14.94M visits, up 16.3% in 30 days \u2014 Source: Genspark Key Signals [[4]](https://console.harmonic.ai/companies/54909419), current\n\u2022 **[Funding]** Series B closed at $275M on November 20, 2025; total raised $435M \u2014 Source: Genspark Company Profile [[2]](https://console.harmonic.ai/companies/54909419), 2025-11-20\n\n---\n\n## In the News\n\nNo recent news available. [[1]](https://console.harmonic.ai/companies/54909419)\n\n---\n\n## Meeting Prep\n\n**Key questions to ask:**\n\u2022 The $275M Series B closed in November 2025 \u2014 how is capital being allocated, and what milestones (revenue, enterprise contracts, product launches) does this round fund through? [[2]](https://console.harmonic.ai/companies/54909419)\n\u2022 Headcount is up 55.2% in 90 days from a base of just 45 employees \u2014 what functions are being hired, and how does the team plan to maintain culture and execution quality at this growth rate? [[4]](https://console.harmonic.ai/companies/54909419)\n\u2022 Both Eric Jing and Kay Zhu previously worked together at Xiaodu Technology \u2014 how does Genspark's AI search approach differentiate from their prior work, and what is the specific B2B go-to-market motion (direct sales, API, platform)? [[2]](https://console.harmonic.ai/companies/54909419)\n\u2022 Web traffic is strong at 14.94M monthly visits, but the company is classified as B2B \u2014 how much of that traffic converts to enterprise pipeline, and what does the current ARR or revenue trajectory look like? [[2]](https://console.harmonic.ai/companies/54909419)[[4]](https://console.harmonic.ai/companies/54909419)\n\n**Recommended next step:** Request a product demo focused on the AI agent framework and ask for a customer reference from a current enterprise account to validate B2B traction behind the traffic numbers.\n",
     "company_name": "Genspark",
-    "run_id": "13ccc375-f2e4-4e98-8263-37408974fa31",
+    "run_id": "ce97d5a1-1892-415a-9858-996332bf485d",
     "success": true,
     "error": null,
     "retrieval_counts": {
@@ -141,7 +217,7 @@
         "harmonic_54909419_signals"
       ]
     },
-    "total_elapsed_ms": 41963,
+    "total_elapsed_ms": 27102,
     "tldr": null,
     "why_it_matters": null,
     "company_snapshot": null,

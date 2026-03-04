@@ -110,21 +110,23 @@ def load_test_records(input_dir: Path, agents: list[str]) -> list[dict]:
     return records
 
 
-def build_batch_requests(records: list[dict]) -> list[dict]:
+def build_batch_requests(records: list[dict]) -> tuple[list[dict], dict[str, str]]:
     """
     Convert Stage 1 records into Anthropic Batch API request objects.
 
     Each request has:
-        custom_id  — the test_case_id (used to join responses back to records)
+        custom_id  — sanitized test_case_id (dots replaced with dashes to satisfy
+                     Batch API pattern ^[a-zA-Z0-9_-]{1,64}$)
         params     — {model, max_tokens, system, messages: [{role, content}]}
 
-    Returns a list ready to pass to client.messages.batches.create(requests=...).
+    Returns (batch_requests, id_map) where id_map maps safe_id → original test_case_id.
     """
     from evaluation.judge_prompts.outreach_judge import build_judge_prompt as outreach_judge
     from evaluation.judge_prompts.tldr_judge import build_judge_prompt as tldr_judge
     from evaluation.judge_prompts.news_aggregator_judge import build_judge_prompt as news_judge
 
     batch_requests = []
+    id_map: dict[str, str] = {}  # safe_id → original test_case_id
 
     for record in records:
         agent = record.get("agent")
@@ -160,8 +162,11 @@ def build_batch_requests(records: list[dict]) -> list[dict]:
             # News aggregator has 12 rubric dimensions — needs more output space
             max_tokens = 32000 if agent == "news_aggregator" else 16000
 
+            # Batch API custom_id must match ^[a-zA-Z0-9_-]{1,64}$ — replace dots
+            safe_id = test_case_id.replace(".", "-")
+            id_map[safe_id] = test_case_id
             batch_requests.append({
-                "custom_id": test_case_id,
+                "custom_id": safe_id,
                 "params": {
                     "model": JUDGE_MODEL,
                     "max_tokens": max_tokens,
@@ -173,7 +178,7 @@ def build_batch_requests(records: list[dict]) -> list[dict]:
         except Exception as exc:
             logger.error(f"Could not build judge prompt for {test_case_id}: {exc}")
 
-    return batch_requests
+    return batch_requests, id_map
 
 
 # =============================================================================
@@ -264,6 +269,7 @@ def fetch_and_parse_results(
     batch_ids: list[str],
     client: anthropic.Anthropic,
     output_dir: Path,
+    id_map: dict[str, str] | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """
     Stream all results from completed batches, save raw JSONL, and parse
@@ -282,12 +288,13 @@ def fetch_and_parse_results(
     with raw_jsonl_path.open("w") as raw_f:
         for batch_id in batch_ids:
             for result in client.messages.batches.results(batch_id):
-                custom_id = result.custom_id
+                safe_id = result.custom_id
+                original_id = (id_map or {}).get(safe_id, safe_id)
                 result_type = result.result.type  # "succeeded" | "errored" | "expired" | "canceled"
 
                 raw_entry = {
                     "batch_id": batch_id,
-                    "custom_id": custom_id,
+                    "custom_id": original_id,
                     "result_type": result_type,
                 }
 
@@ -297,12 +304,12 @@ def fetch_and_parse_results(
                     text = content_blocks[0].text if content_blocks else ""
                     raw_entry["content"] = text
 
-                    parsed = _parse_judge_response(custom_id, text)
+                    parsed = _parse_judge_response(original_id, text)
                     score_records.append(parsed)
                 else:
                     raw_entry["error"] = str(result.result)
                     score_records.append({
-                        "test_case_id": custom_id,
+                        "test_case_id": original_id,
                         "judge_success": False,
                         "error": result_type,
                     })
@@ -367,6 +374,7 @@ def run_realtime(
     batch_requests: list[dict],
     client: anthropic.Anthropic,
     output_dir: Path,
+    id_map: dict[str, str] | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """
     Run judge calls sequentially via the regular Messages API.
@@ -385,11 +393,12 @@ def run_realtime(
 
     with raw_jsonl_path.open("w") as raw_f:
         for i, req in enumerate(batch_requests, 1):
-            custom_id = req["custom_id"]
+            safe_id = req["custom_id"]
+            original_id = (id_map or {}).get(safe_id, safe_id)
             params = req["params"]
-            print(f"  [{i}/{total}] Judging {custom_id}...", end=" ", flush=True)
+            print(f"  [{i}/{total}] Judging {original_id}...", end=" ", flush=True)
 
-            raw_entry = {"custom_id": custom_id, "result_type": "succeeded"}
+            raw_entry = {"custom_id": original_id, "result_type": "succeeded"}
 
             try:
                 # Use streaming for large max_tokens (required by SDK for >10min ops)
@@ -415,14 +424,14 @@ def run_realtime(
                 raw_entry["content"] = text
                 print(f"({usage.input_tokens}in/{usage.output_tokens}out tokens)")
 
-                parsed = _parse_judge_response(custom_id, text)
+                parsed = _parse_judge_response(original_id, text)
                 score_records.append(parsed)
 
             except Exception as exc:
                 raw_entry["result_type"] = "errored"
                 raw_entry["error"] = str(exc)
                 score_records.append({
-                    "test_case_id": custom_id,
+                    "test_case_id": original_id,
                     "judge_success": False,
                     "error": str(exc),
                 })
@@ -703,7 +712,7 @@ Examples:
 
         # ── Step 2: Build prompts ───────────────────────────────────────────
         print(f"\n[2/3] Building judge prompts...")
-        batch_requests = build_batch_requests(records)
+        batch_requests, id_map = build_batch_requests(records)
         print(f"  Built {len(batch_requests)} judge prompts")
 
         if not batch_requests:
@@ -713,7 +722,7 @@ Examples:
         # ── Step 3a: Real-time path (--no-batch) ────────────────────────────
         if args.no_batch:
             print(f"\n[3/3] Running {len(batch_requests)} judge calls in real-time (model: {args.model})...")
-            raw_results, score_records = run_realtime(batch_requests, client, output_dir)
+            raw_results, score_records = run_realtime(batch_requests, client, output_dir, id_map=id_map)
 
             save_scores_json(score_records, output_dir)
             # Reload merged scores so CSV and dashboard reflect all agents, not just this run
@@ -758,6 +767,8 @@ Examples:
         batch_ids = [bid.strip() for bid in args.batch_id.split(",")]
         manifest_path = output_dir / "batch_manifest.json"
         manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+        # Rebuild id_map from manifest keys (original IDs → safe IDs)
+        id_map = {k.replace(".", "-"): k for k in manifest.keys()}
         records = []
         print(f"\n  Polling batch IDs: {batch_ids}")
 
@@ -773,7 +784,7 @@ Examples:
         if (output_dir / "batch_manifest.json").exists()
         else "{}"
     )
-    raw_results, score_records = fetch_and_parse_results(batch_ids, client, output_dir)
+    raw_results, score_records = fetch_and_parse_results(batch_ids, client, output_dir, id_map=id_map)
 
     save_scores_json(score_records, output_dir)
     # Reload merged scores so CSV and dashboard reflect all agents, not just this run

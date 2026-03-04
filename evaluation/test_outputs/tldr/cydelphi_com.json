@@ -1,7 +1,7 @@
 {
   "test_case_id": "tldr_cydelphi.com",
   "agent": "tldr",
-  "timestamp": "2026-03-04T01:24:07.066711",
+  "timestamp": "2026-03-04T05:13:59.784677",
   "company_id": "cydelphi.com",
   "success": true,
   "error": null,
@@ -41,7 +41,7 @@
         "Data Analytics"
       ],
       "customer_type": "Business (B2B)",
-      "fetched_at": "2026-03-04T01:24:39.622404"
+      "fetched_at": "2026-03-04T05:14:09.696882"
     },
     "founders": [],
     "key_signals": [
@@ -65,12 +65,88 @@
       }
     ],
     "news": [],
-    "competitors": []
+    "competitors": [
+      {
+        "company_id": "cydelphi.com",
+        "competitor_name": "7AI",
+        "competitor_domain": "7ai.com",
+        "competitor_type": "startup",
+        "description": "The main product is a cybersecurity platform that utilizes AI agents to automate processes such as data enrichment, investigations, and threat analysis, thereby improving the efficiency of security operations. These agents are designed to integrate with various security tools, enabling rapid threat ",
+        "funding_total": 166600000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": 130600000.0,
+        "funding_last_date": "2025-11-19T00:00:00Z",
+        "headcount": 70,
+        "tags": "Security Software & Services, Business (B2B), Cybersecurity, Software",
+        "harmonic_id": "54370842",
+        "observed_at": "2026-03-04T05:01:58.084657+00:00"
+      },
+      {
+        "company_id": "cydelphi.com",
+        "competitor_name": "Prophet Security",
+        "competitor_domain": "prophetsecurity.ai",
+        "competitor_type": "startup",
+        "description": "The main product is an AI-driven security operations center (SOC) platform that automates the triage, investigation, and response to security alerts, significantly enhancing operational efficiency and reducing investigation time. It utilizes advanced technologies to analyze data, emulate expert anal",
+        "funding_total": 41000000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": null,
+        "funding_last_date": "2026-02-25T00:00:00Z",
+        "headcount": 61,
+        "tags": "Analytics & Business Intelligence Platforms, Communications & Information Technology, Security Software & Services, Business (B2B), Cybersecurity",
+        "harmonic_id": "36802292",
+        "observed_at": "2026-03-04T05:01:58.084683+00:00"
+      },
+      {
+        "company_id": "cydelphi.com",
+        "competitor_name": "SIRP",
+        "competitor_domain": "sirp.io",
+        "competitor_type": "startup",
+        "description": "The main product is an AI-driven security operations platform that employs a network of intelligent agents to automate processes such as alert classification, incident routing, and risk scoring. It integrates with over 200 applications and APIs to provide real-time threat intelligence and customizab",
+        "funding_total": 800000,
+        "funding_stage": "SEED",
+        "funding_last_amount": 500000,
+        "funding_last_date": "2020-01-04T00:00:00Z",
+        "headcount": 59,
+        "tags": "Analytics & Business Intelligence Platforms, Communications & Information Technology, Security Software & Services, Business (B2B), Cybersecurity",
+        "harmonic_id": "32427",
+        "observed_at": "2026-03-04T05:01:58.084813+00:00"
+      },
+      {
+        "company_id": "cydelphi.com",
+        "competitor_name": "ReliaQuest",
+        "competitor_domain": "reliaquest.com",
+        "competitor_type": "incumbent",
+        "description": "The main product is a cloud-native security operations platform that employs agentic AI to automate the detection, investigation, and response to cyber threats, enhancing operational efficiency through features like alert de-duplication and correlation. It integrates various security tools into a un",
+        "funding_total": 878000000.0,
+        "funding_stage": "EXITED",
+        "funding_last_amount": 500000000.0,
+        "funding_last_date": "2025-03-31T00:00:00Z",
+        "headcount": 1110,
+        "tags": "Security Software & Services, Business (B2B), Cybersecurity, Software, Service",
+        "harmonic_id": "176066",
+        "observed_at": "2026-03-04T05:01:58.084801+00:00"
+      },
+      {
+        "company_id": "cydelphi.com",
+        "competitor_name": "Radiant Security",
+        "competitor_domain": "radiantsecurity.ai",
+        "competitor_type": "startup",
+        "description": "The product is an AI-powered platform that automates the triage and investigation of security alerts, allowing analysts to concentrate on real threats while significantly lowering operational costs. It employs adaptive AI technologies to filter out false positives and integrates seamlessly with exis",
+        "funding_total": 22500000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": 15000000.0,
+        "funding_last_date": "2023-11-14T00:00:00Z",
+        "headcount": 54,
+        "tags": "Analytics & Business Intelligence Platforms, Communications & Information Technology, Security Software & Services, Business (B2B), Cybersecurity",
+        "harmonic_id": "44801432",
+        "observed_at": "2026-03-04T05:01:02.42174+00:00"
+      }
+    ]
   },
   "agent_output": {
-    "markdown": "# CYDELPHI | Meeting Brief\n*2026-03-03*\n\n## TL;DR\nCyDelphi is a seed-stage automated cybersecurity incident response platform founded in 2024, having raised $3M from Glasswing Ventures and Blu Ventures. The company is very early with minimal web presence and a concerning headcount contraction of ~17% in the last 90 days \u2014 red flags worth probing directly in this meeting.\n\n---\n\n## Company Overview\nCyDelphi offers an AI-driven incident response platform that manages the full lifecycle of cybersecurity incidents via playbooks, runbooks, and automated workflows. The platform includes a multi-tenant command center supporting remote deployment, evidence collection, and threat analysis, backed by a data lake architecture for rapid information access. [[2]](https://console.harmonic.ai/companies/62587452)\n\n- **Stage:** Seed [[2]](https://console.harmonic.ai/companies/62587452)\n- **Founded:** 2024 [[2]](https://console.harmonic.ai/companies/62587452)\n- **Total Raised:** $3M (last round closed February 2026) [[2]](https://console.harmonic.ai/companies/62587452)\n- **Investors:** Glasswing Ventures, Blu Ventures [[2]](https://console.harmonic.ai/companies/62587452)\n- **Headcount:** 5 [[2]](https://console.harmonic.ai/companies/62587452)\n- **Web Traffic:** 430 [[2]](https://console.harmonic.ai/companies/62587452)\n\n---\n\n## Key Points\n\u2022 **Very early-stage company** \u2014 founded 2024 with only 5 employees, suggesting the product is likely pre-revenue or in very early commercial stages. [[2]](https://console.harmonic.ai/companies/62587452)\n\u2022 **$3M seed round recently closed** (February 2026), providing near-term runway, but the small team size limits execution capacity. [[2]](https://console.harmonic.ai/companies/62587452)\n\u2022 **Headcount has declined 16.7% in the last 90 days** \u2014 at a 5-person company, this represents at least one departure, which is disproportionately significant and warrants direct explanation. [[3]](https://console.harmonic.ai/companies/62587452)\n\u2022 **Web traffic of 430 is extremely low**, indicating minimal market awareness or early-stage go-to-market activity. [[2]](https://console.harmonic.ai/companies/62587452)\n\u2022 **Only one named leader identified** \u2014 Doron Kolton, VP Engineering \u2014 with no CEO, CTO, or commercial leadership identified in available data. [[2]](https://console.harmonic.ai/companies/62587452)\n\n---\n\n## Recent Developments\n\u2022 Closed a $3M seed round on February 12, 2026, backed by Glasswing Ventures and Blu Ventures. [[1]](https://console.harmonic.ai/companies/62587452)[[2]](https://console.harmonic.ai/companies/62587452)\n\u2022 No other recent news or product announcements found in available data. [[1]](https://console.harmonic.ai/companies/62587452)\n\n---\n\n## Signals & Trends\n\u2022 \u26a0\ufe0f **Headcount contraction of -16.7% over 90 days** at a 5-person company is a meaningful signal \u2014 could indicate a co-founder departure, early team instability, or a strategic pivot. [[3]](https://console.harmonic.ai/companies/62587452)\n\u2022 Web traffic data shows no growth trend available yet; current volume of 430 suggests negligible organic traction. [[2]](https://console.harmonic.ai/companies/62587452)[[3]](https://console.harmonic.ai/companies/62587452)\n\u2022 No web traffic change data available to assess directional momentum. [[3]](https://console.harmonic.ai/companies/62587452)\n\n---\n\n## For This Meeting\n\n**Key Questions to Ask:**\n\u2022 Who leads the company? No CEO or commercial leadership is identified in available data \u2014 clarify the full founding team and org structure.\n\u2022 What caused the headcount reduction? Who left, and why?\n\u2022 What is the current product status \u2014 is this live, in beta, or still in development?\n\u2022 Do you have any paying customers or signed pilots? What does early GTM look like?\n\u2022 How are you deploying the $3M seed capital, and what milestones does it fund?\n\n**Risks to Probe:**\n\u2022 **Team thinness and attrition** at 5 people is a critical execution risk, especially post-departure. [[3]](https://console.harmonic.ai/companies/62587452)\n\u2022 **No visible commercial traction** \u2014 web traffic and lack of news suggest the company has not yet broken through to market. [[2]](https://console.harmonic.ai/companies/62587452)\n\u2022 **Leadership gap** \u2014 absence of identified CEO/GTM leadership is a structural concern for a B2B SaaS company needing enterprise sales. [[2]](https://console.harmonic.ai/companies/62587452)\n\n**Areas Needing Clarification:**\n\u2022 Full leadership team composition and equity/role structure.\n\u2022 Competitive differentiation vs. established incident response platforms.\n\u2022 Customer pipeline and revenue status \u2014 not found in available data.\n",
+    "markdown": "# CYDELPHI | Meeting Brief\n*2026-03-03*\n\n## TL;DR\nCYDELPHI is a B2B cybersecurity company offering an AI-driven automated incident response platform that manages the full lifecycle of security incidents via playbooks, runbooks, and a multi-tenant command center. The company closed a $3M seed round in February 2026, backed by Glasswing Ventures and Blu Ventures [[2]](https://console.harmonic.ai/companies/62587452). Despite the recent funding, a notable headcount contraction warrants scrutiny heading into this meeting [[3]](https://console.harmonic.ai/companies/62587452).\n\n---\n\n## Why This Meeting Matters\n\u2022 **Recent seed funding signals early institutional validation:** CYDELPHI raised $3M as recently as February 2026, with participation from Glasswing Ventures and Blu Ventures \u2014 both active in the cybersecurity space \u2014 indicating the thesis has cleared at least one institutional bar [[2]](https://console.harmonic.ai/companies/62587452)\n\u2022 **Headcount contraction is a red flag at this stage:** A -16.7% headcount decline over 90 days at a 5-person company means at least one departure from a very small team, which is a material signal worth probing at the seed stage [[3]](https://console.harmonic.ai/companies/62587452)\n\u2022 **Nascent web traction:** Web traffic stands at just 430, with no measurable growth trend available, suggesting the company is pre-traction and likely pre-revenue or very early in go-to-market [[2]](https://console.harmonic.ai/companies/62587452)[[3]](https://console.harmonic.ai/companies/62587452)\n\n---\n\n## Company Snapshot\n| Field | Value |\n|---|---|\n| Founded | 2024 |\n| HQ | Not found in table |\n| Employees | 5 (-16.7% over 90 days) |\n| Products | Automated incident response platform with AI-driven workflows, playbooks/runbooks, multi-tenant command center, and data lake integration |\n| Customers | B2B (specific customers not found in table) |\n| Total Funding | $3,000,000 |\n| Last Round | $3,000,000 \u2014 February 12, 2026 |\n*Last updated: Based on available data as of most recent retrieval [[2]](https://console.harmonic.ai/companies/62587452)[[3]](https://console.harmonic.ai/companies/62587452)*\n\n---\n\n## Founders\n**Doron Kolton** \u2014 VP Engineering | N/A\nBackground not yet available. Kolton is the only leadership figure identified in the company profile. No additional biographical detail is provided in the available data. [[2]](https://console.harmonic.ai/companies/62587452)\n\n---\n\n## Key Signals\n\u2022 [**Team Contraction**] Headcount declined 16.7% over the past 90 days, dropping to 5 employees \u2014 a significant proportional loss for a seed-stage team \u2014 Source: CYDELPHI Key Signals [[3]](https://console.harmonic.ai/companies/62587452)\n\u2022 [**Funding**] Seed round of $3M closed February 12, 2026, with Glasswing Ventures and Blu Ventures as investors \u2014 Source: CYDELPHI Company Profile [[2]](https://console.harmonic.ai/companies/62587452)\n\n---\n\n## In the News\nNo recent news available.\n\n---\n\n## Meeting Prep\n**Key questions to ask:**\n\u2022 The team has shrunk by ~16.7% in 90 days despite closing a $3M seed round just recently \u2014 who departed, why, and how does leadership plan to rebuild or right-size the team? [[3]](https://console.harmonic.ai/companies/62587452)\n\u2022 With only one named leader (VP Engineering) and no CEO or GTM leadership identified in the profile, who is driving commercial strategy and customer acquisition? [[2]](https://console.harmonic.ai/companies/62587452)\n\u2022 Web traffic sits at just 430 with no growth trend \u2014 do you have any paying customers or signed pilots, and what does the go-to-market motion look like post-funding? [[2]](https://console.harmonic.ai/companies/62587452)[[3]](https://console.harmonic.ai/companies/62587452)\n\n**Recommended next step:** Request a full cap table, org chart, and any customer/pipeline data before advancing \u2014 the headcount contraction and leadership gaps need to be explained before further diligence is warranted.\n",
     "company_name": "CYDELPHI",
-    "run_id": "d753ecf7-2a1a-4742-8ecd-6f402eeb14ca",
+    "run_id": "bcbeb675-bde7-41df-8ce7-b6b8233a0c51",
     "success": true,
     "error": null,
     "retrieval_counts": {
@@ -89,7 +165,7 @@
         "harmonic_62587452_signals"
       ]
     },
-    "total_elapsed_ms": 53719,
+    "total_elapsed_ms": 37570,
     "tldr": null,
     "why_it_matters": null,
     "company_snapshot": null,

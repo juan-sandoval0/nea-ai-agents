@@ -1,0 +1,151 @@
+{
+  "test_case_id": "outreach_saviynt.com_danielle_email",
+  "agent": "outreach",
+  "timestamp": "2026-03-04T05:07:26.456422",
+  "company_id": "saviynt.com",
+  "investor_key": "danielle",
+  "output_format": "email",
+  "success": true,
+  "error": null,
+  "company_bundle": {
+    "company_core": {
+      "company_id": "saviynt.com",
+      "company_name": "Saviynt",
+      "founding_date": "2010-01-01T00:00:00Z",
+      "hq": "El Segundo, California",
+      "employee_count": 1516,
+      "total_funding": 1075000000.0,
+      "products": "Saviynt offers a cloud-based identity management platform that integrates identity governance, application access governance, and privileged access management to improve security and compliance for enterprises. The platform utilizes advanced technologies to facilitate granular access control, manage identity lifecycles, and implement Zero Trust principles across multi-cloud environments.",
+      "customers": "Business (B2B)",
+      "arr_apr": null,
+      "last_round_date": "2026-02-02T00:00:00Z",
+      "last_round_funding": null,
+      "web_traffic_trend": "+4.0% (30d)",
+      "website_update": "11 website updates detected",
+      "hiring_firing": "+7.8% (90d)",
+      "observed_at": "2026-03-04T05:07:27.440690",
+      "source_map": {
+        "company_name": "harmonic",
+        "founding_date": "harmonic",
+        "hq": "harmonic",
+        "employee_count": "harmonic",
+        "total_funding": "harmonic",
+        "products": "harmonic",
+        "customers": "harmonic",
+        "last_round_date": "harmonic",
+        "last_round_funding": "harmonic",
+        "web_traffic_trend": "pending_key_signals",
+        "hiring_firing": "pending_key_signals",
+        "website_update": "pending_tavily",
+        "arr_apr": "not_available"
+      }
+    },
+    "founders": [
+      {
+        "company_id": "saviynt.com",
+        "name": "Amit Saha",
+        "role_title": "VP Business Development",
+        "linkedin_url": "https://linkedin.com/in/amitsaha",
+        "background": "Amit Saha has a diverse background in banking and finance, having served as a Branch Manager at Chhattisgarh Rajya Gramin Bank from 2013 to 2017 and as an Assistant Manager at both INGVYSYA Bank and Yes Bank in 2010-2011. He began his career as a Business Analyst at Knex Inc. from 2017 to 2018. Amit holds a degree from Barkatullah Vishwavidyalaya.\n\n---\nSources: linkedin.com/in/amit-saha-7a259a4",
+        "observed_at": "2026-03-04T05:07:29.067444",
+        "source": "harmonic"
+      }
+    ],
+    "news": [],
+    "key_signals": [
+      {
+        "company_id": "saviynt.com",
+        "signal_type": "web_traffic",
+        "description": "Traffic growing: +4.0% in 30 days",
+        "observed_at": "2026-03-04T05:07:30.957035",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "saviynt.com",
+        "signal_type": "hiring",
+        "description": "Growing team: +7.8% headcount in 90 days (1,516 employees)",
+        "observed_at": "2026-03-04T05:07:30.957035",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "saviynt.com",
+        "signal_type": "website_update",
+        "description": "Saviynt has announced new Amazon Q integrations that enhance AI workflows for identity teams, alongside the launch of an identity-centric, zero trust security service aimed at accelerating digital transformation. Additionally, the company has recognized its top partners through the 2025 Partner Awards, highlighting its growth and strategic collaborations in the identity security market.",
+        "observed_at": "2026-03-04T05:07:30.957035",
+        "source": "tavily"
+      }
+    ],
+    "competitors": [
+      {
+        "company_id": "saviynt.com",
+        "competitor_name": "Immuta",
+        "competitor_domain": "immuta.com",
+        "competitor_type": "startup",
+        "description": "The company offers a data security platform that automates data access governance and management, streamlining processes such as data onboarding, policy creation, and access approvals through integrated workflows. It utilizes technologies for granular access control, continuous monitoring of queries",
+        "funding_total": 258200000.0,
+        "funding_stage": "SERIES_E",
+        "funding_last_amount": null,
+        "funding_last_date": "2023-05-04T00:00:00Z",
+        "headcount": 187,
+        "tags": "Analytics & Business Intelligence Platforms, Life Sciences & Healthcare, Data Infrastructure & Cloud Services, Communications & Information Technology, Healthcare Data & EHR Technology",
+        "harmonic_id": "148869",
+        "observed_at": "2026-03-04T05:08:13.166701+00:00"
+      },
+      {
+        "company_id": "saviynt.com",
+        "competitor_name": "AppOmni",
+        "competitor_domain": "appomni.com",
+        "competitor_type": "startup",
+        "description": "The company provides a SaaS security platform designed to prevent data breaches by ensuring deep visibility and real-time risk detection across various SaaS applications. It utilizes technologies such as identity and access management, threat detection, and configuration management to address risks ",
+        "funding_total": 123000000.0,
+        "funding_stage": "SERIES_C",
+        "funding_last_amount": null,
+        "funding_last_date": "2022-12-15T00:00:00Z",
+        "headcount": 148,
+        "tags": "Security Software & Services, Business (B2B), Cybersecurity, Software, Service",
+        "harmonic_id": "795086",
+        "observed_at": "2026-03-04T05:08:13.16667+00:00"
+      },
+      {
+        "company_id": "saviynt.com",
+        "competitor_name": "Orchid Security",
+        "competitor_domain": "orchid.security",
+        "competitor_type": "startup",
+        "description": "The product is a platform designed for managing identity controls across self-hosted and SaaS applications, focusing on continuous monitoring and compliance. It utilizes advanced AI analytics and modern authentication protocols to assess and improve identity governance and risk management.",
+        "funding_total": 36000000.0,
+        "funding_stage": "SEED",
+        "funding_last_amount": 36000000.0,
+        "funding_last_date": "2025-01-14T00:00:00Z",
+        "headcount": 71,
+        "tags": "Security Software & Services, Business (B2B), Cybersecurity, Software, Service",
+        "harmonic_id": "50900585",
+        "observed_at": "2026-03-04T05:08:13.166685+00:00"
+      }
+    ]
+  },
+  "agent_output": {
+    "subject": "Saviynt's Zero Trust architecture + Amazon Q integration",
+    "message": "Hi Amit,\n\nBy way of introduction, my name is Danielle and I'm a partner at NEA. We've been grateful to be Series A / B lead investors in companies like Plaid, Databricks, Robinhood, Cloudflare, and many others.\n\nI've been tracking Saviynt's evolution in the identity security space and was particularly interested in your recent Amazon Q integration announcement. The ability to surface identity insights directly in AI workflows feels like a meaningful unlock for security teams dealing with the complexity of multi-cloud environments. I'm curious how you're thinking about the intersection of generative AI and identity governance as enterprises adopt more AI tooling.\n\nThe Zero Trust service launch also caught my attention. I'd love to understand more about how you're approaching granular access control at scale and what you're seeing in terms of customer adoption patterns as companies move from perimeter-based security models.\n\nWould you be open to a conversation about Saviynt's roadmap and long-term vision? I'd love to learn more about where you're taking the platform and share a bit about NEA.\n\nNEA is a venture capital firm. We lead early rounds in big ideas and work with generational founders. We're partners to companies such as Perplexity (Series A lead), Databricks (Series B lead), Plaid (Series A lead), Robinhood (Series B lead), Cloudflare (Series B lead), and many others. Our team is based in Menlo Park, CA and NYC.\n\nThanks!\nDanielle",
+    "context_type": "cold_technical_interest",
+    "investor_key": "danielle",
+    "output_format": "email",
+    "contact_name": "Amit Saha",
+    "contact_title": "VP Business Development",
+    "contact_linkedin": "https://linkedin.com/in/amitsaha",
+    "company_name": "Saviynt",
+    "data_sources": {
+      "company_core": true,
+      "founders": 1,
+      "signals": 3,
+      "news": 0
+    },
+    "generated_at": "2026-03-04T05:07:26.456715"
+  },
+  "context_tags": {
+    "investor": "danielle",
+    "format": "email",
+    "data_richness": "medium",
+    "feedback_state": "no_feedback",
+    "investor_context": "cold_technical_interest"
+  }
+}

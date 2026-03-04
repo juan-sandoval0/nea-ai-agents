@@ -1,0 +1,160 @@
+{
+  "test_case_id": "outreach_novee.security_madison_email",
+  "agent": "outreach",
+  "timestamp": "2026-03-04T05:04:14.399282",
+  "company_id": "novee.security",
+  "investor_key": "madison",
+  "output_format": "email",
+  "success": true,
+  "error": null,
+  "company_bundle": {
+    "company_core": {
+      "company_id": "novee.security",
+      "company_name": "Novee Security",
+      "founding_date": "2025-01-01T00:00:00Z",
+      "hq": "Tel Aviv, Israel",
+      "employee_count": 37,
+      "total_funding": 51500000.0,
+      "products": "Novee provides an AI-driven penetration testing platform that uses black-box testing to detect vulnerabilities and attack paths in real-time, mimicking the strategies of actual attackers. The platform leverages purpose-trained AI models that adapt to environmental changes, continuously validating vulnerabilities and offering customized remediation strategies based on the specific technology stack.",
+      "customers": "Business (B2B)",
+      "arr_apr": null,
+      "last_round_date": "2026-01-14T00:00:00Z",
+      "last_round_funding": null,
+      "web_traffic_trend": "0.0% (30d)",
+      "website_update": "6 website updates detected",
+      "hiring_firing": "+32.1% (90d)",
+      "observed_at": "2026-03-04T05:04:14.856300",
+      "source_map": {
+        "company_name": "harmonic",
+        "founding_date": "harmonic",
+        "hq": "harmonic",
+        "employee_count": "harmonic",
+        "total_funding": "harmonic",
+        "products": "harmonic",
+        "customers": "harmonic",
+        "last_round_date": "harmonic",
+        "last_round_funding": "harmonic",
+        "web_traffic_trend": "pending_key_signals",
+        "hiring_firing": "pending_key_signals",
+        "website_update": "pending_tavily",
+        "arr_apr": "not_available"
+      }
+    },
+    "founders": [
+      {
+        "company_id": "novee.security",
+        "name": "Gon Chalamish",
+        "role_title": "Co-Founder & CPO",
+        "linkedin_url": "https://linkedin.com/in/gon-chalamish-a30966282",
+        "background": "Gon Chalamish served as the Research and Development Group Manager at FundGuard from 2024 to 2025, following a notable tenure in the Israel Defense Forces where he held roles including Deputy Commander Chief of Staff and Project Manager. He also led a research and development group within the IDF from 2019 to 2021. Gon holds a Bachelor of Science in Computer Science from Reichman University.\n\n---\nSources: linkedin.com/in/gon-chalamish-a30966282",
+        "observed_at": "2026-03-04T05:04:15.513283",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "novee.security",
+        "name": "Ido Geffen",
+        "role_title": "Co-Founder & CEO",
+        "linkedin_url": "https://linkedin.com/in/ido-geffen",
+        "background": "Ido Geffen has over 20 years of experience in cybersecurity, having held significant roles such as VP of Product at Orca Security, where he contributed to revolutionizing cloud security, and VP of Product & Customer Success at Oasis Security, a leader in non-human identity management. He also served as VP of Customer Success & Support at CyberMDX, managing multiple departments to enhance customer journeys. Ido holds a B.Sc. in Computer Science from Ben-Gurion University and an MBA in Management of Technology, Innovation & Entrepreneurship from Tel Aviv University.\n\n---\nSources: linkedin.com/in/ido-geffen",
+        "observed_at": "2026-03-04T05:04:15.689395",
+        "source": "harmonic"
+      }
+    ],
+    "news": [],
+    "key_signals": [
+      {
+        "company_id": "novee.security",
+        "signal_type": "web_traffic",
+        "description": "Traffic declining: 0.0% in 30 days",
+        "observed_at": "2026-03-04T05:04:16.231545",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "novee.security",
+        "signal_type": "hiring",
+        "description": "Rapid hiring: +32.1% headcount in 90 days (37 employees)",
+        "observed_at": "2026-03-04T05:04:16.231545",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "novee.security",
+        "signal_type": "website_update",
+        "description": "Novee Security has emerged from stealth with $51.5 million in funding, highlighting the increasing demand for offensive security solutions. The launch has been covered by multiple media outlets, indicating strong market interest and growth potential.",
+        "observed_at": "2026-03-04T05:04:16.231545",
+        "source": "tavily"
+      }
+    ],
+    "competitors": [
+      {
+        "company_id": "novee.security",
+        "competitor_name": "Horizon3.ai",
+        "competitor_domain": "horizon3.ai",
+        "competitor_type": "startup",
+        "description": "The main product is an autonomous penetration testing platform that continuously identifies and prioritizes vulnerabilities across various environments, including internal, external, cloud, and hybrid, without requiring agents or code. It utilizes knowledge graph analytics and inference engines to p",
+        "funding_total": 178500000.0,
+        "funding_stage": "SERIES_D",
+        "funding_last_amount": null,
+        "funding_last_date": "2026-01-13T00:00:00Z",
+        "headcount": 375,
+        "tags": "Security Software & Services, Business (B2B), Cybersecurity, Software, Artificial intelligence",
+        "harmonic_id": "650252",
+        "observed_at": "2026-03-04T05:04:48.206848+00:00"
+      },
+      {
+        "company_id": "novee.security",
+        "competitor_name": "Synack",
+        "competitor_domain": "synack.com",
+        "competitor_type": "startup",
+        "description": "The company offers a security testing platform that combines automated tools with human-led penetration testing to identify and remediate vulnerabilities in digital assets and infrastructures. It employs agentic AI and a network of security researchers to facilitate continuous and scalable testing, ",
+        "funding_total": 172368000.0,
+        "funding_stage": "SERIES_D",
+        "funding_last_amount": 65000000.0,
+        "funding_last_date": "2024-01-12T00:00:00Z",
+        "headcount": 239,
+        "tags": "Security Software & Services, Business (B2B), Cybersecurity, Software, Artificial intelligence",
+        "harmonic_id": "76156",
+        "observed_at": "2026-03-04T05:04:48.206945+00:00"
+      },
+      {
+        "company_id": "novee.security",
+        "competitor_name": "XBOW",
+        "competitor_domain": "xbow.com",
+        "competitor_type": "startup",
+        "description": "The main product is an autonomous offensive security platform that utilizes AI to conduct continuous penetration testing, enabling the identification and validation of vulnerabilities in applications with minimal human intervention. This technology facilitates deeper exploration of attack paths and ",
+        "funding_total": 117000000.0,
+        "funding_stage": "SERIES_B",
+        "funding_last_amount": 75000000.0,
+        "funding_last_date": "2025-06-24T00:00:00Z",
+        "headcount": 170,
+        "tags": "Developer Operations & AI Building Tools, Communications & Information Technology, Security Software & Services, Business (B2B), Cybersecurity",
+        "harmonic_id": "55897647",
+        "observed_at": "2026-03-04T05:04:48.206825+00:00"
+      }
+    ]
+  },
+  "agent_output": {
+    "subject": "Novee's black-box AI pentest approach",
+    "message": "Gon\u2014\n\nI am a former Meta AI researcher now investing in data/AI/infra at NEA. I came across Novee and was struck by the black-box AI pentest approach \u2013 the idea of purpose-trained models that adapt to environmental changes and continuously validate vulnerabilities is exactly the kind of offensive security infrastructure we think the market needs.\n\nCurious how you're thinking about the roadmap here, especially around how the models learn new attack patterns and how you're handling remediation prioritization across different tech stacks.\n\nWant to chat?\n\nMadison",
+    "context_type": "cold_technical_interest",
+    "investor_key": "madison",
+    "output_format": "email",
+    "contact_name": "Gon Chalamish",
+    "contact_title": "Co-Founder & CPO",
+    "contact_linkedin": "https://linkedin.com/in/gon-chalamish-a30966282",
+    "company_name": "Novee Security",
+    "data_sources": {
+      "company_core": true,
+      "founders": 2,
+      "signals": 3,
+      "news": 0
+    },
+    "generated_at": "2026-03-04T05:04:14.399393"
+  },
+  "context_tags": {
+    "investor": "madison",
+    "format": "email",
+    "data_richness": "medium",
+    "feedback_state": "no_feedback",
+    "investor_context": "cold_technical_interest"
+  }
+}

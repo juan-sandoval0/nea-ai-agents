@@ -1,0 +1,175 @@
+{
+  "test_case_id": "outreach_periodic.com_madison_email",
+  "agent": "outreach",
+  "timestamp": "2026-03-04T05:11:39.963319",
+  "company_id": "periodic.com",
+  "investor_key": "madison",
+  "output_format": "email",
+  "success": true,
+  "error": null,
+  "company_bundle": {
+    "company_core": {
+      "company_id": "periodic.com",
+      "company_name": "Periodic Labs",
+      "founding_date": "2025-01-01T00:00:00Z",
+      "hq": "San Francisco, California",
+      "employee_count": 39,
+      "total_funding": 300000000.0,
+      "products": "The main product consists of AI scientists and autonomous laboratories designed to conduct experiments that generate high-quality data, particularly in the physical sciences. This technology utilizes advanced AI methodologies to improve materials design, with specific applications in superconductors and semiconductor manufacturing.",
+      "customers": "Business (B2B)",
+      "arr_apr": null,
+      "last_round_date": "2025-09-30T00:00:00Z",
+      "last_round_funding": 300000000.0,
+      "web_traffic_trend": "-17.4% (30d)",
+      "website_update": null,
+      "hiring_firing": "+44.4% (90d)",
+      "observed_at": "2026-03-04T05:11:40.417878",
+      "source_map": {
+        "company_name": "harmonic",
+        "founding_date": "harmonic",
+        "hq": "harmonic",
+        "employee_count": "harmonic",
+        "total_funding": "harmonic",
+        "products": "harmonic",
+        "customers": "harmonic",
+        "last_round_date": "harmonic",
+        "last_round_funding": "harmonic",
+        "web_traffic_trend": "pending_key_signals",
+        "hiring_firing": "pending_key_signals",
+        "website_update": "pending_tavily",
+        "arr_apr": "not_available"
+      }
+    },
+    "founders": [
+      {
+        "company_id": "periodic.com",
+        "name": "Ekin Dogus Cubuk",
+        "role_title": "Co-Founder",
+        "linkedin_url": "https://linkedin.com/in/ekin-dogus-cubuk-9148b8114",
+        "background": "Ekin Dogus Cubuk served as a Research Scientist at Google DeepMind from 2017 to 2025, where he contributed to advanced AI research. Prior to that, he was a Postdoctoral Research Fellow at Stanford University from 2016 to 2017. He holds a Bachelor of Science in Physics and Engineering from Swarthmore College and a Master of Arts in Condensed Matter and Materials Physics from Harvard University.\n\n---\nSources: linkedin.com/in/ekin-dogus-cubuk-9148b8114",
+        "observed_at": "2026-03-04T05:11:41.077895",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "periodic.com",
+        "name": "William (Liam) Fedus",
+        "role_title": "Co-Founder",
+        "linkedin_url": "https://linkedin.com/in/william-liam-fedus-26547811",
+        "background": "William (Liam) Fedus has a strong background in AI and deep learning, having served as a Research Scientist at Google Brain from 2020 to 2022, where he focused on deep learning research. He was a key contributor to the development of ChatGPT while working at OpenAI, first as a Member of Technical Staff and later as VP of Research for Post-Training. Liam holds a PhD in Computer Science from Universit\u00e9 de Montr\u00e9al, where he studied under notable figures like Hugo Larochelle and Yoshua Bengio, and also earned a Master's degree in Elementary Particle Physics from UC San Diego.\n\n---\nSources: linkedin.com/in/william-liam-fedus-26547811",
+        "observed_at": "2026-03-04T05:11:41.241079",
+        "source": "harmonic"
+      }
+    ],
+    "news": [],
+    "key_signals": [
+      {
+        "company_id": "periodic.com",
+        "signal_type": "web_traffic",
+        "description": "Traffic declining: -17.4% in 30 days",
+        "observed_at": "2026-03-04T05:11:41.811305",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "periodic.com",
+        "signal_type": "hiring",
+        "description": "Rapid hiring: +44.4% headcount in 90 days (39 employees)",
+        "observed_at": "2026-03-04T05:11:41.811305",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "periodic.com",
+        "signal_type": "funding",
+        "description": "Last funding: $300,000,000 on September 30, 2025 (SEED)",
+        "observed_at": "2026-03-04T05:11:41.811305",
+        "source": "harmonic"
+      }
+    ],
+    "competitors": [
+      {
+        "company_id": "periodic.com",
+        "competitor_name": "Lila Sciences",
+        "competitor_domain": "lila.ai",
+        "competitor_type": "startup",
+        "description": "The company has developed an AI-driven platform that integrates autonomous workflows to enhance the scientific method across life, chemical, and materials sciences, enabling the design, execution, and evaluation of experiments. This platform employs advanced data analysis and machine learning algori",
+        "funding_total": 435000000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": null,
+        "funding_last_date": "2025-10-10T00:00:00Z",
+        "headcount": 313,
+        "tags": "Analytics & Business Intelligence Platforms, Life Sciences & Healthcare, Data Infrastructure & Cloud Services, Developer Operations & AI Building Tools, Communications & Information Technology",
+        "harmonic_id": "36357215",
+        "observed_at": "2026-03-04T05:11:56.233898+00:00"
+      },
+      {
+        "company_id": "periodic.com",
+        "competitor_name": "Albert Invent",
+        "competitor_domain": "albertinvent.com",
+        "competitor_type": "startup",
+        "description": "The main product is a research and development platform specifically designed for chemistry and materials science, utilizing AI and machine learning to improve data insights and streamline laboratory workflows. Key features include project management tools, real-time inventory control, electronic la",
+        "funding_total": 50000000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": 20000000.0,
+        "funding_last_date": "2025-02-24T00:00:00Z",
+        "headcount": 162,
+        "tags": "Analytics & Business Intelligence Platforms, Life Sciences & Healthcare, Materials, Data Infrastructure & Cloud Services, Communications & Information Technology",
+        "harmonic_id": "3579684",
+        "observed_at": "2026-03-04T05:11:56.23388+00:00"
+      },
+      {
+        "company_id": "periodic.com",
+        "competitor_name": "Radical AI",
+        "competitor_domain": "radical-ai.com",
+        "competitor_type": "startup",
+        "description": "The main product leverages an advanced AI discovery engine and full-scale laboratory automation to facilitate the rapid development of new materials, addressing significant industrial needs. It employs high-throughput experimentation, predictive modeling, and robotic laboratories to optimize materia",
+        "funding_total": 55000000.0,
+        "funding_stage": "SEED",
+        "funding_last_amount": 55000000.0,
+        "funding_last_date": "2025-07-20T00:00:00Z",
+        "headcount": 40,
+        "tags": "Analytics & Business Intelligence Platforms, Materials, Data Infrastructure & Cloud Services, Developer Operations & AI Building Tools, Communications & Information Technology",
+        "harmonic_id": "52341106",
+        "observed_at": "2026-03-04T05:11:56.233924+00:00"
+      },
+      {
+        "company_id": "periodic.com",
+        "competitor_name": "Google DeepMind",
+        "competitor_domain": "deepmind.google",
+        "competitor_type": "incumbent",
+        "description": "The main product is an advanced artificial intelligence system that utilizes deep reinforcement learning, machine learning, and generative modeling techniques to tackle complex challenges across various applications, including video generation and text-to-image synthesis. This technology aims to enh",
+        "funding_total": 50000000.0,
+        "funding_stage": "EXITED",
+        "funding_last_amount": 500000000.0,
+        "funding_last_date": "2014-01-26T00:00:00Z",
+        "headcount": 8164,
+        "tags": "Life Sciences & Healthcare, Data Infrastructure & Cloud Services, Developer Operations & AI Building Tools, Communications & Information Technology, Healthcare Data & EHR Technology",
+        "harmonic_id": "41812506",
+        "observed_at": "2026-03-04T05:11:56.233938+00:00"
+      }
+    ]
+  },
+  "agent_output": {
+    "subject": "Periodic Labs",
+    "message": "Ekin\u2014\n\nI am a former Meta AI researcher who used to work on embeddings and knowledge graphs at Meta and now I invest in data infrastructure and AI at NEA.\n\nI came across Periodic Labs and was immediately drawn to the autonomous lab approach \u2013 using AI scientists to generate high-quality experimental data in physical sciences is exactly the kind of infrastructure shift we're looking for. The superconductor and semiconductor applications are particularly compelling given how data-starved those domains are.\n\nCurious about your roadmap for scaling the experimental loop and how you're thinking about the data layer underneath the AI scientists. Would love to chat.\n\nMadison",
+    "context_type": "cold_technical_interest",
+    "investor_key": "madison",
+    "output_format": "email",
+    "contact_name": "Ekin Dogus Cubuk",
+    "contact_title": "Co-Founder",
+    "contact_linkedin": "https://linkedin.com/in/ekin-dogus-cubuk-9148b8114",
+    "company_name": "Periodic Labs",
+    "data_sources": {
+      "company_core": true,
+      "founders": 2,
+      "signals": 3,
+      "news": 0
+    },
+    "generated_at": "2026-03-04T05:11:39.963427"
+  },
+  "context_tags": {
+    "investor": "madison",
+    "format": "email",
+    "data_richness": "medium",
+    "feedback_state": "no_feedback",
+    "investor_context": "cold_technical_interest"
+  }
+}

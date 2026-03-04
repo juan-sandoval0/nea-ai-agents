@@ -1,0 +1,217 @@
+{
+  "test_case_id": "outreach_genspark.ai_ashley_email",
+  "agent": "outreach",
+  "timestamp": "2026-03-04T05:12:01.640724",
+  "company_id": "genspark.ai",
+  "investor_key": "ashley",
+  "output_format": "email",
+  "success": true,
+  "error": null,
+  "company_bundle": {
+    "company_core": {
+      "company_id": "genspark.ai",
+      "company_name": "Genspark",
+      "founding_date": "2023-01-01T00:00:00Z",
+      "hq": "Palo Alto, California",
+      "employee_count": 45,
+      "total_funding": 435000000.0,
+      "products": "The main product is an AI-driven search engine that utilizes advanced algorithms to enhance search capabilities and improve the relevance of results. Additionally, it incorporates an AI agent framework aimed at increasing user engagement with the content.",
+      "customers": "Business (B2B)",
+      "arr_apr": null,
+      "last_round_date": "2025-11-20T00:00:00Z",
+      "last_round_funding": 275000000.0,
+      "web_traffic_trend": "+16.3% (30d)",
+      "website_update": null,
+      "hiring_firing": "+55.2% (90d)",
+      "observed_at": "2026-03-04T05:12:02.209640",
+      "source_map": {
+        "company_name": "harmonic",
+        "founding_date": "harmonic",
+        "hq": "harmonic",
+        "employee_count": "harmonic",
+        "total_funding": "harmonic",
+        "products": "harmonic",
+        "customers": "harmonic",
+        "last_round_date": "harmonic",
+        "last_round_funding": "harmonic",
+        "web_traffic_trend": "pending_key_signals",
+        "hiring_firing": "pending_key_signals",
+        "website_update": "pending_tavily",
+        "arr_apr": "not_available"
+      }
+    },
+    "founders": [
+      {
+        "company_id": "genspark.ai",
+        "name": "Ray Zhong",
+        "role_title": "Co-founder, Software Engineer",
+        "linkedin_url": "https://linkedin.com/in/ray-zhong-a3735627",
+        "background": "Ray Zhong served as Chief Architect of DuerOS at Baidu, Inc. from 2017 to 2023, where he led the development of the conversational AI platform. Prior to that, he was a staff software engineer at Google for a decade, contributing to core search ranking algorithms and the Google Assistant's home automation features. He holds a Master's degree in Mathematics and Computer Science from Sun Yat-sen University.\n\n---\nSources: linkedin.com/in/ray-zhong-a3735627, x.com/ruradium",
+        "observed_at": "2026-03-04T05:12:02.878569",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "genspark.ai",
+        "name": "Lenjoy Lin",
+        "role_title": "Co-Founder",
+        "linkedin_url": "https://linkedin.com/in/lenjoy",
+        "background": "Lenjoy Lin has over 12 years of experience in engineering leadership, having served as Head of Engineering for TikTok Ads Measurement & Targeting at ByteDance, where he founded and scaled the department. Prior to that, he led the Consumer Personalization Engineering Team at Houzz and was a Tech Lead for Homefeed Ads at Pinterest. He began his career as a Staff Software Engineer at YouTube, where he was a founding member responsible for rebuilding the ads serving and quality stack. Lenjoy holds a Bachelor's degree in Mathematics from Zhejiang University.\n\n---\nSources: linkedin.com/in/lenjoy, x.com/lenjoy",
+        "observed_at": "2026-03-04T05:12:03.063618",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "genspark.ai",
+        "name": "Wen S.",
+        "role_title": "Co-Founder & COO",
+        "linkedin_url": "https://linkedin.com/in/wen-s-3815b04b",
+        "background": "\u2022 Co-Founder & CEO of Smarking Inc. (acquired 2022)  \n\u2022 Chief Product and Technology Officer at JustPark  \n\u2022 B.S. in Automotive Engineering from Nanjing University\n\n---\nSources: linkedin.com/in/wen-sang, twitter.com/sang_wen",
+        "observed_at": "2026-03-04T05:12:07.052725",
+        "source": "swarm"
+      },
+      {
+        "company_id": "genspark.ai",
+        "name": "Kay Zhu",
+        "role_title": "Cofounder & CTO",
+        "linkedin_url": "https://linkedin.com/in/kay-zhu-522b275",
+        "background": "Kay Zhu is a seasoned technology leader with a strong background in AI and search technologies. Prior to co-founding Genspark, she served as CTO at Xiaodu Technology, where she initiated the company from the ground up and secured Series B financing, achieving a $5.1 billion valuation. Before that, she was the Chief Architect of Baidu Search, leading innovations in AI and launching the world's first DNN ranking model. Her experience also includes a role as a Staff Software Engineer at Google, where she contributed to core search ranking and web anti-spam technologies.\n\n---\nSources: linkedin.com/in/kay-zhu-522b275",
+        "observed_at": "2026-03-04T05:12:03.504779",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "genspark.ai",
+        "name": "Eric Jing",
+        "role_title": "Co-founder & CEO",
+        "linkedin_url": "https://linkedin.com/in/eric-jing-5397a1b",
+        "background": "Eric Jing is a seasoned entrepreneur and technology executive with a strong track record in AI and search technologies. He co-founded and served as CEO of Genspark in 2023, and previously led Xiaodu Technology, Inc. as CEO from 2020 to 2023, where he successfully closed Series B financing at a $5.5 billion valuation. Prior to that, he was the Chief Product Manager of Search and Corporate VP at Baidu, Inc., driving innovations in web search and AI products, and he also held a key role as Principal Development Manager of Bing Search at Microsoft, where he contributed to the launch of Bing.com.\n\n---\nSources: linkedin.com/in/eric-jing-5397a1b",
+        "observed_at": "2026-03-04T05:12:03.677143",
+        "source": "harmonic"
+      }
+    ],
+    "news": [],
+    "key_signals": [
+      {
+        "company_id": "genspark.ai",
+        "signal_type": "web_traffic",
+        "description": "Traffic growing: +16.3% in 30 days",
+        "observed_at": "2026-03-04T05:12:08.154385",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "genspark.ai",
+        "signal_type": "hiring",
+        "description": "Rapid hiring: +55.2% headcount in 90 days (45 employees)",
+        "observed_at": "2026-03-04T05:12:08.154385",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "genspark.ai",
+        "signal_type": "funding",
+        "description": "Last funding: $275,000,000 on November 20, 2025 (SERIES_B)",
+        "observed_at": "2026-03-04T05:12:08.154385",
+        "source": "harmonic"
+      }
+    ],
+    "competitors": [
+      {
+        "company_id": "genspark.ai",
+        "competitor_name": "SearchStax",
+        "competitor_domain": "searchstax.com",
+        "competitor_type": "startup",
+        "description": "The main product is a managed search solution that utilizes cloud-based technologies to enhance website search capabilities, featuring AI functionalities such as auto-complete suggestions, related searches, and detailed analytics. It is built on Solr infrastructure, enabling users to create more acc",
+        "funding_total": null,
+        "funding_stage": null,
+        "funding_last_amount": null,
+        "funding_last_date": "2023-07-24T00:00:00Z",
+        "headcount": 110,
+        "tags": "Analytics & Business Intelligence Platforms, Educational Technology - EdTech, Media & Entertainment, Life Sciences & Healthcare, Communications & Information Technology",
+        "harmonic_id": "672151",
+        "observed_at": "2026-03-04T05:12:29.043076+00:00"
+      },
+      {
+        "company_id": "genspark.ai",
+        "competitor_name": "Scrunch AI",
+        "competitor_domain": "scrunchai.com",
+        "competitor_type": "startup",
+        "description": "The main product is an AI search optimization platform that allows businesses to monitor, analyze, and enhance their visibility across AI platforms like ChatGPT and Perplexity. It utilizes advanced data processing techniques to track brand performance and provide actionable insights for optimization",
+        "funding_total": 19000000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": null,
+        "funding_last_date": "2025-11-03T00:00:00Z",
+        "headcount": 49,
+        "tags": "Analytics & Business Intelligence Platforms, Media & Entertainment, Communications & Information Technology, Consumer products and services, Communications and information technology",
+        "harmonic_id": "57216999",
+        "observed_at": "2026-03-04T05:12:29.042958+00:00"
+      },
+      {
+        "company_id": "genspark.ai",
+        "competitor_name": "New Generation",
+        "competitor_domain": "new-gen.ai",
+        "competitor_type": "startup",
+        "description": "The main product is an AI-native commerce platform that leverages natural language processing and generative AI to enhance product search and create personalized shopping experiences through context-aware interactions. It integrates product data with adaptive interfaces to enable real-time customer ",
+        "funding_total": 4500000.0,
+        "funding_stage": "SEED",
+        "funding_last_amount": 4500000.0,
+        "funding_last_date": "2025-05-20T00:00:00Z",
+        "headcount": 25,
+        "tags": "Media & Entertainment, Communications & Information Technology, Consumer Products & Services, E-commerce & Marketplaces, Business (B2B)",
+        "harmonic_id": "61375606",
+        "observed_at": "2026-03-04T05:12:29.042927+00:00"
+      },
+      {
+        "company_id": "genspark.ai",
+        "competitor_name": "DevRev",
+        "competitor_domain": "devrev.ai",
+        "competitor_type": "incumbent",
+        "description": "The main product is an AI-driven platform that integrates diverse data sources to streamline workflows and enhance user interactions through AI-powered search and task automation. It utilizes low latency analytics and customizable large language models to support product development and improve cust",
+        "funding_total": 185825000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": 100825000.0,
+        "funding_last_date": "2024-07-10T00:00:00Z",
+        "headcount": 873,
+        "tags": "Analytics & Business Intelligence Platforms, Product Hunt, Sales & Customer Service, Communications & Information Technology, Enterprise Productivity & Automation",
+        "harmonic_id": "2216035",
+        "observed_at": "2026-03-04T05:12:29.042974+00:00"
+      },
+      {
+        "company_id": "genspark.ai",
+        "competitor_name": "Algolia",
+        "competitor_domain": "algolia.com",
+        "competitor_type": "incumbent",
+        "description": "The main product is an AI search platform that utilizes hyperscale indexing and natural language understanding to efficiently manage a high volume of search queries through a unified API. It features vector search technology, dynamic re-ranking, personalization, and automatic query suggestions to im",
+        "funding_total": 334444000.0,
+        "funding_stage": "SERIES_D",
+        "funding_last_amount": 150000000.0,
+        "funding_last_date": "2021-07-28T00:00:00Z",
+        "headcount": 845,
+        "tags": "Analytics & Business Intelligence Platforms, Developer Operations & AI Building Tools, Communications & Information Technology, Consumer Products & Services, E-commerce & Marketplaces",
+        "harmonic_id": "626500",
+        "observed_at": "2026-03-04T05:12:29.042987+00:00"
+      }
+    ]
+  },
+  "agent_output": {
+    "subject": "Genspark's AI agent framework",
+    "message": "Hey Ray,\n\nI'm an investor and engineer focused on data and AI infra at NEA, where we've backed companies like Perplexity, Databricks, and Together AI.\n\nI came across Genspark and am really intrigued by the AI agent framework you've built to drive engagement on top of your search engine. As we continue to study the emerging stack for agentic infrastructure, I'm curious how you're thinking about the orchestration layer between search retrieval and agent execution, and what primitives you've found most critical for keeping users engaged with AI-generated content.\n\nWould love to connect and learn more about your roadmap and long-term vision. Do you have any availability in the coming weeks to chat?\n\nBest,\nAshley Jepson",
+    "context_type": "cold_technical_interest",
+    "investor_key": "ashley",
+    "output_format": "email",
+    "contact_name": "Ray Zhong",
+    "contact_title": "Co-founder, Software Engineer",
+    "contact_linkedin": "https://linkedin.com/in/ray-zhong-a3735627",
+    "company_name": "Genspark",
+    "data_sources": {
+      "company_core": true,
+      "founders": 5,
+      "signals": 3,
+      "news": 0
+    },
+    "generated_at": "2026-03-04T05:12:01.640962"
+  },
+  "context_tags": {
+    "investor": "ashley",
+    "format": "email",
+    "data_richness": "medium",
+    "feedback_state": "no_feedback",
+    "investor_context": "cold_technical_interest"
+  }
+}

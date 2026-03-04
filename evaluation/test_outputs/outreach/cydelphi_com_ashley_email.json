@@ -1,0 +1,156 @@
+{
+  "test_case_id": "outreach_cydelphi.com_ashley_email",
+  "agent": "outreach",
+  "timestamp": "2026-03-04T04:59:11.932916",
+  "company_id": "cydelphi.com",
+  "investor_key": "ashley",
+  "output_format": "email",
+  "success": true,
+  "error": null,
+  "company_bundle": {
+    "company_core": {
+      "company_id": "cydelphi.com",
+      "company_name": "CYDELPHI",
+      "founding_date": "2024-01-01T00:00:00Z",
+      "hq": "Lake Forest, California",
+      "employee_count": 5,
+      "total_funding": 3000000.0,
+      "products": "The main product is an automated incident response platform that manages the complete lifecycle of cybersecurity incidents, utilizing AI-driven workflows and structured methodologies such as playbooks and runbooks to enhance recovery efficiency. It features a multi-tenant command center for remote deployment, evidence collection, and threat analysis, while leveraging a data lake for rapid access to critical information.",
+      "customers": "Business (B2B)",
+      "arr_apr": null,
+      "last_round_date": "2026-02-12T00:00:00Z",
+      "last_round_funding": 3000000.0,
+      "web_traffic_trend": "0.0% (30d)",
+      "website_update": null,
+      "hiring_firing": "-16.7% (90d)",
+      "observed_at": "2026-03-04T04:59:13.503593",
+      "source_map": {
+        "company_name": "harmonic",
+        "founding_date": "harmonic",
+        "hq": "harmonic",
+        "employee_count": "harmonic",
+        "total_funding": "harmonic",
+        "products": "harmonic",
+        "customers": "harmonic",
+        "last_round_date": "harmonic",
+        "last_round_funding": "harmonic",
+        "web_traffic_trend": "pending_key_signals",
+        "hiring_firing": "pending_key_signals",
+        "website_update": "pending_tavily",
+        "arr_apr": "not_available"
+      }
+    },
+    "founders": [],
+    "news": [],
+    "key_signals": [
+      {
+        "company_id": "cydelphi.com",
+        "signal_type": "web_traffic",
+        "description": "Traffic declining: 0.0% in 30 days",
+        "observed_at": "2026-03-04T04:59:15.680113",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "cydelphi.com",
+        "signal_type": "hiring",
+        "description": "Significant layoffs: -16.7% headcount in 90 days (5 employees)",
+        "observed_at": "2026-03-04T04:59:15.680113",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "cydelphi.com",
+        "signal_type": "funding",
+        "description": "Last funding: $3,000,000 on February 12, 2026 (SEED)",
+        "observed_at": "2026-03-04T04:59:15.680113",
+        "source": "harmonic"
+      }
+    ],
+    "competitors": [
+      {
+        "company_id": "cydelphi.com",
+        "competitor_name": "7AI",
+        "competitor_domain": "7ai.com",
+        "competitor_type": "startup",
+        "description": "The main product is a cybersecurity platform that utilizes AI agents to automate processes such as data enrichment, investigations, and threat analysis, thereby improving the efficiency of security operations. These agents are designed to integrate with various security tools, enabling rapid threat ",
+        "funding_total": 166600000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": 130600000.0,
+        "funding_last_date": "2025-11-19T00:00:00Z",
+        "headcount": 70,
+        "tags": "Security Software & Services, Business (B2B), Cybersecurity, Software",
+        "harmonic_id": "54370842",
+        "observed_at": "2026-03-04T04:59:35.895677+00:00"
+      },
+      {
+        "company_id": "cydelphi.com",
+        "competitor_name": "Prophet Security",
+        "competitor_domain": "prophetsecurity.ai",
+        "competitor_type": "startup",
+        "description": "The main product is an AI-driven security operations center (SOC) platform that automates the triage, investigation, and response to security alerts, significantly enhancing operational efficiency and reducing investigation time. It utilizes advanced technologies to analyze data, emulate expert anal",
+        "funding_total": 41000000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": null,
+        "funding_last_date": "2026-02-25T00:00:00Z",
+        "headcount": 61,
+        "tags": "Analytics & Business Intelligence Platforms, Communications & Information Technology, Security Software & Services, Business (B2B), Cybersecurity",
+        "harmonic_id": "36802292",
+        "observed_at": "2026-03-04T04:59:35.895707+00:00"
+      },
+      {
+        "company_id": "cydelphi.com",
+        "competitor_name": "SIRP",
+        "competitor_domain": "sirp.io",
+        "competitor_type": "startup",
+        "description": "The main product is an AI-driven security operations platform that employs a network of intelligent agents to automate processes such as alert classification, incident routing, and risk scoring. It integrates with over 200 applications and APIs to provide real-time threat intelligence and customizab",
+        "funding_total": 800000,
+        "funding_stage": "SEED",
+        "funding_last_amount": 500000,
+        "funding_last_date": "2020-01-04T00:00:00Z",
+        "headcount": 59,
+        "tags": "Analytics & Business Intelligence Platforms, Communications & Information Technology, Security Software & Services, Business (B2B), Cybersecurity",
+        "harmonic_id": "32427",
+        "observed_at": "2026-03-04T04:59:35.895832+00:00"
+      },
+      {
+        "company_id": "cydelphi.com",
+        "competitor_name": "ReliaQuest",
+        "competitor_domain": "reliaquest.com",
+        "competitor_type": "incumbent",
+        "description": "The main product is a cloud-native security operations platform that employs agentic AI to automate the detection, investigation, and response to cyber threats, enhancing operational efficiency through features like alert de-duplication and correlation. It integrates various security tools into a un",
+        "funding_total": 878000000.0,
+        "funding_stage": "EXITED",
+        "funding_last_amount": 500000000.0,
+        "funding_last_date": "2025-03-31T00:00:00Z",
+        "headcount": 1110,
+        "tags": "Security Software & Services, Business (B2B), Cybersecurity, Software, Service",
+        "harmonic_id": "176066",
+        "observed_at": "2026-03-04T04:59:35.89582+00:00"
+      }
+    ]
+  },
+  "agent_output": {
+    "subject": "CYDELPHI's incident response architecture",
+    "message": "Hey there,\n\nI'm an investor and engineer focused on data and AI infra at NEA, where we've backed companies like Perplexity, Databricks, and Together AI.\n\nI came across CYDELPHI and am really intrigued by your approach to automated incident response\u2014particularly the architecture around your multi-tenant command center and the data lake design for rapid evidence retrieval. The combination of AI-driven workflows with structured playbooks feels like the right balance between automation and control for security teams who need both speed and auditability.\n\nI'd love to learn more about your roadmap and long-term vision for the platform, especially as you think about scaling the agentic components of your incident lifecycle management.\n\nDo you have any availability in the coming weeks to chat?\n\nAshley",
+    "context_type": "cold_technical_interest",
+    "investor_key": "ashley",
+    "output_format": "email",
+    "contact_name": null,
+    "contact_title": null,
+    "contact_linkedin": null,
+    "company_name": "CYDELPHI",
+    "data_sources": {
+      "company_core": true,
+      "founders": 0,
+      "signals": 3,
+      "news": 0
+    },
+    "generated_at": "2026-03-04T04:59:11.934473"
+  },
+  "context_tags": {
+    "investor": "ashley",
+    "format": "email",
+    "data_richness": "low",
+    "feedback_state": "no_feedback",
+    "investor_context": "cold_technical_interest"
+  }
+}

@@ -1,7 +1,7 @@
 {
   "test_case_id": "tldr_periodic.com",
   "agent": "tldr",
-  "timestamp": "2026-03-04T01:28:43.276485",
+  "timestamp": "2026-03-04T05:16:14.872739",
   "company_id": "periodic.com",
   "success": true,
   "error": null,
@@ -53,7 +53,7 @@
         "Industrial & Manufacturing"
       ],
       "customer_type": "Business (B2B)",
-      "fetched_at": "2026-03-04T01:28:51.728198"
+      "fetched_at": "2026-03-04T05:16:16.911363"
     },
     "founders": [
       {
@@ -62,8 +62,8 @@
         "role_title": "Co-Founder",
         "linkedin_url": "https://linkedin.com/in/ekin-dogus-cubuk-9148b8114",
         "background": "Ekin Dogus Cubuk served as a Research Scientist at Google DeepMind from 2017 to 2025, where he contributed to advanced AI research. Prior to that, he was a Postdoctoral Research Fellow at Stanford University from 2016 to 2017. He holds a Bachelor of Science in Physics and Engineering from Swarthmore College and a Master of Arts in Condensed Matter and Materials Physics from Harvard University.\n\n---\nSources: linkedin.com/in/ekin-dogus-cubuk-9148b8114",
-        "observed_at": "2026-03-04T00:04:37.789608",
-        "source": "swarm"
+        "observed_at": "2026-03-04T05:11:41.077895",
+        "source": "harmonic"
       },
       {
         "company_id": "periodic.com",
@@ -71,8 +71,8 @@
         "role_title": "Co-Founder",
         "linkedin_url": "https://linkedin.com/in/william-liam-fedus-26547811",
         "background": "William (Liam) Fedus has a strong background in AI and deep learning, having served as a Research Scientist at Google Brain from 2020 to 2022, where he focused on deep learning research. He was a key contributor to the development of ChatGPT while working at OpenAI, first as a Member of Technical Staff and later as VP of Research for Post-Training. Liam holds a PhD in Computer Science from Universit\u00e9 de Montr\u00e9al, where he studied under notable figures like Hugo Larochelle and Yoshua Bengio, and also earned a Master's degree in Elementary Particle Physics from UC San Diego.\n\n---\nSources: linkedin.com/in/william-liam-fedus-26547811",
-        "observed_at": "2026-03-04T00:04:43.104570",
-        "source": "swarm"
+        "observed_at": "2026-03-04T05:11:41.241079",
+        "source": "harmonic"
       }
     ],
     "key_signals": [
@@ -96,12 +96,73 @@
       }
     ],
     "news": [],
-    "competitors": []
+    "competitors": [
+      {
+        "company_id": "periodic.com",
+        "competitor_name": "Lila Sciences",
+        "competitor_domain": "lila.ai",
+        "competitor_type": "startup",
+        "description": "The company has developed an AI-driven platform that integrates autonomous workflows to enhance the scientific method across life, chemical, and materials sciences, enabling the design, execution, and evaluation of experiments. This platform employs advanced data analysis and machine learning algori",
+        "funding_total": 435000000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": null,
+        "funding_last_date": "2025-10-10T00:00:00Z",
+        "headcount": 313,
+        "tags": "Analytics & Business Intelligence Platforms, Life Sciences & Healthcare, Data Infrastructure & Cloud Services, Developer Operations & AI Building Tools, Communications & Information Technology",
+        "harmonic_id": "36357215",
+        "observed_at": "2026-03-04T05:11:56.233898+00:00"
+      },
+      {
+        "company_id": "periodic.com",
+        "competitor_name": "Albert Invent",
+        "competitor_domain": "albertinvent.com",
+        "competitor_type": "startup",
+        "description": "The main product is a research and development platform specifically designed for chemistry and materials science, utilizing AI and machine learning to improve data insights and streamline laboratory workflows. Key features include project management tools, real-time inventory control, electronic la",
+        "funding_total": 50000000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": 20000000.0,
+        "funding_last_date": "2025-02-24T00:00:00Z",
+        "headcount": 162,
+        "tags": "Analytics & Business Intelligence Platforms, Life Sciences & Healthcare, Materials, Data Infrastructure & Cloud Services, Communications & Information Technology",
+        "harmonic_id": "3579684",
+        "observed_at": "2026-03-04T05:11:56.23388+00:00"
+      },
+      {
+        "company_id": "periodic.com",
+        "competitor_name": "Radical AI",
+        "competitor_domain": "radical-ai.com",
+        "competitor_type": "startup",
+        "description": "The main product leverages an advanced AI discovery engine and full-scale laboratory automation to facilitate the rapid development of new materials, addressing significant industrial needs. It employs high-throughput experimentation, predictive modeling, and robotic laboratories to optimize materia",
+        "funding_total": 55000000.0,
+        "funding_stage": "SEED",
+        "funding_last_amount": 55000000.0,
+        "funding_last_date": "2025-07-20T00:00:00Z",
+        "headcount": 40,
+        "tags": "Analytics & Business Intelligence Platforms, Materials, Data Infrastructure & Cloud Services, Developer Operations & AI Building Tools, Communications & Information Technology",
+        "harmonic_id": "52341106",
+        "observed_at": "2026-03-04T05:11:56.233924+00:00"
+      },
+      {
+        "company_id": "periodic.com",
+        "competitor_name": "Google DeepMind",
+        "competitor_domain": "deepmind.google",
+        "competitor_type": "incumbent",
+        "description": "The main product is an advanced artificial intelligence system that utilizes deep reinforcement learning, machine learning, and generative modeling techniques to tackle complex challenges across various applications, including video generation and text-to-image synthesis. This technology aims to enh",
+        "funding_total": 50000000.0,
+        "funding_stage": "EXITED",
+        "funding_last_amount": 500000000.0,
+        "funding_last_date": "2014-01-26T00:00:00Z",
+        "headcount": 8164,
+        "tags": "Life Sciences & Healthcare, Data Infrastructure & Cloud Services, Developer Operations & AI Building Tools, Communications & Information Technology, Healthcare Data & EHR Technology",
+        "harmonic_id": "41812506",
+        "observed_at": "2026-03-04T05:11:56.233938+00:00"
+      }
+    ]
   },
   "agent_output": {
-    "markdown": "# Periodic Labs | Meeting Brief\n*2026-03-03*\n\n## TL;DR\nPeriodic Labs is a newly founded (2025) AI-for-science company building autonomous laboratories and AI scientists to accelerate physical sciences research, with a focus on materials design, superconductors, and semiconductor manufacturing. Despite being at seed stage, the company has raised a remarkable $300M from a top-tier syndicate including a16z, Lightspeed, and Bain Capital Ventures. The founder pedigree \u2014 a Google DeepMind research scientist and a former OpenAI VP of Research who contributed to ChatGPT \u2014 is exceptional and likely explains the outsized raise.\n\n---\n\n## Company Overview\nPeriodic Labs develops AI scientists and autonomous laboratory systems designed to run experiments and generate high-quality data in the physical sciences. Core applications include materials design, superconductors, and semiconductor manufacturing. The company operates B2B and sits at the intersection of AI, advanced manufacturing, and robotics. [[2]](https://console.harmonic.ai/companies/35555342)\n\n- **Founded:** 2025 [[2]](https://console.harmonic.ai/companies/35555342)\n- **Stage:** Seed [[2]](https://console.harmonic.ai/companies/35555342)\n- **Headcount:** 39, up 44.4% in the last 90 days [[2]](https://console.harmonic.ai/companies/35555342)[[4]](https://console.harmonic.ai/companies/35555342)\n- **Web Traffic:** 35,580 visits, down 17.4% in the last 30 days [[2]](https://console.harmonic.ai/companies/35555342)[[4]](https://console.harmonic.ai/companies/35555342)\n- **Total Raised:** $300M, closed September 30, 2025 [[2]](https://console.harmonic.ai/companies/35555342)\n\n---\n\n## Key Points\n\u2022 **Extraordinary seed raise for the stage:** $300M at seed is highly anomalous and signals extreme investor conviction \u2014 or a redefined notion of \"seed.\" This warrants clarification on how capital will be deployed and what milestones define the next stage. [[2]](https://console.harmonic.ai/companies/35555342)\n\n\u2022 **Elite founder credentials:** Co-founder Ekin Dogus Cubuk spent 2017\u20132025 as a Research Scientist at Google DeepMind with a background in condensed matter and materials physics \u2014 directly relevant to the product thesis. [[2]](https://console.harmonic.ai/companies/35555342)[[3]](https://swarm.com)\n\n\u2022 **High-profile AI pedigree on the other side:** Co-founder William (Liam) Fedus was VP of Research for Post-Training at OpenAI and a key contributor to ChatGPT, with prior deep learning research at Google Brain. His PhD lineage under Yoshua Bengio and Hugo Larochelle at Universit\u00e9 de Montr\u00e9al is top-tier. [[2]](https://console.harmonic.ai/companies/35555342)[[3]](https://swarm.com)\n\n\u2022 **Rapid team scaling:** 44.4% headcount growth in 90 days (from a base of ~27 to 39) suggests aggressive hiring post-funding close, consistent with a fresh large raise. [[4]](https://console.harmonic.ai/companies/35555342)\n\n\u2022 **Top-tier investor syndicate:** Andreessen Horowitz, Lightspeed Venture Partners, Bain Capital Ventures, Felicis, and Quiet Capital are all on the cap table. [[2]](https://console.harmonic.ai/companies/35555342)\n\n\u2022 **Declining web traffic is a flag:** A 17.4% drop in traffic over 30 days at this early stage could reflect limited public-facing product activity, or it may simply indicate the company is pre-launch and not yet driving inbound. Worth probing. [[4]](https://console.harmonic.ai/companies/35555342)\n\n---\n\n## Recent Developments\n\u2022 Closed a $300M seed round on September 30, 2025, backed by a16z, Lightspeed, BCV, Felicis, and Quiet Capital. [[2]](https://console.harmonic.ai/companies/35555342)\n\u2022 Headcount has grown 44.4% over the past 90 days, indicating active team buildout post-close. [[4]](https://console.harmonic.ai/companies/35555342)\n\u2022 No additional historical news data available yet \u2014 tracking initiated from first retrieval. [[1]](https://console.harmonic.ai/companies/35555342)\n\n---\n\n## Signals & Trends\n\u2022 **Hiring surge** consistent with deploying fresh capital; team growing rapidly from a small base. [[4]](https://console.harmonic.ai/companies/35555342)\n\u2022 **Web traffic declining** (-17.4% over 30 days) \u2014 likely pre-product-launch, but worth monitoring as a potential indicator of limited market awareness or early traction challenges. [[4]](https://console.harmonic.ai/companies/35555342)\n\u2022 **Seed label on a $300M round** is unusual; competitive dynamics in AI-for-science (autonomous labs, materials discovery) may be driving investors to move fast and large. [[2]](https://console.harmonic.ai/companies/35555342)\n\n---\n\n## For This Meeting\n\n**Key questions to ask:**\n- Why is this labeled a seed round at $300M \u2014 is this a single tranche or structured with milestones? What does the deployment timeline look like?\n- What is the current state of the product \u2014 are autonomous labs operational, in pilot, or still in development?\n- Who are the first target customers, and is there any early commercial traction or LOIs in semiconductor/materials sectors?\n- How do the two co-founders divide responsibilities, and are there other key hires (e.g., a CTO, Head of Science)?\n\n**Risks to probe:**\n- **Capital efficiency:** $300M at seed with 39 people implies an enormous runway \u2014 or very capital-intensive lab infrastructure. Understand the burn model.\n- **Hardware dependency:** Autonomous physical laboratories require significant physical infrastructure. What is the build vs. partner strategy?\n- **Declining traffic:** Is this a pre-launch company with no public product, or is there a go-to-market gap forming early?\n\n**Areas needing clarification:**\n- Titles and role split between Cubuk and Fedus are not specified in available data. [[2]](https://console.harmonic.ai/companies/35555342)\n- No customer names, pilots, or revenue data available. [[1]](https://console.harmonic.ai/companies/35555342)\n- The specific AI methodologies underpinning the platform are not detailed in available data. [[2]](https://console.harmonic.ai/companies/35555342)\n",
+    "markdown": "# Periodic Labs | Meeting Brief\n*2026-03-03*\n\n# Meeting Briefing: Periodic Labs\n\n---\n\n## TL;DR\nPeriodic Labs builds AI scientists and autonomous laboratories to conduct experiments and generate high-quality data for physical sciences applications, including superconductors and semiconductor manufacturing. [[2]](https://console.harmonic.ai/companies/35555342) The company raised a $300M seed round in September 2025 \u2014 a striking figure for a seed-stage company \u2014 backed by Andreessen Horowitz, Felicis, Bain Capital Ventures, Quiet Capital, and Lightspeed Venture Partners. [[2]](https://console.harmonic.ai/companies/35555342) Headcount has grown 44.4% in 90 days, signaling aggressive early scaling. [[4]](https://console.harmonic.ai/companies/35555342)\n\n---\n\n## Why This Meeting Matters\n\u2022 **Exceptional seed round size:** A $300M seed raise in 2025 from a blue-chip syndicate (a16z, Lightspeed, BCV) is a strong signal of outsized investor conviction in the autonomous lab / AI-for-science thesis. [[2]](https://console.harmonic.ai/companies/35555342)\n\u2022 **Rapid team scaling:** 44.4% headcount growth in 90 days \u2014 from a base of ~39 employees \u2014 indicates the company is deploying capital quickly and building out core capabilities at pace. [[4]](https://console.harmonic.ai/companies/35555342)\n\u2022 **Founder pedigree in frontier AI:** Co-founders bring direct experience from Google DeepMind, Google Brain, and OpenAI (including VP of Research for Post-Training at OpenAI), positioning the team at the intersection of cutting-edge AI and physical sciences. [[2]](https://console.harmonic.ai/companies/35555342)\n\u2022 **High-value application domains:** Focus on superconductors and semiconductor manufacturing targets sectors with significant national security and industrial relevance, which may support non-dilutive funding pathways and strategic partnerships. [[2]](https://console.harmonic.ai/companies/35555342)\n\n---\n\n## Company Snapshot\n| Field | Value |\n|---|---|\n| Founded | 2025 |\n| HQ | Not found in table |\n| Employees | 39 (+44.4% 90d) |\n| Products | AI scientists and autonomous laboratories for physical sciences experimentation and materials design |\n| Customers | B2B |\n| Total Funding | $300,000,000 |\n| Last Round | $300,000,000 \u2014 September 2025 |\n*Last updated: 2025-09-30*\n\n---\n\n## Founders\n\n**Ekin Dogus Cubuk** \u2014 Co-Founder | linkedin.com/in/ekin-dogus-cubuk-9148b8114\nResearch Scientist at Google DeepMind from 2017 to 2025, contributing to advanced AI research, preceded by a postdoctoral fellowship at Stanford University (2016\u20132017). [[2]](https://console.harmonic.ai/companies/35555342) He holds a BS in Physics and Engineering from Swarthmore College and an MA in Condensed Matter and Materials Physics from Harvard University \u2014 a rare combination of deep physics domain expertise and frontier AI experience directly relevant to Periodic Labs' core thesis. [[2]](https://console.harmonic.ai/companies/35555342)\n\n**William (Liam) Fedus** \u2014 Co-Founder | linkedin.com/in/william-liam-fedus-26547811\nFedus was a Research Scientist at Google Brain (2020\u20132022) and a key contributor to ChatGPT at OpenAI, where he rose to VP of Research for Post-Training. [[2]](https://console.harmonic.ai/companies/35555342) He holds a PhD in Computer Science from Universit\u00e9 de Montr\u00e9al (supervised by Hugo Larochelle and Yoshua Bengio) and an MS in Elementary Particle Physics from UC San Diego, giving him both elite AI research credentials and a physics foundation. [[2]](https://console.harmonic.ai/companies/35555342)\n\n---\n\n## Key Signals\n\u2022 **[Hiring]** Rapid headcount growth of 44.4% over 90 days \u2014 indicates aggressive post-funding team buildout. \u2014 Source: Periodic Labs Key Signals [[4]](https://console.harmonic.ai/companies/35555342), 2025\n\u2022 **[Funding]** $300M seed round closed September 30, 2025 \u2014 current stage listed as Seed. \u2014 Source: Periodic Labs Company Profile [[2]](https://console.harmonic.ai/companies/35555342), 2025-09-30\n\u2022 **[Web Traffic]** Website traffic down 17.4% over 30 days \u2014 worth monitoring; may reflect early-stage site immaturity or a shift away from inbound marketing at this stage. \u2014 Source: Periodic Labs Recent Updates [[1]](https://console.harmonic.ai/companies/35555342), 2025\n\n---\n\n## In the News\n**No recent news available.**\nNo historical change data or news articles were present in the provided sources. [[1]](https://console.harmonic.ai/companies/35555342)\n\n---\n\n## Meeting Prep\n\n**Key questions to ask:**\n\u2022 The seed round is $300M \u2014 an extraordinary amount for a seed stage. What is the intended use of capital, and what milestones does the team need to hit before a Series A? What does the burn rate look like given 39 employees? [[2]](https://console.harmonic.ai/companies/35555342)\n\u2022 Liam Fedus comes from large-scale language model research (ChatGPT, Google Brain), while Ekin Cubuk's background is in condensed matter physics and AI at DeepMind. How are the co-founders dividing responsibilities, and how does their combined expertise map onto the product roadmap for autonomous labs? [[2]](https://console.harmonic.ai/companies/35555342)\n\u2022 Web traffic is down 17.4% in 30 days despite a major funding event. Is the company intentionally operating in stealth or limiting inbound exposure, and what does the current go-to-market strategy look like for B2B customers in semiconductors and superconductors? [[1]](https://console.harmonic.ai/companies/35555342)[[4]](https://console.harmonic.ai/companies/35555342)\n\n**Recommended next step:** Request a product demo of the autonomous laboratory platform and ask for at least one concrete example of an experiment conducted, including the data output quality benchmarks used \u2014 this will validate whether the core technical claims are at proof-of-concept or production stage.\n",
     "company_name": "Periodic Labs",
-    "run_id": "9c93decb-aeb3-4411-92cb-e6f391ec24bf",
+    "run_id": "4079fee6-cd73-49f5-ac6b-6fa68d5f262d",
     "success": true,
     "error": null,
     "retrieval_counts": {
@@ -121,7 +182,7 @@
         "harmonic_35555342_signals"
       ]
     },
-    "total_elapsed_ms": 36380,
+    "total_elapsed_ms": 26754,
     "tldr": null,
     "why_it_matters": null,
     "company_snapshot": null,

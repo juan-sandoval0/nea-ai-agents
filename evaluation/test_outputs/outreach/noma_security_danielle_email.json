@@ -1,0 +1,182 @@
+{
+  "test_case_id": "outreach_noma.security_danielle_email",
+  "agent": "outreach",
+  "timestamp": "2026-03-04T05:09:37.175747",
+  "company_id": "noma.security",
+  "investor_key": "danielle",
+  "output_format": "email",
+  "success": true,
+  "error": null,
+  "company_bundle": {
+    "company_core": {
+      "company_id": "noma.security",
+      "company_name": "Noma Security",
+      "founding_date": "2023-01-01T00:00:00Z",
+      "hq": "Tel Aviv-Yafo, Tel Aviv, Israel",
+      "employee_count": 91,
+      "total_funding": 132000000.0,
+      "products": "Noma Security offers an AI security and governance platform designed to provide visibility and control throughout the AI lifecycle, from model development to application runtime. The platform utilizes API-based integrations and real-time threat detection to manage security and compliance risks in AI applications across various environments.",
+      "customers": "Business (B2B)",
+      "arr_apr": null,
+      "last_round_date": "2025-07-01T00:00:00Z",
+      "last_round_funding": 100000000.0,
+      "web_traffic_trend": "+4.7% (30d)",
+      "website_update": "21 website updates detected",
+      "hiring_firing": "+30.0% (90d)",
+      "observed_at": "2026-03-04T05:09:37.820172",
+      "source_map": {
+        "company_name": "harmonic",
+        "founding_date": "harmonic",
+        "hq": "harmonic",
+        "employee_count": "harmonic",
+        "total_funding": "harmonic",
+        "products": "harmonic",
+        "customers": "harmonic",
+        "last_round_date": "harmonic",
+        "last_round_funding": "harmonic",
+        "web_traffic_trend": "pending_key_signals",
+        "hiring_firing": "pending_key_signals",
+        "website_update": "pending_tavily",
+        "arr_apr": "not_available"
+      }
+    },
+    "founders": [
+      {
+        "company_id": "noma.security",
+        "name": "Niv Braun",
+        "role_title": "Co-Founder & CEO",
+        "linkedin_url": "https://linkedin.com/in/niv-braun",
+        "background": "Niv Braun served as a Group Manager at Verint from 2020 to 2022, where he led a 50-person team in developing a new cybersecurity product line. Prior to that, he held various roles at Verint, including Product Team Lead and Outbound Product Manager. His experience also includes serving as a Cyber Security Group Manager in the Israeli Military Intelligence - Unit 8200 from 2015 to 2016.\n\n---\nSources: linkedin.com/in/niv-braun",
+        "observed_at": "2026-03-04T05:09:38.490572",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "noma.security",
+        "name": "Alon Tron",
+        "role_title": "Co-Founder & CTO",
+        "linkedin_url": "https://linkedin.com/in/alon-tron",
+        "background": "Alon Tron served as the Data Science Lead at Interai from 2020 to 2022, where he utilized machine learning models and computer vision algorithms to enhance enterprise applications. Prior to that, he held multiple roles at Israeli Military Intelligence, including Development Consultant and Tech Lead in Unit 8200, where he guided development teams in technology upgrades and requirement design. He holds dual Bachelor of Science degrees in Computer Science and Computational Biology from UC San Diego and The Hebrew University of Jerusalem.\n\n---\nSources: linkedin.com/in/alon-tron",
+        "observed_at": "2026-03-04T05:09:38.646294",
+        "source": "harmonic"
+      }
+    ],
+    "news": [],
+    "key_signals": [
+      {
+        "company_id": "noma.security",
+        "signal_type": "web_traffic",
+        "description": "Traffic growing: +4.7% in 30 days",
+        "observed_at": "2026-03-04T05:09:39.242641",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "noma.security",
+        "signal_type": "hiring",
+        "description": "Rapid hiring: +30.0% headcount in 90 days (91 employees)",
+        "observed_at": "2026-03-04T05:09:39.242641",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "noma.security",
+        "signal_type": "funding",
+        "description": "Last funding: $100,000,000 on July 1, 2025 (SERIES_B)",
+        "observed_at": "2026-03-04T05:09:39.242641",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "noma.security",
+        "signal_type": "website_update",
+        "description": "Noma Security has appointed Pisani, a veteran in enterprise security, to enhance the adoption of agentic AI, signaling a strategic move to strengthen their market position. Additionally, they are collaborating with AWS to establish a secure foundation for enterprise AI, indicating growth potential in the AI sector.",
+        "observed_at": "2026-03-04T05:09:39.242641",
+        "source": "tavily"
+      }
+    ],
+    "competitors": [
+      {
+        "company_id": "noma.security",
+        "competitor_name": "HiddenLayer",
+        "competitor_domain": "hiddenlayer.com",
+        "competitor_type": "startup",
+        "description": "The company provides a security platform designed to protect AI applications, including agentic, generative, and predictive models, through real-time monitoring, vulnerability assessments, and automated red teaming. It utilizes technologies such as the MITRE ATLAS framework and offers seamless integ",
+        "funding_total": 56000000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": 50000000.0,
+        "funding_last_date": "2023-09-19T00:00:00Z",
+        "headcount": 146,
+        "tags": "Developer Operations & AI Building Tools, Communications & Information Technology, Security Software & Services, Business (B2B), Cybersecurity",
+        "harmonic_id": "7697979",
+        "observed_at": "2026-03-04T05:09:30.250936+00:00"
+      },
+      {
+        "company_id": "noma.security",
+        "competitor_name": "WitnessAI",
+        "competitor_domain": "witness.ai",
+        "competitor_type": "startup",
+        "description": "WitnessAI provides an AI-native security platform designed to ensure the safe deployment and governance of artificial intelligence within enterprises, utilizing intent-based machine learning engines for runtime defense and behavior-based controls. The platform offers comprehensive monitoring of AI a",
+        "funding_total": 85500000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": 58000000.0,
+        "funding_last_date": "2026-01-13T00:00:00Z",
+        "headcount": 87,
+        "tags": "Communications & Information Technology, Enterprise Productivity & Automation, Security Software & Services, Business Services, Business (B2B)",
+        "harmonic_id": "46785521",
+        "observed_at": "2026-03-04T05:10:08.834454+00:00"
+      },
+      {
+        "company_id": "noma.security",
+        "competitor_name": "Nagomi Security",
+        "competitor_domain": "nagomisecurity.com",
+        "competitor_type": "startup",
+        "description": "Nagomi Security offers a platform for threat exposure management that integrates with existing cybersecurity tools to identify vulnerabilities and optimize security configurations. The solution utilizes threat intelligence, machine learning, and automation to enhance proactive risk management and st",
+        "funding_total": 30000000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": 23000000.0,
+        "funding_last_date": "2024-04-24T00:00:00Z",
+        "headcount": 74,
+        "tags": "Security Software & Services, Business (B2B), Cybersecurity, Software, Service",
+        "harmonic_id": "52587243",
+        "observed_at": "2026-03-04T05:10:08.83455+00:00"
+      },
+      {
+        "company_id": "noma.security",
+        "competitor_name": "Harmonic Security",
+        "competitor_domain": "harmonic.security",
+        "competitor_type": "startup",
+        "description": "Harmonic Security provides an AI governance and control platform designed to enhance data security in Generative AI environments by detecting unauthorized applications and safeguarding sensitive, unstructured data. The platform employs advanced protective measures and human-like review techniques to",
+        "funding_total": 25961000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": 17500000.0,
+        "funding_last_date": "2024-10-02T00:00:00Z",
+        "headcount": 56,
+        "tags": "Data Infrastructure & Cloud Services, Communications & Information Technology, Security Software & Services, Business (B2B), Cybersecurity",
+        "harmonic_id": "36336799",
+        "observed_at": "2026-03-04T05:10:08.834497+00:00"
+      }
+    ]
+  },
+  "agent_output": {
+    "subject": "Noma's AI security architecture",
+    "message": "Hi Niv,\n\nBy way of introduction, my name is Danielle and I'm a partner at NEA. We've been grateful to be Series A / B lead investors in companies like Plaid, Databricks, Robinhood, Cloudflare, and many others.\n\nI've been spending time understanding the AI security landscape, and Noma's approach to lifecycle visibility caught my attention. The API-based integration model you've built is particularly interesting \u2014 most solutions we've seen focus narrowly on either model development or runtime, but rarely provide continuous coverage across both. I'm curious how you're handling the handoff between development-time governance and production runtime monitoring, especially as models move between environments.\n\nThe AWS collaboration and Pisani joining to lead the agentic AI push suggest you're thinking several steps ahead on where enterprise AI security needs to go. I'd love to understand more about your roadmap here and how you're thinking about the governance challenges that emerge as companies move from isolated AI experiments to production agentic workflows.\n\nWould you be open to a conversation? Happy to work around your schedule.\n\nNEA is a venture capital firm. We lead early rounds in big ideas and work with generational founders. We're partners to companies such as Perplexity (Series A lead), Databricks (Series B lead), Plaid (Series A lead), Robinhood (Series B lead), Cloudflare (Series B lead), and many others. Our team is based in Menlo Park, CA and NYC.\n\nDanielle",
+    "context_type": "cold_technical_interest",
+    "investor_key": "danielle",
+    "output_format": "email",
+    "contact_name": "Niv Braun",
+    "contact_title": "Co-Founder & CEO",
+    "contact_linkedin": "https://linkedin.com/in/niv-braun",
+    "company_name": "Noma Security",
+    "data_sources": {
+      "company_core": true,
+      "founders": 2,
+      "signals": 4,
+      "news": 0
+    },
+    "generated_at": "2026-03-04T05:09:37.175997"
+  },
+  "context_tags": {
+    "investor": "danielle",
+    "format": "email",
+    "data_richness": "medium",
+    "feedback_state": "no_feedback",
+    "investor_context": "cold_technical_interest"
+  }
+}

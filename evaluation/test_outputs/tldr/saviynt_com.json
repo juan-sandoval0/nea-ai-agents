@@ -1,7 +1,7 @@
 {
   "test_case_id": "tldr_saviynt.com",
   "agent": "tldr",
-  "timestamp": "2026-03-04T01:26:29.594460",
+  "timestamp": "2026-03-04T05:15:26.989717",
   "company_id": "saviynt.com",
   "success": true,
   "error": null,
@@ -47,7 +47,7 @@
         "Identity & Access Management"
       ],
       "customer_type": "Business (B2B)",
-      "fetched_at": "2026-03-04T01:27:31.887593"
+      "fetched_at": "2026-03-04T05:15:30.255510"
     },
     "founders": [
       {
@@ -56,8 +56,8 @@
         "role_title": "VP Business Development",
         "linkedin_url": "https://linkedin.com/in/amitsaha",
         "background": "Amit Saha has a diverse background in banking and finance, having served as a Branch Manager at Chhattisgarh Rajya Gramin Bank from 2013 to 2017 and as an Assistant Manager at both INGVYSYA Bank and Yes Bank in 2010-2011. He began his career as a Business Analyst at Knex Inc. from 2017 to 2018. Amit holds a degree from Barkatullah Vishwavidyalaya.\n\n---\nSources: linkedin.com/in/amit-saha-7a259a4",
-        "observed_at": "2026-03-04T00:01:35.340760",
-        "source": "swarm"
+        "observed_at": "2026-03-04T05:08:24.215909",
+        "source": "harmonic"
       }
     ],
     "key_signals": [
@@ -75,12 +75,58 @@
       }
     ],
     "news": [],
-    "competitors": []
+    "competitors": [
+      {
+        "company_id": "saviynt.com",
+        "competitor_name": "Immuta",
+        "competitor_domain": "immuta.com",
+        "competitor_type": "startup",
+        "description": "The company offers a data security platform that automates data access governance and management, streamlining processes such as data onboarding, policy creation, and access approvals through integrated workflows. It utilizes technologies for granular access control, continuous monitoring of queries",
+        "funding_total": 258200000.0,
+        "funding_stage": "SERIES_E",
+        "funding_last_amount": null,
+        "funding_last_date": "2023-05-04T00:00:00Z",
+        "headcount": 187,
+        "tags": "Analytics & Business Intelligence Platforms, Life Sciences & Healthcare, Data Infrastructure & Cloud Services, Communications & Information Technology, Healthcare Data & EHR Technology",
+        "harmonic_id": "148869",
+        "observed_at": "2026-03-04T05:08:54.313819+00:00"
+      },
+      {
+        "company_id": "saviynt.com",
+        "competitor_name": "AppOmni",
+        "competitor_domain": "appomni.com",
+        "competitor_type": "startup",
+        "description": "The company provides a SaaS security platform designed to prevent data breaches by ensuring deep visibility and real-time risk detection across various SaaS applications. It utilizes technologies such as identity and access management, threat detection, and configuration management to address risks ",
+        "funding_total": 123000000.0,
+        "funding_stage": "SERIES_C",
+        "funding_last_amount": null,
+        "funding_last_date": "2022-12-15T00:00:00Z",
+        "headcount": 148,
+        "tags": "Security Software & Services, Business (B2B), Cybersecurity, Software, Service",
+        "harmonic_id": "795086",
+        "observed_at": "2026-03-04T05:08:54.313784+00:00"
+      },
+      {
+        "company_id": "saviynt.com",
+        "competitor_name": "Orchid Security",
+        "competitor_domain": "orchid.security",
+        "competitor_type": "startup",
+        "description": "The product is a platform designed for managing identity controls across self-hosted and SaaS applications, focusing on continuous monitoring and compliance. It utilizes advanced AI analytics and modern authentication protocols to assess and improve identity governance and risk management.",
+        "funding_total": 36000000.0,
+        "funding_stage": "SEED",
+        "funding_last_amount": 36000000.0,
+        "funding_last_date": "2025-01-14T00:00:00Z",
+        "headcount": 71,
+        "tags": "Security Software & Services, Business (B2B), Cybersecurity, Software, Service",
+        "harmonic_id": "50900585",
+        "observed_at": "2026-03-04T05:08:54.313801+00:00"
+      }
+    ]
   },
   "agent_output": {
-    "markdown": "# Saviynt | Meeting Brief\n*2026-03-03*\n\n## TL;DR\nSaviynt is a mature, heavily-funded cloud identity governance platform ($1.075B raised) that remains classified as Series B \u2014 a structural anomaly worth probing. The company shows positive momentum with headcount and web traffic both growing, and a recent funding event in early 2026.\n\n## Company Overview\nSaviynt provides a cloud-native identity management platform for enterprises, combining identity governance, application access governance, and privileged access management (PAM) under a Zero Trust framework across multi-cloud environments. Founded in 2010, the company operates B2B in the cybersecurity/security software space. [[2]](https://console.harmonic.ai/companies/130270)\n\n- **Headcount:** 1,516 employees (+7.8% over 90 days) [[4]](https://console.harmonic.ai/companies/130270)\n- **Web Traffic:** 119,000 monthly visits (+4.0% over 30 days) [[4]](https://console.harmonic.ai/companies/130270)\n- **Total Raised:** $1,075,000,000 [[2]](https://console.harmonic.ai/companies/130270)\n- **Stage:** Series B [[2]](https://console.harmonic.ai/companies/130270)\n- **Investors:** KKR, HPS Investment Partners, AllianceBernstein, Carrick Capital Partners, PNC [[2]](https://console.harmonic.ai/companies/130270)\n\n## Key Points\n\u2022 **Massive capital raised relative to stated stage** \u2014 $1.075B at Series B is highly unusual and suggests either atypical financing structure (e.g., growth equity rounds labeled as Series B), significant debt components, or delayed IPO trajectory. This warrants direct clarification. [[2]](https://console.harmonic.ai/companies/130270)\n\u2022 **Institutional-grade investor base** signals credibility and likely governance maturity \u2014 KKR and HPS in particular suggest this has been treated as a growth/buyout-style investment rather than traditional venture. [[2]](https://console.harmonic.ai/companies/130270)\n\u2022 **Strong headcount growth** of +7.8% in 90 days at 1,500+ employees indicates active scaling, not a plateau \u2014 meaningful for a company of this size and age. [[4]](https://console.harmonic.ai/companies/130270)\n\u2022 **Platform breadth is a competitive differentiator** \u2014 the combination of IGA, PAM, and application access governance in a single cloud-native platform targets enterprise consolidation trends in identity security. [[2]](https://console.harmonic.ai/companies/130270)\n\u2022 **Founded in 2010** \u2014 at 14+ years old, this is a late-stage company by any measure, making the Series B label and continued private status notable. [[2]](https://console.harmonic.ai/companies/130270)\n\n## Recent Developments\n\u2022 **Funding event recorded February 2, 2026** \u2014 nature, size, and lead investor of this round are not specified in available data. [[4]](https://console.harmonic.ai/companies/130270)\n\u2022 No additional recent news or product announcements found in available data. [[1]](https://console.harmonic.ai/companies/130270)\n\n## Signals & Trends\n\u2022 **Hiring accelerating:** +7.8% headcount growth in 90 days at a 1,500+ person company is a strong signal of expansion, not maintenance. [[4]](https://console.harmonic.ai/companies/130270)\n\u2022 **Web traffic rising:** +4.0% month-over-month suggests growing market interest or active demand generation. [[4]](https://console.harmonic.ai/companies/130270)\n\u2022 **Identity security tailwinds:** Zero Trust and multi-cloud IAM are high-priority enterprise spending categories \u2014 Saviynt's platform positioning aligns well with current market demand. [[2]](https://console.harmonic.ai/companies/130270)\n\n## For This Meeting\n\u2022 **Clarify the capital structure** \u2014 What does $1.075B raised at \"Series B\" actually mean? How much is equity vs. debt? What is the current valuation and cap table structure?\n\u2022 **Probe the February 2026 funding event** \u2014 Who led it? What was the size and purpose (growth, secondary, recapitalization)?\n\u2022 **IPO or exit trajectory** \u2014 At this scale and age, what is the path to liquidity? Is an IPO being considered, or is a strategic acquisition more likely?\n\u2022 **Leadership depth** \u2014 The only founder/leadership data available is for a VP of Business Development. Key executive team (CEO, CTO, etc.) is **not found in data** and should be clarified in the meeting.\n\u2022 **Competitive positioning** \u2014 How does Saviynt differentiate against SailPoint, CyberArk, and other identity incumbents? (Note: competitors not referenced in provided data \u2014 confirm in meeting.)\n\u2022 **Revenue and profitability** \u2014 No financial performance data available; this is a critical gap to address given the capital deployed.\n",
+    "markdown": "# Saviynt | Meeting Brief\n*2026-03-03*\n\n## TL;DR\nSaviynt offers a cloud-native identity governance and privileged access management platform targeting enterprise security and compliance across multi-cloud environments. The company has raised $1.075B in total funding, with its most recent round closing in February 2026. Headcount and web traffic are both trending upward, signaling active growth momentum.\n\n## Why This Meeting Matters\n\u2022 Saviynt has raised $1.075B in total funding from institutional investors including KKR, HPS Investment Partners, AllianceBernstein, and PNC \u2014 indicating significant capital backing and institutional validation in the enterprise identity security space [[2]](https://console.harmonic.ai/companies/130270)\n\u2022 Headcount grew 7.8% over the last 90 days, suggesting active scaling of the team and potential expansion into new markets or product areas [[4]](https://console.harmonic.ai/companies/130270)\n\u2022 Web traffic is up 4.0% over the last 30 days, pointing to growing market interest and pipeline activity [[4]](https://console.harmonic.ai/companies/130270)\n\u2022 A funding event was recorded as recently as February 2, 2026, indicating the company is actively raising or has recently closed capital \u2014 a key timing signal for investor engagement [[4]](https://console.harmonic.ai/companies/130270)\n\n## Company Snapshot\n| Field | Value |\n|---|---|\n| Founded | 2010 |\n| HQ | Not found in table |\n| Employees | 1,516 (+7.8% 90d) |\n| Products | Cloud-based identity governance, application access governance, and privileged access management platform |\n| Customers | Enterprise (B2B) |\n| Total Funding | $1,075,000,000 |\n| Last Round | Series B \u2014 February 2, 2026 |\n*Last updated: Current snapshot (no historical change data available yet)*\n\n## Founders\n**Amit Saha** \u2014 VP Business Development | linkedin.com/in/amit-saha-7a259a4\nAmit Saha brings a background spanning banking, finance, and business development, with roles at Chhattisgarh Rajya Gramin Bank, INGVYSYA Bank, Yes Bank, and Knex Inc. He holds a degree from Barkatullah Vishwavidyalaya. Note: the provided data lists only one individual under Founders & Leadership; additional founder or executive data is not available in the source material.\n\n## Key Signals\n\u2022 [Hiring] Headcount up 7.8% in 90 days \u2014 Source: Saviynt Key Signals [[4]](https://console.harmonic.ai/companies/130270), current snapshot\n\u2022 [Web Traffic] Traffic growing 4.0% in 30 days \u2014 Source: Saviynt Key Signals [[4]](https://console.harmonic.ai/companies/130270), current snapshot\n\u2022 [Funding] Last funding event recorded February 2, 2026; current stage: Series B \u2014 Source: Saviynt Key Signals [[4]](https://console.harmonic.ai/companies/130270)\n\n## In the News\nNo recent news available.\n\n## Meeting Prep\n**Key questions to ask:**\n\u2022 The company is categorized as Series B yet has raised over $1B in total funding \u2014 can leadership clarify the capital structure, use of proceeds from the February 2026 round, and how the Series B designation reflects the current stage? [[2]](https://console.harmonic.ai/companies/130270)[[4]](https://console.harmonic.ai/companies/130270)\n\u2022 Headcount has grown 7.8% in 90 days against a base of 1,516 employees \u2014 where is hiring concentrated (sales, engineering, go-to-market), and what does this signal about near-term strategic priorities? [[4]](https://console.harmonic.ai/companies/130270)\n\u2022 With KKR and HPS Investment Partners among existing backers, what is the current path to liquidity \u2014 is an IPO, strategic acquisition, or continued private growth the preferred outcome? [[2]](https://console.harmonic.ai/companies/130270)\n\n**Recommended next step:** Request a product demo and current ARR/NRR metrics ahead of the meeting to ground valuation discussions, given the significant capital raised relative to the Series B stage designation.\n",
     "company_name": "Saviynt",
-    "run_id": "48bc0355-7dec-4ddd-95a8-a4bde267e9f6",
+    "run_id": "f3ef7c4e-6734-4ab7-922a-9031ca024046",
     "success": true,
     "error": null,
     "retrieval_counts": {
@@ -100,7 +146,7 @@
         "harmonic_130270_signals"
       ]
     },
-    "total_elapsed_ms": 85693,
+    "total_elapsed_ms": 21307,
     "tldr": null,
     "why_it_matters": null,
     "company_snapshot": null,

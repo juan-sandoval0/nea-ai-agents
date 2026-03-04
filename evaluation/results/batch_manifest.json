@@ -1,9 +1,149 @@
 {
-  "tldr_airbnb.com": {
-    "agent": "tldr",
-    "company_id": "airbnb.com",
-    "investor_key": null,
-    "output_format": null,
+  "outreach_cydelphi.com_ashley_email": {
+    "agent": "outreach",
+    "company_id": "cydelphi.com",
+    "investor_key": "ashley",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_cydelphi.com_danielle_email": {
+    "agent": "outreach",
+    "company_id": "cydelphi.com",
+    "investor_key": "danielle",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_cydelphi.com_madison_email": {
+    "agent": "outreach",
+    "company_id": "cydelphi.com",
+    "investor_key": "madison",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_distyl.ai_ashley_email": {
+    "agent": "outreach",
+    "company_id": "distyl.ai",
+    "investor_key": "ashley",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_distyl.ai_danielle_email": {
+    "agent": "outreach",
+    "company_id": "distyl.ai",
+    "investor_key": "danielle",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_distyl.ai_madison_email": {
+    "agent": "outreach",
+    "company_id": "distyl.ai",
+    "investor_key": "madison",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_genspark.ai_ashley_email": {
+    "agent": "outreach",
+    "company_id": "genspark.ai",
+    "investor_key": "ashley",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_genspark.ai_danielle_email": {
+    "agent": "outreach",
+    "company_id": "genspark.ai",
+    "investor_key": "danielle",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_genspark.ai_madison_email": {
+    "agent": "outreach",
+    "company_id": "genspark.ai",
+    "investor_key": "madison",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_noma.security_ashley_email": {
+    "agent": "outreach",
+    "company_id": "noma.security",
+    "investor_key": "ashley",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_noma.security_danielle_email": {
+    "agent": "outreach",
+    "company_id": "noma.security",
+    "investor_key": "danielle",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_noma.security_madison_email": {
+    "agent": "outreach",
+    "company_id": "noma.security",
+    "investor_key": "madison",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_novee.security_ashley_email": {
+    "agent": "outreach",
+    "company_id": "novee.security",
+    "investor_key": "ashley",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_novee.security_danielle_email": {
+    "agent": "outreach",
+    "company_id": "novee.security",
+    "investor_key": "danielle",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_novee.security_madison_email": {
+    "agent": "outreach",
+    "company_id": "novee.security",
+    "investor_key": "madison",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_periodic.com_ashley_email": {
+    "agent": "outreach",
+    "company_id": "periodic.com",
+    "investor_key": "ashley",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_periodic.com_danielle_email": {
+    "agent": "outreach",
+    "company_id": "periodic.com",
+    "investor_key": "danielle",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_periodic.com_madison_email": {
+    "agent": "outreach",
+    "company_id": "periodic.com",
+    "investor_key": "madison",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_saviynt.com_ashley_email": {
+    "agent": "outreach",
+    "company_id": "saviynt.com",
+    "investor_key": "ashley",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_saviynt.com_danielle_email": {
+    "agent": "outreach",
+    "company_id": "saviynt.com",
+    "investor_key": "danielle",
+    "output_format": "email",
+    "days": null
+  },
+  "outreach_saviynt.com_madison_email": {
+    "agent": "outreach",
+    "company_id": "saviynt.com",
+    "investor_key": "madison",
+    "output_format": "email",
     "days": null
   },
   "tldr_cydelphi.com": {
@@ -27,27 +167,6 @@
     "output_format": null,
     "days": null
   },
-  "tldr_matx.com": {
-    "agent": "tldr",
-    "company_id": "matx.com",
-    "investor_key": null,
-    "output_format": null,
-    "days": null
-  },
-  "tldr_namespace.com": {
-    "agent": "tldr",
-    "company_id": "namespace.com",
-    "investor_key": null,
-    "output_format": null,
-    "days": null
-  },
-  "tldr_neuralmagic.com": {
-    "agent": "tldr",
-    "company_id": "neuralmagic.com",
-    "investor_key": null,
-    "output_format": null,
-    "days": null
-  },
   "tldr_noma.security": {
     "agent": "tldr",
     "company_id": "noma.security",
@@ -58,20 +177,6 @@
   "tldr_novee.security": {
     "agent": "tldr",
     "company_id": "novee.security",
-    "investor_key": null,
-    "output_format": null,
-    "days": null
-  },
-  "tldr_octo.ai": {
-    "agent": "tldr",
-    "company_id": "octo.ai",
-    "investor_key": null,
-    "output_format": null,
-    "days": null
-  },
-  "tldr_openai.com": {
-    "agent": "tldr",
-    "company_id": "openai.com",
     "investor_key": null,
     "output_format": null,
     "days": null
@@ -90,11 +195,11 @@
     "output_format": null,
     "days": null
   },
-  "tldr_stripe.com": {
-    "agent": "tldr",
-    "company_id": "stripe.com",
+  "news_aggregator_7d": {
+    "agent": "news_aggregator",
+    "company_id": null,
     "investor_key": null,
     "output_format": null,
-    "days": null
+    "days": 7
   }
 }

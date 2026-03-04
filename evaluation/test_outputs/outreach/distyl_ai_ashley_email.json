@@ -1,0 +1,182 @@
+{
+  "test_case_id": "outreach_distyl.ai_ashley_email",
+  "agent": "outreach",
+  "timestamp": "2026-03-04T05:04:53.362375",
+  "company_id": "distyl.ai",
+  "investor_key": "ashley",
+  "output_format": "email",
+  "success": true,
+  "error": null,
+  "company_bundle": {
+    "company_core": {
+      "company_id": "distyl.ai",
+      "company_name": "Distyl AI",
+      "founding_date": "2022-01-01T00:00:00Z",
+      "hq": "San Francisco, California",
+      "employee_count": 124,
+      "total_funding": 202000000.0,
+      "products": "Distyl AI offers a platform that automates the creation and deployment of AI-driven workflows, leveraging generative AI models alongside existing organizational data. The technology focuses on transparency and auditability, allowing for the customization of workflows to meet specific business requirements.",
+      "customers": "Business (B2B)",
+      "arr_apr": null,
+      "last_round_date": "2025-09-23T00:00:00Z",
+      "last_round_funding": 175000000.0,
+      "web_traffic_trend": "+4.8% (30d)",
+      "website_update": "1 website updates detected",
+      "hiring_firing": "+12.7% (90d)",
+      "observed_at": "2026-03-04T05:04:54.072136",
+      "source_map": {
+        "company_name": "harmonic",
+        "founding_date": "harmonic",
+        "hq": "harmonic",
+        "employee_count": "harmonic",
+        "total_funding": "harmonic",
+        "products": "harmonic",
+        "customers": "harmonic",
+        "last_round_date": "harmonic",
+        "last_round_funding": "harmonic",
+        "web_traffic_trend": "pending_key_signals",
+        "hiring_firing": "pending_key_signals",
+        "website_update": "pending_tavily",
+        "arr_apr": "not_available"
+      }
+    },
+    "founders": [
+      {
+        "company_id": "distyl.ai",
+        "name": "Arjun Prakash",
+        "role_title": "Co-Founder, CEO",
+        "linkedin_url": "https://linkedin.com/in/arjunsprakash",
+        "background": "Arjun Prakash has extensive experience in the tech industry, having served as Head of Solutions at Snorkel AI, where he led new product development and business strategy. Prior to that, he was an early executive at Palantir Technologies, contributing to the scaling of the commercial business over eight years. He also worked as an Associate at Blackrock Healthcare Group, developing quantitative models, and conducted research at Siemens, focusing on pattern recognition for medical imaging. Arjun holds a BS in Electrical and Computer Engineering from Cornell University and has furthered his education at Cornell Tech.\n\n---\nSources: linkedin.com/in/arjunsprakash, twitter.com/arjunsprakash",
+        "observed_at": "2026-03-04T05:04:55.144718",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "distyl.ai",
+        "name": "Derek Ho",
+        "role_title": "Co-Founder, COO",
+        "linkedin_url": "https://linkedin.com/in/derek-ho-distyl",
+        "background": "Derek Ho has a strong background in business development and finance, having worked at Palantir Technologies from 2017 to 2022, where he managed C-suite relationships and drove digital transformation initiatives. Prior to that, he was a Fixed Income Trader at Citadel (2013-2016) and Credit Suisse (2010-2013), where he developed quantitative models to enhance profitability. He holds a BSc in Finance, Accounting, and Statistics from The Wharton School.\n\n---\nSources: linkedin.com/in/derek-ho-distyl",
+        "observed_at": "2026-03-04T05:04:55.338425",
+        "source": "harmonic"
+      }
+    ],
+    "news": [],
+    "key_signals": [
+      {
+        "company_id": "distyl.ai",
+        "signal_type": "web_traffic",
+        "description": "Traffic growing: +4.8% in 30 days",
+        "observed_at": "2026-03-04T05:04:56.063453",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "distyl.ai",
+        "signal_type": "hiring",
+        "description": "Rapid hiring: +12.7% headcount in 90 days (124 employees)",
+        "observed_at": "2026-03-04T05:04:56.063453",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "distyl.ai",
+        "signal_type": "funding",
+        "description": "Last funding: $175,000,000 on September 23, 2025 (SERIES_B)",
+        "observed_at": "2026-03-04T05:04:56.063453",
+        "source": "harmonic"
+      },
+      {
+        "company_id": "distyl.ai",
+        "signal_type": "website_update",
+        "description": "Distyl AI has launched AI-native automation solutions aimed at enabling enterprises to scale operations by 10x, positioning itself as a partner for companies looking to undertake billion-dollar AI initiatives.",
+        "observed_at": "2026-03-04T05:04:56.063453",
+        "source": "tavily"
+      }
+    ],
+    "competitors": [
+      {
+        "company_id": "distyl.ai",
+        "competitor_name": "Instabase",
+        "competitor_domain": "instabase.com",
+        "competitor_type": "startup",
+        "description": "The company offers an AI-native platform that automates the processing of unstructured documents, transforming them into reliable and auditable data to enhance complex workflows. It employs technologies such as generative AI, multi-model optimization, and applied business logic to improve data extra",
+        "funding_total": 276950000.0,
+        "funding_stage": "SERIES_D",
+        "funding_last_amount": 100000000.0,
+        "funding_last_date": "2025-01-17T00:00:00Z",
+        "headcount": 182,
+        "tags": "Analytics & Business Intelligence Platforms, Financial Services, Data Infrastructure & Cloud Services, Communications & Information Technology, Enterprise Productivity & Automation",
+        "harmonic_id": "1462111",
+        "observed_at": "2026-03-04T05:06:00.551594+00:00"
+      },
+      {
+        "company_id": "distyl.ai",
+        "competitor_name": "Stability AI",
+        "competitor_domain": "stability.ai",
+        "competitor_type": "startup",
+        "description": "Stability AI provides custom AI workflows designed for enterprise creative teams, focusing on high-volume production through tools for product photography, brand style adherence, and rapid product concepting. Their technology utilizes advanced diffusion techniques for generative AI, enabling the cre",
+        "funding_total": 442000000.0,
+        "funding_stage": "SERIES_B",
+        "funding_last_amount": 100000000.0,
+        "funding_last_date": "2025-09-26T00:00:00Z",
+        "headcount": 172,
+        "tags": "Digital Media & Content Platforms, Media & Entertainment, Developer Operations & AI Building Tools, Communications & Information Technology, Business (B2B)",
+        "harmonic_id": "10624818",
+        "observed_at": "2026-03-04T05:06:00.551518+00:00"
+      },
+      {
+        "company_id": "distyl.ai",
+        "competitor_name": "InfrasAI",
+        "competitor_domain": "infrasai.io",
+        "competitor_type": "startup",
+        "description": "InfrasAI offers a workflow infrastructure specifically designed for insurance carriers, leveraging AI and natural language processing to transform raw requirements into operational workflows. The platform automates the generation of headless workflows from various input formats and provides a simpli",
+        "funding_total": 21150000.0,
+        "funding_stage": "SERIES_A",
+        "funding_last_amount": 17000000.0,
+        "funding_last_date": "2023-01-27T00:00:00Z",
+        "headcount": 114,
+        "tags": "Analytics & Business Intelligence Platforms, Financial Services, Data Infrastructure & Cloud Services, Communications & Information Technology, Business (B2B)",
+        "harmonic_id": "63514765",
+        "observed_at": "2026-03-04T05:06:00.551721+00:00"
+      },
+      {
+        "company_id": "distyl.ai",
+        "competitor_name": "Invisible Technologies",
+        "competitor_domain": "invisibletech.ai",
+        "competitor_type": "incumbent",
+        "description": "The company offers AI-driven systems that enhance enterprise operations through a modular data platform, a process builder for workflow mapping, and an evaluation platform for testing AI models. These technologies are designed to integrate with existing processes, improving operational efficiency ac",
+        "funding_total": 120380000.0,
+        "funding_stage": "SEED",
+        "funding_last_amount": 100000000.0,
+        "funding_last_date": "2025-09-16T00:00:00Z",
+        "headcount": 4911,
+        "tags": "Developer Operations & AI Building Tools, Communications & Information Technology, Enterprise Productivity & Automation, Business Services, Business (B2B)",
+        "harmonic_id": "63046849",
+        "observed_at": "2026-03-04T05:06:00.551563+00:00"
+      }
+    ]
+  },
+  "agent_output": {
+    "subject": "Distyl's approach to transparent AI workflows",
+    "message": "Hey Arjun,\n\nI'm an investor and engineer focused on data and AI infra at NEA, where we've backed companies like Perplexity, Databricks, and Together AI.\n\nI've been following Distyl's work on automating AI-driven workflows with a focus on transparency and auditability. As more enterprises move beyond proof-of-concept AI projects, the ability to customize and trace workflow execution becomes critical infrastructure. I'm particularly curious about how you're thinking about the technical architecture that enables both the generative AI integration and the auditability layer to coexist without compromising performance.\n\nI'd love to learn more about your roadmap and long-term vision for the platform, especially as you scale to support the billion-dollar AI initiatives you've mentioned.\n\nDo you have any availability in the coming weeks to chat?\n\nBest,\nAshley Jepson",
+    "context_type": "cold_technical_interest",
+    "investor_key": "ashley",
+    "output_format": "email",
+    "contact_name": "Arjun Prakash",
+    "contact_title": "Co-Founder, CEO",
+    "contact_linkedin": "https://linkedin.com/in/arjunsprakash",
+    "company_name": "Distyl AI",
+    "data_sources": {
+      "company_core": true,
+      "founders": 2,
+      "signals": 4,
+      "news": 0
+    },
+    "generated_at": "2026-03-04T05:04:53.362726"
+  },
+  "context_tags": {
+    "investor": "ashley",
+    "format": "email",
+    "data_richness": "medium",
+    "feedback_state": "no_feedback",
+    "investor_context": "cold_technical_interest"
+  }
+}

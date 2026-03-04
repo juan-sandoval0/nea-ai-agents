@@ -1,0 +1,42 @@
+{
+  "test_case_id": "outreach_physicalintelligence.company_ashley_email",
+  "agent": "outreach",
+  "timestamp": "2026-03-04T05:08:59.156963",
+  "company_id": "physicalintelligence.company",
+  "investor_key": "ashley",
+  "output_format": "email",
+  "success": false,
+  "error": "Company not found in database. Run ingest_company first.",
+  "company_bundle": {
+    "company_core": null,
+    "founders": [],
+    "news": [],
+    "key_signals": [],
+    "competitors": []
+  },
+  "agent_output": {
+    "subject": null,
+    "message": null,
+    "context_type": null,
+    "investor_key": "ashley",
+    "output_format": "email",
+    "contact_name": null,
+    "contact_title": null,
+    "contact_linkedin": null,
+    "company_name": null,
+    "data_sources": {
+      "company_core": false,
+      "founders": 0,
+      "signals": 0,
+      "news": 0
+    },
+    "generated_at": "2026-03-04T05:08:59.157295"
+  },
+  "context_tags": {
+    "investor": "ashley",
+    "format": "email",
+    "data_richness": "empty",
+    "feedback_state": "no_feedback",
+    "investor_context": null
+  }
+}
