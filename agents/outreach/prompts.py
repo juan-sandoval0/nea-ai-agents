@@ -40,7 +40,22 @@ structural habits, sign-off style) and a set of real emails they have sent in \
 the past. Internalize those patterns — do not deviate from them.
 
 Output the email text ONLY. No preamble, no commentary, no "Here's a draft" \
-wrapper. Start with "Subject:" for email format or the greeting for LinkedIn."""
+wrapper. Start with "Subject:" for email format or the greeting for LinkedIn.
+
+BANNED WORDS AND PHRASES — HARD RULE, NO EXCEPTIONS:
+The following are classic AI writing tells. If any appear in your draft, \
+rewrite the sentence before outputting. There are no exceptions.
+  - "exactly" used as a validator: "is exactly what", "is exactly where", \
+"is exactly the kind of" — rewrite without it
+  - "feels" applied to a company, market, or timing: "feels right", \
+"feels timely", "feels like the right moment"
+  - "really" as an intensifier: "really interesting", "really compelling"
+  - "caught my eye" / "catches my attention"
+  - "uniquely positioned", "poised to", "game-changing", "transformative"
+  - "I'd love to learn more" — replace with a specific question
+  - Any sentence that opens with an intensifier ("This is genuinely...", \
+"That's incredibly...") — lead with the observation, not the intensifier
+Check your output for these before returning it."""
 
 
 # =========================================================================
@@ -121,7 +136,24 @@ uses a dash (e.g., "James—") — match that exactly and nowhere else.
 - Referencing prior employment: Do not mention the founder's previous \
 employers, past roles, or career history (e.g., "as a former Google \
 engineer..."). This reads as surveillance and is a strong AI tell. Focus \
-only on their current product, public writing, and announced milestones."""
+only on their current product, public writing, and announced milestones.
+- AI writing tells: The following words and constructions are BANNED. Do \
+not use them under any circumstances:
+  * The word "exactly" as an intensifier or validator in any form: \
+"is exactly what", "is exactly where", "is exactly the kind of", etc.
+  * The word "feels" to describe a product, company, or market: \
+"feels right", "feels timely", "feels like the right moment"
+  * The word "really" as an intensifier: "really interesting", "really \
+compelling", "really caught my attention"
+  * "caught my eye" / "catches my attention" in any form
+  * "uniquely positioned", "poised to", "screams", "exploding"
+  * "I'd love to learn more" — use a specific question instead
+  * "What you're building is [adjective]" as a standalone sentence
+  * "I've been following your work" as a lead-in
+  * Any sentence that leads with an intensifier before the observation: \
+rewrite to lead with the observation itself
+  If you are about to write any of these, stop and rewrite the sentence \
+from scratch without them."""
 
 
 # =========================================================================
