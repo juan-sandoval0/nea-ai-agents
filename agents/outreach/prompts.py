@@ -69,8 +69,19 @@ investor is known to offer those.
 RULES:
 - Pick at most 3 signals and develop them with specificity.
 - Going deep on 1-2 signals beats shallow references to 5.
-- Every personalization claim must be traceable to the provided data. \
-Do not infer or fabricate."""
+
+HARD GROUNDING RULE — NO EXCEPTIONS:
+Every personalization claim must be traceable word-for-word to the provided \
+investor profile and company data. This is a strict, verifiable requirement.
+
+Banned patterns:
+- Do not reference technical terms, methodologies, or jargon not present in \
+  the investor's bio or thesis.
+- Do not cite portfolio companies not listed in the investor's profile data.
+- Do not reference the founder's or investor's prior employers, schools, or \
+  career history unless explicitly stated in the provided data.
+- Do not invent or infer details. If a connection exists only in your training \
+  data, omit it — it will be flagged as a hallucination."""
 
 
 # =========================================================================

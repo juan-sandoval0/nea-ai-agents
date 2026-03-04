@@ -1,0 +1,80 @@
+{
+  "test_case_id": "tldr_openai.com",
+  "agent": "tldr",
+  "timestamp": "2026-03-03T23:44:31.651150",
+  "company_id": "openai.com",
+  "success": true,
+  "error": null,
+  "company_bundle": {
+    "company_core": null,
+    "founders": [
+      {
+        "company_id": "openai.com",
+        "name": "Greg Brockman",
+        "role_title": "President, Chairman, & Co-Founder",
+        "linkedin_url": "https://linkedin.com/in/thegdb",
+        "background": "Greg Brockman served as the CTO at Stripe from 2010 to 2015, where he played a key role in scaling the company and shaping its technology strategy. He holds a degree in Marketing from the Massachusetts Institute of Technology. Additionally, he has a track record of backing successful founders, further demonstrating his commitment to innovation and entrepreneurship.\n\n---\nSources: linkedin.com/in/thegdb, twitter.com/gdb",
+        "observed_at": "2026-03-03T23:45:30.910155",
+        "source": "swarm"
+      },
+      {
+        "company_id": "openai.com",
+        "name": "Ilya Sutskever",
+        "role_title": "Co-Founder and Research Director",
+        "linkedin_url": "https://linkedin.com/in/ilya-sutskever-45978618",
+        "background": "Ilya Sutskever is a co-founder and former Chief Scientist at OpenAI, where he played a pivotal role from 2016 to 2024. Prior to OpenAI, he was a Research Scientist at Google from 2013 to 2015 and co-founded Dnnresearch, which was acquired by Google. He holds a Bachelor's degree in Computer Science and Mathematics from the University of Toronto, underscoring his strong technical background in AI research.\n\n---\nSources: linkedin.com/in/ilya-sutskever, x.com/ilyasut",
+        "observed_at": "2026-03-03T23:45:33.909704",
+        "source": "swarm"
+      },
+      {
+        "company_id": "openai.com",
+        "name": "Wojciech Zaremba",
+        "role_title": "OpenAI co-founder",
+        "linkedin_url": "https://linkedin.com/in/wojciech-zaremba-356568164",
+        "background": "Wojciech Zaremba holds a PhD in Deep Learning from New York University and has a strong background in AI research, having served as a Research Scientist at both Google Brain and Facebook AI Research. At Google, he implemented the first convolutional neural network trained on ImageNet, utilizing the AlexNet architecture. Additionally, he interned at NVIDIA, where he contributed to CUDA and driver development.\n\n---\nSources: linkedin.com/in/wojciech-zaremba-356568164",
+        "observed_at": "2026-03-03T23:45:35.892441",
+        "source": "swarm"
+      }
+    ],
+    "news": [],
+    "key_signals": [],
+    "competitors": []
+  },
+  "agent_output": {
+    "markdown": "# OpenAI | Meeting Brief\n*2026-03-03*\n\n## TL;DR\nOpenAI is a generative AI platform company that recently closed a massive $110B round in February 2026, bringing total funding to ~$167.6B. [[2]](https://console.harmonic.ai/companies/75639) The company is in aggressive growth mode with headcount up 14.5% in 90 days, though web traffic has dipped 6.4% in the past month \u2014 a tension worth probing. [[4]](https://console.harmonic.ai/companies/75639)\n\n---\n\n## Company Overview\nOpenAI provides an API platform built on generative AI models for text and video content creation, with applications across data analysis, enterprise solutions, and developer tooling. [[2]](https://console.harmonic.ai/companies/75639) Founded in 2015, the company operates B2B and is currently at an unspecified venture stage despite its scale. Headcount stands at 11,208, and monthly web traffic is approximately 210 million visits. [[2]](https://console.harmonic.ai/companies/75639)\n\n---\n\n## Key Points\n\u2022 **Extraordinary capital raised:** Total funding of ~$167.6B, including a $110B round closed February 2026 \u2014 one of the largest private funding rounds on record. Investors include Andreessen Horowitz, Morgan Stanley, Insight Partners, Firestreak Ventures, and Aliya Capital Partners. [[2]](https://console.harmonic.ai/companies/75639)\n\u2022 **Aggressive hiring:** 14.5% headcount growth in 90 days (to 11,208 employees) signals rapid organizational scaling \u2014 but also raises questions about burn rate given the capital intensity. [[4]](https://console.harmonic.ai/companies/75639)\n\u2022 **Traffic decline is a flag:** 210M monthly visits but down 6.4% in 30 days. At this scale, a traffic decline warrants explanation \u2014 competitive pressure, product changes, or seasonal noise? [[4]](https://console.harmonic.ai/companies/75639)\n\u2022 **Founding team depth:** Co-founders bring elite technical pedigree \u2014 Ilya Sutskever (former Chief Scientist, ex-Google Research, co-founded Dnnresearch acquired by Google) and Wojciech Zaremba (PhD Deep Learning/NYU, ex-Google Brain, ex-Facebook AI Research). Greg Brockman (President) previously served as CTO at Stripe. [[2]](https://console.harmonic.ai/companies/75639) Note: Sutskever's profile indicates his OpenAI tenure ended in 2024 \u2014 his current role and involvement should be clarified.\n\n---\n\n## Recent Developments\n\u2022 **$110B funding round closed February 27, 2026** \u2014 the most recent and dominant data point. [[2]](https://console.harmonic.ai/companies/75639)\n\u2022 No additional recent news or product updates are available in the provided data. [[1]](https://console.harmonic.ai/companies/75639)\n\n---\n\n## Signals & Trends\n\u2022 **Hiring surge:** +14.5% headcount in 90 days is aggressive even for a company of this size \u2014 suggests major expansion across functions. [[4]](https://console.harmonic.ai/companies/75639)\n\u2022 **Web traffic softening:** -6.4% in 30 days against a 210M baseline is notable and could indicate early competitive erosion or product/UX friction. [[4]](https://console.harmonic.ai/companies/75639)\n\u2022 **Funding stage listed as \"VENTURE_UNKNOWN\"** despite $167B raised \u2014 the company's capitalization structure and path to liquidity (IPO, etc.) is unclear from available data. [[2]](https://console.harmonic.ai/companies/75639)\n\n---\n\n## For This Meeting\n**Key questions to ask:**\n\u2022 What is driving the 6.4% traffic decline \u2014 competitive dynamics, product changes, or something else?\n\u2022 How is the $110B round being deployed? What does the burn rate look like at 11,000+ employees?\n\u2022 What is Ilya Sutskever's current status and involvement given his profile suggests departure in 2024? [[2]](https://console.harmonic.ai/companies/75639)\n\u2022 What is the timeline and mechanism for liquidity given the \"VENTURE_UNKNOWN\" stage classification?\n\n**Risks to probe:**\n\u2022 Capital efficiency at this scale \u2014 $167B raised demands an extraordinary revenue and margin story.\n\u2022 Talent concentration risk and whether the founding/technical leadership bench remains intact.\n\u2022 Traffic decline could be an early signal of market saturation or competitive displacement.\n\n**Areas needing clarification:**\n\u2022 Current revenue, ARR, and profitability metrics \u2014 **not found in data.**\n\u2022 Sam Altman's role or any other C-suite leadership beyond the three named founders \u2014 **not found in data.**\n\u2022 Specific enterprise customer traction or product roadmap details \u2014 **not found in data.**\n",
+    "company_name": "OpenAI",
+    "run_id": "ab324097-9832-447d-ba30-78dd5d72ea73",
+    "success": true,
+    "error": null,
+    "retrieval_counts": {
+      "profile_k": 2,
+      "news_k": 1,
+      "signals_k": 1
+    },
+    "retrieval_doc_ids": {
+      "profile": [
+        "harmonic_75639",
+        "swarm_enrichment"
+      ],
+      "news": [
+        "harmonic_75639_updates"
+      ],
+      "signals": [
+        "harmonic_75639_signals"
+      ]
+    },
+    "total_elapsed_ms": 119533,
+    "tldr": null,
+    "why_it_matters": null,
+    "company_snapshot": null,
+    "founders": null,
+    "signals": null,
+    "news": null,
+    "meeting_prep": null
+  },
+  "context_tags": {
+    "company": "openai.com",
+    "data_sources": "founders",
+    "tldr_type": "standard"
+  }
+}

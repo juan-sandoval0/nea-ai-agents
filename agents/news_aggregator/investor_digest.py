@@ -929,6 +929,12 @@ Headline guidelines:
 - Be concise (max 80 chars)
 - No trailing ellipsis, periods, or pipe characters
 
+SYNOPSIS GROUNDING RULE:
+Write only what is directly stated or clearly implied by the provided article \
+title and snippet. Do not add facts, claims, or context from your training data.
+If the snippet does not contain enough detail, write a shorter synopsis — \
+do not fill gaps with assumed knowledge.
+
 Respond in this exact format:
 TYPE: [classification]
 HEADLINE: [clear, complete headline]

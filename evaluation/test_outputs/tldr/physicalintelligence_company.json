@@ -1,0 +1,45 @@
+{
+  "test_case_id": "tldr_physicalintelligence.company",
+  "agent": "tldr",
+  "timestamp": "2026-03-04T01:27:57.207513",
+  "company_id": "physicalintelligence.company",
+  "success": false,
+  "error": "Company not found in Harmonic for URL: physicalintelligence.company",
+  "company_bundle": {
+    "company_core": null,
+    "founders": [],
+    "key_signals": [],
+    "news": [],
+    "competitors": []
+  },
+  "agent_output": {
+    "markdown": "# Meeting Briefing: physicalintelligence.company\n\n## Error\n\nCompany not found in Harmonic for URL: physicalintelligence.company\n\n---\n\n*Generated: 2026-03-03 17:27:57*\n*Run ID: f25a33b0-da92-4aa1-9d3e-f67e19ade821*\n",
+    "company_name": "physicalintelligence.company",
+    "run_id": "f25a33b0-da92-4aa1-9d3e-f67e19ade821",
+    "success": false,
+    "error": "Company not found in Harmonic for URL: physicalintelligence.company",
+    "retrieval_counts": {
+      "profile_k": 0,
+      "news_k": 0,
+      "signals_k": 0
+    },
+    "retrieval_doc_ids": {
+      "profile": [],
+      "news": [],
+      "signals": []
+    },
+    "total_elapsed_ms": 276,
+    "tldr": null,
+    "why_it_matters": null,
+    "company_snapshot": null,
+    "founders": null,
+    "signals": null,
+    "news": null,
+    "meeting_prep": null
+  },
+  "context_tags": {
+    "company": "physicalintelligence.company",
+    "data_sources": "none",
+    "tldr_type": "standard"
+  }
+}

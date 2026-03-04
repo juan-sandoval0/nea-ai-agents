@@ -1,0 +1,117 @@
+{
+  "test_case_id": "tldr_saviynt.com",
+  "agent": "tldr",
+  "timestamp": "2026-03-04T01:26:29.594460",
+  "company_id": "saviynt.com",
+  "success": true,
+  "error": null,
+  "company_bundle": {
+    "company_core": {
+      "id": "130270",
+      "name": "Saviynt",
+      "description": "Saviynt offers a cloud-based identity management platform that integrates identity governance, application access governance, and privileged access management to improve security and compliance for enterprises. The platform utilizes advanced technologies to facilitate granular access control, manage identity lifecycles, and implement Zero Trust principles across multi-cloud environments.",
+      "domain": "saviynt.com",
+      "website_url": "https://saviynt.com",
+      "logo_url": "https://media.licdn.com/dms/image/v2/D4E0BAQEpQPJ8Q0Sxyg/company-logo_200_200/B4EZrrepxxHMAI-/0/1764887273112/saviynt_logo?e=2147483647&v=beta&t=EMvebRfabm0YitqtEeM2wIL6xe3SqrdN3IgFt2uKMzQ",
+      "city": "El Segundo",
+      "state": "California",
+      "country": "United States",
+      "founded_date": "2010-01-01T00:00:00Z",
+      "founded_year": 2010,
+      "headcount": 1516,
+      "headcount_change_90d": 7.82,
+      "web_traffic": 119000,
+      "web_traffic_change_30d": 3.97,
+      "funding_total": 1075000000.0,
+      "funding_stage": "SERIES_B",
+      "funding_last_amount": null,
+      "funding_last_date": "2026-02-02T00:00:00Z",
+      "funding_rounds": [],
+      "investors": [
+        "Carrick Capital Partners",
+        "PNC",
+        "AllianceBernstein",
+        "KKR",
+        "HPS Investment Partners, LLC",
+        "Sixth Street",
+        "Happy Valley LaunchBox powered by PNC Bank",
+        "Ten Eleven Ventures"
+      ],
+      "linkedin_url": "https://linkedin.com/company/saviynt",
+      "tags": [
+        "Security Software & Services",
+        "Business (B2B)",
+        "Cybersecurity",
+        "Software",
+        "Service",
+        "Identity & Access Management"
+      ],
+      "customer_type": "Business (B2B)",
+      "fetched_at": "2026-03-04T01:27:31.887593"
+    },
+    "founders": [
+      {
+        "company_id": "saviynt.com",
+        "name": "Amit Saha",
+        "role_title": "VP Business Development",
+        "linkedin_url": "https://linkedin.com/in/amitsaha",
+        "background": "Amit Saha has a diverse background in banking and finance, having served as a Branch Manager at Chhattisgarh Rajya Gramin Bank from 2013 to 2017 and as an Assistant Manager at both INGVYSYA Bank and Yes Bank in 2010-2011. He began his career as a Business Analyst at Knex Inc. from 2017 to 2018. Amit holds a degree from Barkatullah Vishwavidyalaya.\n\n---\nSources: linkedin.com/in/amit-saha-7a259a4",
+        "observed_at": "2026-03-04T00:01:35.340760",
+        "source": "swarm"
+      }
+    ],
+    "key_signals": [
+      {
+        "signal_type": "headcount",
+        "description": "Headcount change 90d: +7.8%",
+        "source": "Harmonic",
+        "observed_at": "2026-03-04"
+      },
+      {
+        "signal_type": "web_traffic",
+        "description": "Web traffic change 30d: +4.0%",
+        "source": "Harmonic",
+        "observed_at": "2026-03-04"
+      }
+    ],
+    "news": [],
+    "competitors": []
+  },
+  "agent_output": {
+    "markdown": "# Saviynt | Meeting Brief\n*2026-03-03*\n\n## TL;DR\nSaviynt is a mature, heavily-funded cloud identity governance platform ($1.075B raised) that remains classified as Series B \u2014 a structural anomaly worth probing. The company shows positive momentum with headcount and web traffic both growing, and a recent funding event in early 2026.\n\n## Company Overview\nSaviynt provides a cloud-native identity management platform for enterprises, combining identity governance, application access governance, and privileged access management (PAM) under a Zero Trust framework across multi-cloud environments. Founded in 2010, the company operates B2B in the cybersecurity/security software space. [[2]](https://console.harmonic.ai/companies/130270)\n\n- **Headcount:** 1,516 employees (+7.8% over 90 days) [[4]](https://console.harmonic.ai/companies/130270)\n- **Web Traffic:** 119,000 monthly visits (+4.0% over 30 days) [[4]](https://console.harmonic.ai/companies/130270)\n- **Total Raised:** $1,075,000,000 [[2]](https://console.harmonic.ai/companies/130270)\n- **Stage:** Series B [[2]](https://console.harmonic.ai/companies/130270)\n- **Investors:** KKR, HPS Investment Partners, AllianceBernstein, Carrick Capital Partners, PNC [[2]](https://console.harmonic.ai/companies/130270)\n\n## Key Points\n\u2022 **Massive capital raised relative to stated stage** \u2014 $1.075B at Series B is highly unusual and suggests either atypical financing structure (e.g., growth equity rounds labeled as Series B), significant debt components, or delayed IPO trajectory. This warrants direct clarification. [[2]](https://console.harmonic.ai/companies/130270)\n\u2022 **Institutional-grade investor base** signals credibility and likely governance maturity \u2014 KKR and HPS in particular suggest this has been treated as a growth/buyout-style investment rather than traditional venture. [[2]](https://console.harmonic.ai/companies/130270)\n\u2022 **Strong headcount growth** of +7.8% in 90 days at 1,500+ employees indicates active scaling, not a plateau \u2014 meaningful for a company of this size and age. [[4]](https://console.harmonic.ai/companies/130270)\n\u2022 **Platform breadth is a competitive differentiator** \u2014 the combination of IGA, PAM, and application access governance in a single cloud-native platform targets enterprise consolidation trends in identity security. [[2]](https://console.harmonic.ai/companies/130270)\n\u2022 **Founded in 2010** \u2014 at 14+ years old, this is a late-stage company by any measure, making the Series B label and continued private status notable. [[2]](https://console.harmonic.ai/companies/130270)\n\n## Recent Developments\n\u2022 **Funding event recorded February 2, 2026** \u2014 nature, size, and lead investor of this round are not specified in available data. [[4]](https://console.harmonic.ai/companies/130270)\n\u2022 No additional recent news or product announcements found in available data. [[1]](https://console.harmonic.ai/companies/130270)\n\n## Signals & Trends\n\u2022 **Hiring accelerating:** +7.8% headcount growth in 90 days at a 1,500+ person company is a strong signal of expansion, not maintenance. [[4]](https://console.harmonic.ai/companies/130270)\n\u2022 **Web traffic rising:** +4.0% month-over-month suggests growing market interest or active demand generation. [[4]](https://console.harmonic.ai/companies/130270)\n\u2022 **Identity security tailwinds:** Zero Trust and multi-cloud IAM are high-priority enterprise spending categories \u2014 Saviynt's platform positioning aligns well with current market demand. [[2]](https://console.harmonic.ai/companies/130270)\n\n## For This Meeting\n\u2022 **Clarify the capital structure** \u2014 What does $1.075B raised at \"Series B\" actually mean? How much is equity vs. debt? What is the current valuation and cap table structure?\n\u2022 **Probe the February 2026 funding event** \u2014 Who led it? What was the size and purpose (growth, secondary, recapitalization)?\n\u2022 **IPO or exit trajectory** \u2014 At this scale and age, what is the path to liquidity? Is an IPO being considered, or is a strategic acquisition more likely?\n\u2022 **Leadership depth** \u2014 The only founder/leadership data available is for a VP of Business Development. Key executive team (CEO, CTO, etc.) is **not found in data** and should be clarified in the meeting.\n\u2022 **Competitive positioning** \u2014 How does Saviynt differentiate against SailPoint, CyberArk, and other identity incumbents? (Note: competitors not referenced in provided data \u2014 confirm in meeting.)\n\u2022 **Revenue and profitability** \u2014 No financial performance data available; this is a critical gap to address given the capital deployed.\n",
+    "company_name": "Saviynt",
+    "run_id": "48bc0355-7dec-4ddd-95a8-a4bde267e9f6",
+    "success": true,
+    "error": null,
+    "retrieval_counts": {
+      "profile_k": 2,
+      "news_k": 1,
+      "signals_k": 1
+    },
+    "retrieval_doc_ids": {
+      "profile": [
+        "harmonic_130270",
+        "swarm_enrichment"
+      ],
+      "news": [
+        "harmonic_130270_updates"
+      ],
+      "signals": [
+        "harmonic_130270_signals"
+      ]
+    },
+    "total_elapsed_ms": 85693,
+    "tldr": null,
+    "why_it_matters": null,
+    "company_snapshot": null,
+    "founders": null,
+    "signals": null,
+    "news": null,
+    "meeting_prep": null
+  },
+  "context_tags": {
+    "company": "saviynt.com",
+    "data_sources": "harmonic,signals,founders",
+    "tldr_type": "standard"
+  }
+}

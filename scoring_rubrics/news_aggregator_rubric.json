@@ -5,7 +5,7 @@
   "quality_bar": "Signal-to-noise ratio. Every signal in the digest must be there for a reason.",
   "composite_formula": "Score = [(S1×15)+(S2×10)+(S3×10)+(S4×8)+(S5×8)+(S6×4)+(S7×8)+(S8×4)+(D1×12)+(D2×10)+(D3×6)+(D4×5)] / 5",
   "composite_range": "0–100",
-  "pass_threshold": null,
+  "pass_threshold": 70,
   "score_range": { "min": 1, "max": 5 },
 
   "structure": {

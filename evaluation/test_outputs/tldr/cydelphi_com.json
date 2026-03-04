@@ -1,0 +1,106 @@
+{
+  "test_case_id": "tldr_cydelphi.com",
+  "agent": "tldr",
+  "timestamp": "2026-03-04T01:24:07.066711",
+  "company_id": "cydelphi.com",
+  "success": true,
+  "error": null,
+  "company_bundle": {
+    "company_core": {
+      "id": "62587452",
+      "name": "CYDELPHI",
+      "description": "The main product is an automated incident response platform that manages the complete lifecycle of cybersecurity incidents, utilizing AI-driven workflows and structured methodologies such as playbooks and runbooks to enhance recovery efficiency. It features a multi-tenant command center for remote deployment, evidence collection, and threat analysis, while leveraging a data lake for rapid access to critical information.",
+      "domain": "cydelphi.com",
+      "website_url": "https://cydelphi.com",
+      "logo_url": "https://assets.harmonic.ai/company_1a4b06f2f0aeb8da2ff6605eeb95f764fceafb735eda4133b1f726982553070c.png",
+      "city": "Lake Forest",
+      "state": "California",
+      "country": "United States",
+      "founded_date": "2024-01-01T00:00:00Z",
+      "founded_year": 2024,
+      "headcount": 5,
+      "headcount_change_90d": -16.67,
+      "web_traffic": 430,
+      "web_traffic_change_30d": 0.0,
+      "funding_total": 3000000.0,
+      "funding_stage": "SEED",
+      "funding_last_amount": 3000000.0,
+      "funding_last_date": "2026-02-12T00:00:00Z",
+      "funding_rounds": [],
+      "investors": [
+        "Glasswing Ventures",
+        "Blu Ventures"
+      ],
+      "linkedin_url": "https://linkedin.com/company/cydelphi",
+      "tags": [
+        "Security Software & Services",
+        "Business (B2B)",
+        "Cybersecurity",
+        "Software",
+        "Service",
+        "Data Analytics"
+      ],
+      "customer_type": "Business (B2B)",
+      "fetched_at": "2026-03-04T01:24:39.622404"
+    },
+    "founders": [],
+    "key_signals": [
+      {
+        "signal_type": "headcount",
+        "description": "Headcount change 90d: -16.7%",
+        "source": "Harmonic",
+        "observed_at": "2026-03-04"
+      },
+      {
+        "signal_type": "web_traffic",
+        "description": "Web traffic change 30d: 0.0%",
+        "source": "Harmonic",
+        "observed_at": "2026-03-04"
+      },
+      {
+        "signal_type": "funding",
+        "description": "Last round: $3,000,000 (2026-02-12T00:00:00Z)",
+        "source": "Harmonic",
+        "observed_at": "2026-02-12T00:00:00Z"
+      }
+    ],
+    "news": [],
+    "competitors": []
+  },
+  "agent_output": {
+    "markdown": "# CYDELPHI | Meeting Brief\n*2026-03-03*\n\n## TL;DR\nCyDelphi is a seed-stage automated cybersecurity incident response platform founded in 2024, having raised $3M from Glasswing Ventures and Blu Ventures. The company is very early with minimal web presence and a concerning headcount contraction of ~17% in the last 90 days \u2014 red flags worth probing directly in this meeting.\n\n---\n\n## Company Overview\nCyDelphi offers an AI-driven incident response platform that manages the full lifecycle of cybersecurity incidents via playbooks, runbooks, and automated workflows. The platform includes a multi-tenant command center supporting remote deployment, evidence collection, and threat analysis, backed by a data lake architecture for rapid information access. [[2]](https://console.harmonic.ai/companies/62587452)\n\n- **Stage:** Seed [[2]](https://console.harmonic.ai/companies/62587452)\n- **Founded:** 2024 [[2]](https://console.harmonic.ai/companies/62587452)\n- **Total Raised:** $3M (last round closed February 2026) [[2]](https://console.harmonic.ai/companies/62587452)\n- **Investors:** Glasswing Ventures, Blu Ventures [[2]](https://console.harmonic.ai/companies/62587452)\n- **Headcount:** 5 [[2]](https://console.harmonic.ai/companies/62587452)\n- **Web Traffic:** 430 [[2]](https://console.harmonic.ai/companies/62587452)\n\n---\n\n## Key Points\n\u2022 **Very early-stage company** \u2014 founded 2024 with only 5 employees, suggesting the product is likely pre-revenue or in very early commercial stages. [[2]](https://console.harmonic.ai/companies/62587452)\n\u2022 **$3M seed round recently closed** (February 2026), providing near-term runway, but the small team size limits execution capacity. [[2]](https://console.harmonic.ai/companies/62587452)\n\u2022 **Headcount has declined 16.7% in the last 90 days** \u2014 at a 5-person company, this represents at least one departure, which is disproportionately significant and warrants direct explanation. [[3]](https://console.harmonic.ai/companies/62587452)\n\u2022 **Web traffic of 430 is extremely low**, indicating minimal market awareness or early-stage go-to-market activity. [[2]](https://console.harmonic.ai/companies/62587452)\n\u2022 **Only one named leader identified** \u2014 Doron Kolton, VP Engineering \u2014 with no CEO, CTO, or commercial leadership identified in available data. [[2]](https://console.harmonic.ai/companies/62587452)\n\n---\n\n## Recent Developments\n\u2022 Closed a $3M seed round on February 12, 2026, backed by Glasswing Ventures and Blu Ventures. [[1]](https://console.harmonic.ai/companies/62587452)[[2]](https://console.harmonic.ai/companies/62587452)\n\u2022 No other recent news or product announcements found in available data. [[1]](https://console.harmonic.ai/companies/62587452)\n\n---\n\n## Signals & Trends\n\u2022 \u26a0\ufe0f **Headcount contraction of -16.7% over 90 days** at a 5-person company is a meaningful signal \u2014 could indicate a co-founder departure, early team instability, or a strategic pivot. [[3]](https://console.harmonic.ai/companies/62587452)\n\u2022 Web traffic data shows no growth trend available yet; current volume of 430 suggests negligible organic traction. [[2]](https://console.harmonic.ai/companies/62587452)[[3]](https://console.harmonic.ai/companies/62587452)\n\u2022 No web traffic change data available to assess directional momentum. [[3]](https://console.harmonic.ai/companies/62587452)\n\n---\n\n## For This Meeting\n\n**Key Questions to Ask:**\n\u2022 Who leads the company? No CEO or commercial leadership is identified in available data \u2014 clarify the full founding team and org structure.\n\u2022 What caused the headcount reduction? Who left, and why?\n\u2022 What is the current product status \u2014 is this live, in beta, or still in development?\n\u2022 Do you have any paying customers or signed pilots? What does early GTM look like?\n\u2022 How are you deploying the $3M seed capital, and what milestones does it fund?\n\n**Risks to Probe:**\n\u2022 **Team thinness and attrition** at 5 people is a critical execution risk, especially post-departure. [[3]](https://console.harmonic.ai/companies/62587452)\n\u2022 **No visible commercial traction** \u2014 web traffic and lack of news suggest the company has not yet broken through to market. [[2]](https://console.harmonic.ai/companies/62587452)\n\u2022 **Leadership gap** \u2014 absence of identified CEO/GTM leadership is a structural concern for a B2B SaaS company needing enterprise sales. [[2]](https://console.harmonic.ai/companies/62587452)\n\n**Areas Needing Clarification:**\n\u2022 Full leadership team composition and equity/role structure.\n\u2022 Competitive differentiation vs. established incident response platforms.\n\u2022 Customer pipeline and revenue status \u2014 not found in available data.\n",
+    "company_name": "CYDELPHI",
+    "run_id": "d753ecf7-2a1a-4742-8ecd-6f402eeb14ca",
+    "success": true,
+    "error": null,
+    "retrieval_counts": {
+      "profile_k": 1,
+      "news_k": 1,
+      "signals_k": 1
+    },
+    "retrieval_doc_ids": {
+      "profile": [
+        "harmonic_62587452"
+      ],
+      "news": [
+        "harmonic_62587452_updates"
+      ],
+      "signals": [
+        "harmonic_62587452_signals"
+      ]
+    },
+    "total_elapsed_ms": 53719,
+    "tldr": null,
+    "why_it_matters": null,
+    "company_snapshot": null,
+    "founders": null,
+    "signals": null,
+    "news": null,
+    "meeting_prep": null
+  },
+  "context_tags": {
+    "company": "cydelphi.com",
+    "data_sources": "harmonic,signals",
+    "tldr_type": "standard"
+  }
+}

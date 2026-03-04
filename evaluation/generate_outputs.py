@@ -21,7 +21,7 @@ Output layout:
             ...
         news_aggregator/
             digest_7d.json
-            digest_30d.json
+            digest_7d.json
 
 Each JSON record has the shape:
     {
@@ -87,9 +87,14 @@ logger = logging.getLogger(__name__)
 
 # Companies used for outreach + TLDR test cases
 DEFAULT_COMPANIES = [
-    "stripe.com",
-    "openai.com",
-    "airbnb.com",
+    "cydelphi.com",
+    "novee.security",
+    "distyl.ai",
+    "saviynt.com",
+    "physicalintelligence.company",
+    "noma.security",
+    "periodic.com",
+    "genspark.ai",
 ]
 
 # Investor profiles to use for outreach test cases
@@ -103,7 +108,7 @@ DEFAULT_INVESTORS = [
 DEFAULT_FORMATS = ["email"]
 
 # News aggregator look-back windows
-DEFAULT_DIGEST_DAYS = [7, 30]
+DEFAULT_DIGEST_DAYS = [7]
 
 # Minimum priority score for news aggregator digest
 DEFAULT_MIN_PRIORITY = 40.0
@@ -316,10 +321,57 @@ def run_tldr_cases(
             # Step 1: Run briefing agent
             run_result = agent.prepare_briefing(company_id)
 
-            # Step 2: Fetch company bundle (for factual grounding in the judge)
+            # Step 2: Build company_bundle from what the agent actually retrieved.
+            # The TLDR agent calls Harmonic directly (never writes to SQLite), so
+            # get_company_bundle() would return empty data and the judge would flag
+            # every claim as a hallucination. Instead we use the Harmonic data the
+            # agent had, supplemented by SQLite for founders/competitors (which are
+            # written there during enrichment).
+            retrieved = run_result.get("retrieved_content") or {}
+            company_raw = retrieved.get("company_raw")  # HarmonicCompany dict, raw_data stripped
+
             normalized = normalize_company_id(company_id)
             bundle = get_company_bundle(normalized)
-            bundle_dict = bundle.to_dict()
+            sqlite_dict = bundle.to_dict()
+
+            # Build structured key_signals from Harmonic metric fields
+            key_signals = []
+            if company_raw:
+                hc = company_raw.get("headcount_change_90d")
+                wt = company_raw.get("web_traffic_change_30d")
+                fl_amount = company_raw.get("funding_last_amount")
+                fl_date = company_raw.get("funding_last_date")
+                if hc is not None:
+                    sign = "+" if hc > 0 else ""
+                    key_signals.append({
+                        "signal_type": "headcount",
+                        "description": f"Headcount change 90d: {sign}{hc:.1f}%",
+                        "source": "Harmonic",
+                        "observed_at": datetime.utcnow().date().isoformat(),
+                    })
+                if wt is not None:
+                    sign = "+" if wt > 0 else ""
+                    key_signals.append({
+                        "signal_type": "web_traffic",
+                        "description": f"Web traffic change 30d: {sign}{wt:.1f}%",
+                        "source": "Harmonic",
+                        "observed_at": datetime.utcnow().date().isoformat(),
+                    })
+                if fl_amount and fl_date:
+                    key_signals.append({
+                        "signal_type": "funding",
+                        "description": f"Last round: ${fl_amount:,.0f} ({fl_date})",
+                        "source": "Harmonic",
+                        "observed_at": fl_date,
+                    })
+
+            bundle_dict = {
+                "company_core": company_raw,
+                "founders": sqlite_dict.get("founders") or [],
+                "key_signals": key_signals,
+                "news": [],  # Harmonic has no news endpoint; metric changes are in signals
+                "competitors": sqlite_dict.get("competitors") or [],
+            }
 
             # Step 3: Build agent_output the TLDR judge accepts
             # The judge accepts: markdown string OR structured sections dict.

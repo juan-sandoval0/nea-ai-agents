@@ -47,7 +47,7 @@ except ImportError:
 
 import chromadb
 from langgraph.graph import StateGraph, START, END
-from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
 import operator
 
@@ -96,7 +96,7 @@ from observability.langsmith import (
 # =============================================================================
 
 DEFAULT_NEWS_DAYS = 30
-DEFAULT_LLM_MODEL = "gpt-4o-mini"
+DEFAULT_LLM_MODEL = "claude-sonnet-4-6"
 
 # =============================================================================
 # DATA MODELS
@@ -892,7 +892,7 @@ def synthesize_briefing_node(state: BriefingState) -> dict:
     signals_sources = format_sources_for_prompt(signals.sources if signals else [])
 
     # Initialize LLM
-    llm = ChatOpenAI(model=DEFAULT_LLM_MODEL, temperature=0)
+    llm = ChatAnthropic(model=DEFAULT_LLM_MODEL, temperature=0)
 
     system_prompt = """You are an AI assistant preparing meeting briefings for venture capital investors.
 
@@ -925,6 +925,21 @@ STRUCTURE YOUR OUTPUT EXACTLY AS:
 • [Key questions to ask]
 • [Risks or opportunities to probe]
 • [Areas needing clarification]
+
+CRITICAL GROUNDING RULE:
+Every factual claim in your briefing — names, titles, funding amounts, investors,
+dates, technologies, customers — must come directly from the data sections below
+(Company Profile, Recent News, Key Signals).
+
+Do NOT use any knowledge from your training data about this company.
+If a field is missing or blank, write "Not found in data" — do not fill it in.
+If you are unsure whether a claim is in the data, omit it entirely.
+
+Specific examples of what NOT to do:
+- Do not assign a title (CEO, CTO, etc.) to a founder unless that title is
+  explicitly stated in the Company Profile data.
+- Do not name investors unless they appear in the provided data.
+- Do not reference products, features, or partnerships not mentioned in the data.
 
 GUIDELINES:
 - Be succinct but comprehensive - don't omit important information
@@ -1151,6 +1166,7 @@ class MeetingBriefingAgent:
         error_str = None
         output_markdown = None
         company_name = url
+        final_state: dict = {}
 
         try:
             # Build initial state
@@ -1173,7 +1189,7 @@ class MeetingBriefingAgent:
             }
 
             # Run the graph
-            final_state = self.graph.invoke(initial_state)
+            final_state = self.graph.invoke(initial_state)  # type: ignore[assignment]
 
             output_markdown = final_state.get("briefing_markdown", "")
             error_str = final_state.get("error")
@@ -1188,6 +1204,21 @@ class MeetingBriefingAgent:
 
         total_elapsed_ms = int((time.perf_counter() - start_time) * 1000)
 
+        # Extract retrieved content from final state so callers (e.g. the
+        # evaluation pipeline) can use the actual Harmonic data as ground
+        # truth rather than relying on the SQLite bundle, which the TLDR
+        # agent never populates.
+        profile_result = final_state.get("profile_result")
+        news_result = final_state.get("news_result")
+        signals_result = final_state.get("signals_result")
+
+        company_raw = None
+        if profile_result and profile_result.raw_results:
+            raw = profile_result.raw_results[0]
+            if isinstance(raw, dict):
+                # Strip raw_data to avoid bloating downstream consumers
+                company_raw = {k: v for k, v in raw.items() if k != "raw_data"}
+
         return {
             "url": url,
             "company_name": company_name,
@@ -1200,6 +1231,12 @@ class MeetingBriefingAgent:
             "total_elapsed_ms": total_elapsed_ms,
             "success": error_str is None,
             "error": error_str,
+            "retrieved_content": {
+                "profile_text": profile_result.content if profile_result else None,
+                "news_text": news_result.content if news_result else None,
+                "signals_text": signals_result.content if signals_result else None,
+                "company_raw": company_raw,
+            },
         }
 
     def list_available_companies(self) -> list[str]:

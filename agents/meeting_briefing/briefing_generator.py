@@ -34,7 +34,7 @@ from datetime import datetime
 from typing import Optional
 
 import time
-from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from core.database import CompanyBundle, CompanyCore, Founder, KeySignal, NewsArticle, CompetitorSnapshot
@@ -74,7 +74,7 @@ logger = get_logger(__name__)
 # CONFIGURATION
 # =============================================================================
 
-DEFAULT_LLM_MODEL = "gpt-4o-mini"
+DEFAULT_LLM_MODEL = "claude-sonnet-4-6"
 
 # Mandatory system prompt - enforces data-only generation
 SYSTEM_PROMPT = """You are an AI assistant generating meeting briefings for venture capital investors.
@@ -367,7 +367,7 @@ def generate_briefing(company_id: str, model: str = DEFAULT_LLM_MODEL) -> dict:
 
     Args:
         company_id: Company URL or domain
-        model: LLM model to use (default: gpt-4o-mini)
+        model: LLM model to use (default: claude-sonnet-4-6)
 
     Returns:
         Dict with:
@@ -605,7 +605,7 @@ Remember: Use ONLY the data provided above. If something is not in the tables, s
     )
 
     try:
-        llm = ChatOpenAI(model=actual_model, temperature=temperature)
+        llm = ChatAnthropic(model=actual_model, temperature=temperature)
         messages = [
             SystemMessage(content=system_prompt_content),
             HumanMessage(content=user_prompt),

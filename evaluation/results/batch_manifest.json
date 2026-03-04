@@ -1,4 +1,32 @@
 {
+  "tldr_airbnb.com": {
+    "agent": "tldr",
+    "company_id": "airbnb.com",
+    "investor_key": null,
+    "output_format": null,
+    "days": null
+  },
+  "tldr_cydelphi.com": {
+    "agent": "tldr",
+    "company_id": "cydelphi.com",
+    "investor_key": null,
+    "output_format": null,
+    "days": null
+  },
+  "tldr_distyl.ai": {
+    "agent": "tldr",
+    "company_id": "distyl.ai",
+    "investor_key": null,
+    "output_format": null,
+    "days": null
+  },
+  "tldr_genspark.ai": {
+    "agent": "tldr",
+    "company_id": "genspark.ai",
+    "investor_key": null,
+    "output_format": null,
+    "days": null
+  },
   "tldr_matx.com": {
     "agent": "tldr",
     "company_id": "matx.com",
@@ -20,6 +48,20 @@
     "output_format": null,
     "days": null
   },
+  "tldr_noma.security": {
+    "agent": "tldr",
+    "company_id": "noma.security",
+    "investor_key": null,
+    "output_format": null,
+    "days": null
+  },
+  "tldr_novee.security": {
+    "agent": "tldr",
+    "company_id": "novee.security",
+    "investor_key": null,
+    "output_format": null,
+    "days": null
+  },
   "tldr_octo.ai": {
     "agent": "tldr",
     "company_id": "octo.ai",
@@ -27,18 +69,32 @@
     "output_format": null,
     "days": null
   },
-  "news_aggregator_30d": {
-    "agent": "news_aggregator",
-    "company_id": null,
+  "tldr_openai.com": {
+    "agent": "tldr",
+    "company_id": "openai.com",
     "investor_key": null,
     "output_format": null,
-    "days": 30
+    "days": null
   },
-  "news_aggregator_7d": {
-    "agent": "news_aggregator",
-    "company_id": null,
+  "tldr_periodic.com": {
+    "agent": "tldr",
+    "company_id": "periodic.com",
     "investor_key": null,
     "output_format": null,
-    "days": 7
+    "days": null
+  },
+  "tldr_saviynt.com": {
+    "agent": "tldr",
+    "company_id": "saviynt.com",
+    "investor_key": null,
+    "output_format": null,
+    "days": null
+  },
+  "tldr_stripe.com": {
+    "agent": "tldr",
+    "company_id": "stripe.com",
+    "investor_key": null,
+    "output_format": null,
+    "days": null
   }
 }

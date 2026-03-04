@@ -1,0 +1,141 @@
+{
+  "test_case_id": "tldr_distyl.ai",
+  "agent": "tldr",
+  "timestamp": "2026-03-04T01:25:32.340704",
+  "company_id": "distyl.ai",
+  "success": true,
+  "error": null,
+  "company_bundle": {
+    "company_core": {
+      "id": "11533692",
+      "name": "Distyl AI",
+      "description": "Distyl AI provides a platform that automates the creation and deployment of AI-driven workflows, utilizing generative AI models in conjunction with existing organizational data. The technology emphasizes transparency and auditability, enabling the customization of workflows to align with specific business needs.",
+      "domain": "distyl.ai",
+      "website_url": "https://distyl.ai",
+      "logo_url": "https://assets.harmonic.ai/company_76f2c3be89f0cba1c187ae0a5ec4bfb972e432e804c09c4a520530fdeb964380.png",
+      "city": "San Francisco",
+      "state": "California",
+      "country": "United States",
+      "founded_date": "2022-01-01T00:00:00Z",
+      "founded_year": 2022,
+      "headcount": 124,
+      "headcount_change_90d": 12.73,
+      "web_traffic": 14870,
+      "web_traffic_change_30d": 4.76,
+      "funding_total": 202000000.0,
+      "funding_stage": "SERIES_B",
+      "funding_last_amount": 175000000.0,
+      "funding_last_date": "2025-09-23T00:00:00Z",
+      "funding_rounds": [],
+      "investors": [
+        "AI Grant",
+        "Coatue Management",
+        "Millennium Technology Value Partners",
+        "Dell Technologies",
+        "Lightspeed Venture Partners",
+        "FirsthandVC",
+        "DST Global",
+        "Khosla Ventures",
+        "avra",
+        "Dell Technologies Capital",
+        "Brad Gerstner",
+        "Jim Cash",
+        "Nat Friedman"
+      ],
+      "linkedin_url": "https://linkedin.com/company/distylai",
+      "tags": [
+        "Analytics & Business Intelligence Platforms",
+        "Life Sciences & Healthcare",
+        "Developer Operations & AI Building Tools",
+        "Communications & Information Technology",
+        "Healthcare Data & EHR Technology",
+        "Enterprise Productivity & Automation",
+        "Business (B2B)",
+        "Artificial intelligence",
+        "Service",
+        "Data Analytics"
+      ],
+      "customer_type": "Business (B2B)",
+      "fetched_at": "2026-03-04T01:26:00.493038"
+    },
+    "founders": [
+      {
+        "company_id": "distyl.ai",
+        "name": "Arjun Prakash",
+        "role_title": "Co-Founder, CEO",
+        "linkedin_url": "https://linkedin.com/in/arjunsprakash",
+        "background": "Arjun Prakash has extensive experience in the tech industry, having served as Head of Solutions at Snorkel AI, where he led new product development and business strategy. Prior to that, he was an early executive at Palantir Technologies, contributing to the scaling of the commercial business over eight years. He also worked as an Associate at Blackrock Healthcare Group, developing quantitative models, and conducted research at Siemens, focusing on pattern recognition for medical imaging. Arjun holds a BS in Electrical and Computer Engineering from Cornell University and has furthered his education at Cornell Tech.\n\n---\nSources: linkedin.com/in/arjunsprakash, twitter.com/arjunsprakash",
+        "observed_at": "2026-03-03T23:59:31.388640",
+        "source": "swarm"
+      },
+      {
+        "company_id": "distyl.ai",
+        "name": "Derek Ho",
+        "role_title": "Co-Founder, COO",
+        "linkedin_url": "https://linkedin.com/in/derek-ho-distyl",
+        "background": "Derek Ho has a strong background in business development and finance, having worked at Palantir Technologies from 2017 to 2022, where he managed C-suite relationships and drove digital transformation initiatives. Prior to that, he was a Fixed Income Trader at Citadel (2013-2016) and Credit Suisse (2010-2013), where he developed quantitative models to enhance profitability. He holds a BSc in Finance, Accounting, and Statistics from The Wharton School.\n\n---\nSources: linkedin.com/in/derek-ho-distyl",
+        "observed_at": "2026-03-03T23:59:33.670188",
+        "source": "swarm"
+      }
+    ],
+    "key_signals": [
+      {
+        "signal_type": "headcount",
+        "description": "Headcount change 90d: +12.7%",
+        "source": "Harmonic",
+        "observed_at": "2026-03-04"
+      },
+      {
+        "signal_type": "web_traffic",
+        "description": "Web traffic change 30d: +4.8%",
+        "source": "Harmonic",
+        "observed_at": "2026-03-04"
+      },
+      {
+        "signal_type": "funding",
+        "description": "Last round: $175,000,000 (2025-09-23T00:00:00Z)",
+        "source": "Harmonic",
+        "observed_at": "2025-09-23T00:00:00Z"
+      }
+    ],
+    "news": [],
+    "competitors": []
+  },
+  "agent_output": {
+    "markdown": "# Distyl AI | Meeting Brief\n*2026-03-03*\n\n## TL;DR\nDistyl AI is a B2B enterprise AI workflow automation platform that just closed a massive $175M Series B in September 2025, bringing total funding to $202M. [[1]](https://console.harmonic.ai/companies/11533692)[[2]](https://console.harmonic.ai/companies/11533692) The company is backed by a strong investor syndicate including Lightspeed, Coatue, and Dell Technologies, and is showing healthy growth signals across headcount and traffic. [[2]](https://console.harmonic.ai/companies/11533692) The founding team carries deep Palantir pedigree, which is a meaningful signal for enterprise go-to-market credibility.\n\n---\n\n## Company Overview\nDistyl AI automates the creation and deployment of AI-driven workflows using generative AI models integrated with existing organizational data. [[2]](https://console.harmonic.ai/companies/11533692) The platform emphasizes transparency and auditability \u2014 a differentiator relevant to regulated industries. The company operates in healthcare/life sciences, analytics, and developer tooling verticals. [[2]](https://console.harmonic.ai/companies/11533692)\n\n- **Founded:** 2022 [[2]](https://console.harmonic.ai/companies/11533692)\n- **Stage:** Series B [[2]](https://console.harmonic.ai/companies/11533692)\n- **Total Raised:** $202M [[2]](https://console.harmonic.ai/companies/11533692)\n- **Headcount:** 124 (+12.7% over 90 days) [[4]](https://console.harmonic.ai/companies/11533692)\n- **Web Traffic:** 14,870 monthly visitors (+4.8% over 30 days) [[4]](https://console.harmonic.ai/companies/11533692)\n\n---\n\n## Key Points\n\u2022 **Massive Series B signals strong conviction:** The $175M round closed September 23, 2025 \u2014 an unusually large Series B that suggests investors see significant enterprise traction or a winner-take-most dynamic in AI workflow automation. [[2]](https://console.harmonic.ai/companies/11533692)\n\n\u2022 **Blue-chip investor syndicate:** Backed by Lightspeed Venture Partners, Coatue Management, Dell Technologies, Millennium Technology Value Partners, and AI Grant. Dell's participation is notable and may indicate a strategic distribution or infrastructure partnership angle. [[2]](https://console.harmonic.ai/companies/11533692)\n\n\u2022 **Palantir-heavy founding team is a genuine asset:** CEO Arjun Prakash spent eight years as an early executive at Palantir scaling the commercial business, and COO Derek Ho also came from Palantir (2017\u20132022) managing C-suite relationships and digital transformation. [[3]](https://swarm.com) This is a team that knows how to sell complex data products to large enterprises.\n\n\u2022 **Transparency and auditability as core differentiators:** The platform is explicitly built around auditable, customizable workflows \u2014 a critical requirement in healthcare and regulated industries where the company appears to be targeting. [[2]](https://console.harmonic.ai/companies/11533692)\n\n\u2022 **Headcount growth is accelerating:** 12.7% headcount growth in 90 days on a base of 124 employees suggests active hiring across functions post-fundraise. [[4]](https://console.harmonic.ai/companies/11533692)\n\n---\n\n## Recent Developments\n\u2022 Closed $175M Series B on September 23, 2025, the largest round in the company's history. [[2]](https://console.harmonic.ai/companies/11533692)\n\u2022 Headcount has grown 12.7% in the past 90 days, indicating rapid post-funding team expansion. [[4]](https://console.harmonic.ai/companies/11533692)\n\u2022 Web traffic up 4.8% in the past 30 days, suggesting growing market awareness or inbound demand. [[4]](https://console.harmonic.ai/companies/11533692)\n\n---\n\n## Signals & Trends\n\u2022 **Hiring surge:** 12.7% headcount growth in 90 days is well above typical growth rates and points to aggressive scaling \u2014 worth understanding which functions are being built out (sales, engineering, GTM). [[4]](https://console.harmonic.ai/companies/11533692)\n\u2022 **Traffic growth is modest but positive:** 14,870 monthly visitors with 4.8% 30-day growth is relatively low for a $202M-funded company \u2014 this may reflect a direct enterprise sales motion rather than inbound-led growth, or could indicate limited brand awareness. [[4]](https://console.harmonic.ai/companies/11533692)\n\u2022 **Healthcare/life sciences focus:** The company's vertical tags suggest a deliberate focus on regulated industries where auditability requirements create a natural moat. [[2]](https://console.harmonic.ai/companies/11533692)\n\n---\n\n## For This Meeting\n**Key questions to ask:**\n\u2022 What is the current ARR and revenue growth rate \u2014 does it justify the $175M Series B valuation?\n\u2022 Who are the anchor enterprise customers, and what does the typical contract size and sales cycle look like?\n\u2022 How is the Palantir playbook being applied here \u2014 is this a services-heavy or product-led motion?\n\u2022 What specific roles are being hired for with the new capital, and what does the 18-month roadmap look like?\n\u2022 How does Dell Technologies' involvement translate into distribution or go-to-market leverage?\n\n**Risks to probe:**\n\u2022 Low web traffic relative to funding raised could indicate heavy reliance on a small number of large customers \u2014 concentration risk.\n\u2022 The AI workflow automation space is crowded; press for specific differentiation beyond \"transparency and auditability.\"\n\u2022 Palantir alumni are excellent at enterprise sales but can build operationally complex, services-heavy businesses \u2014 clarify the product vs. services revenue mix.\n\n**Areas needing clarification:**\n\u2022 No third co-founder or CTO identified in available data \u2014 worth understanding the technical leadership structure. [[2]](https://console.harmonic.ai/companies/11533692)[[3]](https://swarm.com)\n\u2022 No specific customer names, case studies, or revenue metrics available in provided data. [[2]](https://console.harmonic.ai/companies/11533692)\n\u2022 The role of AI Grant in the cap table is unusual alongside institutional investors \u2014 worth understanding the context. [[2]](https://console.harmonic.ai/companies/11533692)\n",
+    "company_name": "Distyl AI",
+    "run_id": "37bd1263-fd41-455e-ae25-5e3ff3f72d12",
+    "success": true,
+    "error": null,
+    "retrieval_counts": {
+      "profile_k": 2,
+      "news_k": 1,
+      "signals_k": 1
+    },
+    "retrieval_doc_ids": {
+      "profile": [
+        "harmonic_11533692",
+        "swarm_enrichment"
+      ],
+      "news": [
+        "harmonic_11533692_updates"
+      ],
+      "signals": [
+        "harmonic_11533692_signals"
+      ]
+    },
+    "total_elapsed_ms": 56098,
+    "tldr": null,
+    "why_it_matters": null,
+    "company_snapshot": null,
+    "founders": null,
+    "signals": null,
+    "news": null,
+    "meeting_prep": null
+  },
+  "context_tags": {
+    "company": "distyl.ai",
+    "data_sources": "harmonic,signals,founders",
+    "tldr_type": "standard"
+  }
+}

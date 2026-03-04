@@ -1,0 +1,121 @@
+{
+  "test_case_id": "tldr_novee.security",
+  "agent": "tldr",
+  "timestamp": "2026-03-04T01:25:02.755344",
+  "company_id": "novee.security",
+  "success": true,
+  "error": null,
+  "company_bundle": {
+    "company_core": {
+      "id": "66059811",
+      "name": "Novee Security",
+      "description": "Novee provides an AI-driven penetration testing platform that uses black-box testing to detect vulnerabilities and attack paths in real-time, mimicking the strategies of actual attackers. The platform leverages purpose-trained AI models that adapt to environmental changes, continuously validating vulnerabilities and offering customized remediation strategies based on the specific technology stack.",
+      "domain": "novee.security",
+      "website_url": "https://novee.security",
+      "logo_url": "https://assets.harmonic.ai/company_94d9f97d26ba52beafbc7df49a5873b7e48e99517bcc121b5b32647adefb9d49.png",
+      "city": null,
+      "state": "Tel Aviv",
+      "country": "Israel",
+      "founded_date": "2025-01-01T00:00:00Z",
+      "founded_year": 2025,
+      "headcount": 37,
+      "headcount_change_90d": 32.14,
+      "web_traffic": 4491,
+      "web_traffic_change_30d": 0.0,
+      "funding_total": 51500000.0,
+      "funding_stage": "SERIES_A",
+      "funding_last_amount": null,
+      "funding_last_date": "2026-01-14T00:00:00Z",
+      "funding_rounds": [],
+      "investors": [
+        "YL Ventures",
+        "Zeev Ventures",
+        "Canaan"
+      ],
+      "linkedin_url": "https://linkedin.com/company/novee-security",
+      "tags": [
+        "Security Software & Services",
+        "Business (B2B)",
+        "Cybersecurity",
+        "Software",
+        "Artificial intelligence",
+        "Service"
+      ],
+      "customer_type": "Business (B2B)",
+      "fetched_at": "2026-03-04T01:25:08.892663"
+    },
+    "founders": [
+      {
+        "company_id": "novee.security",
+        "name": "Gon Chalamish",
+        "role_title": "Co-Founder & CPO",
+        "linkedin_url": "https://linkedin.com/in/gon-chalamish-a30966282",
+        "background": "Gon Chalamish served as the Research and Development Group Manager at FundGuard from 2024 to 2025, following a notable tenure in the Israel Defense Forces where he held roles including Deputy Commander Chief of Staff and Project Manager. He also led a research and development group within the IDF from 2019 to 2021. Gon holds a Bachelor of Science in Computer Science from Reichman University.\n\n---\nSources: linkedin.com/in/gon-chalamish-a30966282",
+        "observed_at": "2026-03-03T23:58:19.131626",
+        "source": "swarm"
+      },
+      {
+        "company_id": "novee.security",
+        "name": "Ido Geffen",
+        "role_title": "Co-Founder & CEO",
+        "linkedin_url": "https://linkedin.com/in/ido-geffen",
+        "background": "Ido Geffen has over 20 years of experience in cybersecurity, having held significant roles such as VP of Product at Orca Security, where he contributed to revolutionizing cloud security, and VP of Product & Customer Success at Oasis Security, a leader in non-human identity management. He also served as VP of Customer Success & Support at CyberMDX, managing multiple departments to enhance customer journeys. Ido holds a B.Sc. in Computer Science from Ben-Gurion University and an MBA in Management of Technology, Innovation & Entrepreneurship from Tel Aviv University.\n\n---\nSources: linkedin.com/in/ido-geffen",
+        "observed_at": "2026-03-03T23:58:21.508432",
+        "source": "swarm"
+      }
+    ],
+    "key_signals": [
+      {
+        "signal_type": "headcount",
+        "description": "Headcount change 90d: +32.1%",
+        "source": "Harmonic",
+        "observed_at": "2026-03-04"
+      },
+      {
+        "signal_type": "web_traffic",
+        "description": "Web traffic change 30d: 0.0%",
+        "source": "Harmonic",
+        "observed_at": "2026-03-04"
+      }
+    ],
+    "news": [],
+    "competitors": []
+  },
+  "agent_output": {
+    "markdown": "# Novee Security | Meeting Brief\n*2026-03-03*\n\n## TL;DR\nNovee Security is a newly founded (2025) AI-driven penetration testing company that raised a $51.5M Series A in January 2026 \u2014 a notably large early-stage round. The company is growing headcount aggressively (+32% in 90 days), signaling rapid scaling, but limited traction data is available to validate market momentum.\n\n---\n\n## Company Overview\nNovee Security builds an AI-powered penetration testing platform using black-box testing to detect vulnerabilities and attack paths in real-time, mimicking real attacker behavior. Purpose-trained AI models adapt to environmental changes, continuously validate vulnerabilities, and deliver remediation strategies tailored to the customer's specific tech stack. [[2]](https://console.harmonic.ai/companies/66059811)\n\n- **Stage:** Series A [[2]](https://console.harmonic.ai/companies/66059811)\n- **Founded:** 2025 [[2]](https://console.harmonic.ai/companies/66059811)\n- **Total Raised:** $51.5M [[2]](https://console.harmonic.ai/companies/66059811)\n- **Headcount:** 37, +32.1% over 90 days [[2]](https://console.harmonic.ai/companies/66059811)[[4]](https://console.harmonic.ai/companies/66059811)\n- **Web Traffic:** 4,491 [[2]](https://console.harmonic.ai/companies/66059811)\n\n---\n\n## Key Points\n\u2022 **Unusually large Series A for a company founded in 2025** \u2014 $51.5M raised with backing from YL Ventures, Zeev Ventures, and Canaan suggests strong investor conviction, but the round size relative to company age warrants scrutiny on what milestones justified this valuation. [[2]](https://console.harmonic.ai/companies/66059811)\n\n\u2022 **Strong founder pedigree in cybersecurity and product** \u2014 CEO Ido Geffen brings 20+ years of cybersecurity experience, including VP of Product at Orca Security and VP of Product & Customer Success at Oasis Security, both well-regarded companies in cloud and identity security. [[3]](https://swarm.com)\n\n\u2022 **CPO Gon Chalamish brings R&D and IDF background** \u2014 His roles as Deputy Commander Chief of Staff and R&D Group Manager within the IDF, followed by an R&D leadership role at FundGuard, suggest technical depth, though his commercial experience is more limited. [[3]](https://swarm.com)\n\n\u2022 **Rapid headcount growth (+32.1% in 90 days)** signals active scaling, but at 37 employees total, the company is still early-stage operationally. [[4]](https://console.harmonic.ai/companies/66059811)\n\n\u2022 **No web traffic trend data or customer traction metrics available** \u2014 Current web traffic of 4,491 is modest; absence of historical data makes it impossible to assess growth trajectory. [[2]](https://console.harmonic.ai/companies/66059811)[[4]](https://console.harmonic.ai/companies/66059811)\n\n---\n\n## Recent Developments\n\u2022 **Series A funding closed January 14, 2026**, led by YL Ventures, Zeev Ventures, and Canaan \u2014 $51.5M total raised. [[1]](https://console.harmonic.ai/companies/66059811)[[4]](https://console.harmonic.ai/companies/66059811)\n\u2022 No additional news, product launches, or partnership announcements found in available data. [[1]](https://console.harmonic.ai/companies/66059811)\n\n---\n\n## Signals & Trends\n\u2022 **Hiring surge:** +32.1% headcount growth in 90 days (from a base of ~28 to 37) indicates active team-building, likely post-Series A deployment. [[4]](https://console.harmonic.ai/companies/66059811)\n\u2022 **Web traffic baseline is low** (4,491), and no trend data exists yet \u2014 this is a key gap to monitor for early demand signals. [[2]](https://console.harmonic.ai/companies/66059811)[[4]](https://console.harmonic.ai/companies/66059811)\n\u2022 No competitive dynamic or market positioning data available in provided sources. [[4]](https://console.harmonic.ai/companies/66059811)\n\n---\n\n## For This Meeting\n\n**Key questions to ask:**\n- What does the current customer pipeline look like \u2014 any paying customers, pilots, or LOIs?\n- How does the platform differentiate from existing automated pen testing tools (e.g., on attack path simulation and AI adaptation)?\n- What is the intended use of the $51.5M \u2014 headcount, R&D, GTM, or all three?\n- What drove the decision to raise such a large Series A this early?\n\n**Risks to probe:**\n- **Traction gap:** A $51.5M raise in 2025/2026 with only 37 employees and modest web traffic raises questions about whether commercial validation exists yet. Press hard on ARR, customer count, and retention.\n- **Founder commercial experience:** Geffen has strong product and CS backgrounds but no prior CEO role on record; worth probing his go-to-market strategy and sales leadership plan. [[3]](https://swarm.com)\n- **Market timing:** AI-driven pen testing is a crowded and fast-moving space \u2014 clarify what proprietary advantage the AI models provide and how defensible they are.\n\n**Areas needing clarification:**\n- No historical news or product milestones are available \u2014 ask for a company timeline and key proof points since founding. [[1]](https://console.harmonic.ai/companies/66059811)\n- Web traffic trend data is absent; request direct metrics on pipeline, demos, and inbound demand. [[4]](https://console.harmonic.ai/companies/66059811)\n",
+    "company_name": "Novee Security",
+    "run_id": "a40f10aa-674c-4f30-82f3-464f7b14af9f",
+    "success": true,
+    "error": null,
+    "retrieval_counts": {
+      "profile_k": 2,
+      "news_k": 1,
+      "signals_k": 1
+    },
+    "retrieval_doc_ids": {
+      "profile": [
+        "harmonic_66059811",
+        "swarm_enrichment"
+      ],
+      "news": [
+        "harmonic_66059811_updates"
+      ],
+      "signals": [
+        "harmonic_66059811_signals"
+      ]
+    },
+    "total_elapsed_ms": 28780,
+    "tldr": null,
+    "why_it_matters": null,
+    "company_snapshot": null,
+    "founders": null,
+    "signals": null,
+    "news": null,
+    "meeting_prep": null
+  },
+  "context_tags": {
+    "company": "novee.security",
+    "data_sources": "harmonic,signals,founders",
+    "tldr_type": "standard"
+  }
+}

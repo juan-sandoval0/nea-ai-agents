@@ -348,10 +348,10 @@ def build_judge_prompt(
     Returns:
         (system_prompt, user_prompt) strings for the Messages API.
     """
-    company_core = company_bundle.get("company_core", {})
-    founders = company_bundle.get("founders", [])
-    key_signals = company_bundle.get("key_signals", [])
-    news_articles = company_bundle.get("news_articles", [])
+    company_core = company_bundle.get("company_core") or {}
+    founders = company_bundle.get("founders") or []
+    key_signals = company_bundle.get("key_signals") or []
+    news_articles = company_bundle.get("news_articles") or company_bundle.get("news") or []
 
     # Agent output — prefer structured fields if available, fall back to markdown
     markdown = agent_output.get("markdown", "")

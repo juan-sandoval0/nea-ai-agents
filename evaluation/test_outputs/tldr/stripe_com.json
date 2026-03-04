@@ -1,0 +1,117 @@
+{
+  "test_case_id": "tldr_stripe.com",
+  "agent": "tldr",
+  "timestamp": "2026-03-03T23:41:43.896581",
+  "company_id": "stripe.com",
+  "success": true,
+  "error": null,
+  "company_bundle": {
+    "company_core": null,
+    "founders": [
+      {
+        "company_id": "stripe.com",
+        "name": "Patrick Collison",
+        "role_title": "CEO",
+        "linkedin_url": "https://linkedin.com/in/patrickcollison",
+        "background": "Patrick Collison co-founded Stripe, a leading online payment processing platform, which has significantly transformed the fintech landscape. He holds a Bachelor of Arts in Psychology from Creighton University and a Master of Arts in Anthropology from the University of South Dakota. Prior to Stripe, he gained experience in technology and entrepreneurship, contributing to his deep understanding of the intersection between technology and business.\n\n---\nSources: linkedin.com/in/patrick-collison-a6296a26",
+        "observed_at": "2026-03-03T23:43:22.033285",
+        "source": "swarm"
+      },
+      {
+        "company_id": "stripe.com",
+        "name": "John Collison",
+        "role_title": "President",
+        "linkedin_url": "https://linkedin.com/in/johnbcollison",
+        "background": "John Collison co-founded Stripe, a leading online payment processing platform, which has significantly transformed the fintech landscape. He has a strong educational background in marketing from Harvard University. Prior to Stripe, he was involved in various entrepreneurial ventures, showcasing his expertise in building successful tech companies.\n\n---\nSources: linkedin.com/in/johnbcollison, twitter.com/collision",
+        "observed_at": "2026-03-03T23:43:24.741102",
+        "source": "swarm"
+      }
+    ],
+    "news": [],
+    "key_signals": [],
+    "competitors": [
+      {
+        "company_id": "stripe.com",
+        "competitor_name": "Primer",
+        "competitor_domain": "primer.io",
+        "competitor_type": "startup",
+        "description": "The main product is a unified payments infrastructure that enables businesses to manage multiple payment methods through a single API, streamlining the checkout process. It incorporates automation, customization features, and fraud prevention tools to facilitate global payment transactions.",
+        "funding_total": 73399800.0,
+        "funding_stage": "SERIES_B",
+        "funding_last_amount": null,
+        "funding_last_date": "2023-11-07T00:00:00Z",
+        "headcount": 247,
+        "tags": "Financial Services, Business (B2B), Software, Service, Data Analytics",
+        "harmonic_id": "1858",
+        "observed_at": "2026-03-03T00:28:47.814606+00:00"
+      },
+      {
+        "company_id": "stripe.com",
+        "competitor_name": "Solid",
+        "competitor_domain": "solidfi.com",
+        "competitor_type": "startup",
+        "description": "The company provides a FinTech platform that supports embedded banking, payment processing, and card issuance, enabling programmatic account creation and customizable payment workflows. It utilizes modern APIs and managed infrastructure to ensure compliance and facilitate the development of integrat",
+        "funding_total": 80840000.0,
+        "funding_stage": "SERIES_B",
+        "funding_last_amount": 63000000.0,
+        "funding_last_date": "2022-08-31T00:00:00Z",
+        "headcount": 115,
+        "tags": "Financial Services, Banking & Lending Technology, Business (B2B), Insurance Technology - Insurtech, Software",
+        "harmonic_id": "34874536",
+        "observed_at": "2026-03-03T00:28:47.814645+00:00"
+      },
+      {
+        "company_id": "stripe.com",
+        "competitor_name": "Zil Money",
+        "competitor_domain": "zilmoney.com",
+        "competitor_type": "startup",
+        "description": "The company provides an all-in-one payment management platform that streamlines various transaction methods, including ACH, wire transfers, checks, and credit card payments, while integrating with existing accounting and payroll systems. The platform emphasizes efficiency and security, supported by ",
+        "funding_total": null,
+        "funding_stage": "VENTURE_UNKNOWN",
+        "funding_last_amount": null,
+        "funding_last_date": null,
+        "headcount": 73,
+        "tags": "Product Hunt, Financial Services, Banking & Lending Technology, Accounting & Finance Services, Communications & Information Technology",
+        "harmonic_id": "3139810",
+        "observed_at": "2026-03-03T00:28:47.814671+00:00"
+      }
+    ]
+  },
+  "agent_output": {
+    "markdown": "# Stripe | Meeting Brief\n*2026-03-03*\n\n## TL;DR\nStripe is a mature, large-scale B2B financial infrastructure company showing meaningful growth signals across both headcount and web traffic. With over $8.8B raised and a recent funding event in early 2026, the company remains highly active. This meeting should focus on understanding current strategic priorities and trajectory.\n\n## Company Overview\nStripe provides a financial infrastructure platform for online and in-person payment processing, subscription management, invoicing automation, and fraud prevention via APIs and no-code solutions. Founded in 2010, the company operates at significant scale with 14,145 employees and ~109M monthly web visits. [[2]](https://console.harmonic.ai/companies/142540)\n\n- **Stage:** Late-stage private\n- **Total Raised:** $8,815,918,068 [[2]](https://console.harmonic.ai/companies/142540)\n- **Headcount:** 14,145 [[2]](https://console.harmonic.ai/companies/142540)\n- **Web Traffic:** 108.9M monthly visits [[2]](https://console.harmonic.ai/companies/142540)\n\n## Key Points\n\u2022 **Significant scale with continued growth momentum** \u2014 headcount is up 5.5% over 90 days and web traffic up 8.3% over 30 days, suggesting active hiring and expanding market demand rather than stagnation typical of a mature company [[4]](https://console.harmonic.ai/companies/142540)\n\u2022 **Broad financial infrastructure platform** \u2014 Stripe spans payments, subscriptions, invoicing, fraud prevention, and revenue management, positioning it as a full-stack financial OS for businesses rather than a point solution [[2]](https://console.harmonic.ai/companies/142540)\n\u2022 **Substantial investor backing** \u2014 $8.8B+ raised with investors including Andreessen Horowitz and Google, indicating strong institutional confidence [[2]](https://console.harmonic.ai/companies/142540)\n\u2022 **Recent funding activity** \u2014 a funding event was recorded as recently as February 2026, signaling continued capital raises at this stage [[4]](https://console.harmonic.ai/companies/142540)\n\n## Recent Developments\n\u2022 Funding event recorded February 24, 2026 \u2014 nature, size, and structure of this round are **not found in data** [[4]](https://console.harmonic.ai/companies/142540)\n\u2022 No additional recent news or product announcements available in provided data [[1]](https://console.harmonic.ai/companies/142540)\n\n## Signals & Trends\n\u2022 **Hiring accelerating:** +5.5% headcount growth in 90 days at a 14,000+ person company is notable \u2014 at this scale, that represents hundreds of net new hires [[4]](https://console.harmonic.ai/companies/142540)\n\u2022 **Traffic inflecting upward:** +8.3% web traffic growth in 30 days suggests either a product launch, marketing push, or organic demand surge worth probing [[4]](https://console.harmonic.ai/companies/142540)\n\u2022 No competitive dynamics or customer-specific signals found in data [[4]](https://console.harmonic.ai/companies/142540)\n\n## For This Meeting\n\u2022 **Key questions to ask:**\n  - What was the purpose and structure of the February 2026 funding event \u2014 primary capital raise, secondary, or something else?\n  - What is driving the accelerated hiring? Which functions or geographies are growing fastest?\n  - What is behind the recent web traffic spike \u2014 new product, campaign, or market expansion?\n\n\u2022 **Risks or opportunities to probe:**\n  - At $8.8B+ raised and 14,000+ employees, path to liquidity (IPO or otherwise) is a critical topic \u2014 what is the current thinking on timing?\n  - Competitive pressure from payment infrastructure peers is not addressed in available data and should be raised directly\n\n\u2022 **Areas needing clarification:**\n  - Revenue, valuation, and profitability metrics are **not found in data** \u2014 these are essential for any investment discussion\n  - Details on the February 2026 funding round (amount, investors, valuation) are missing and should be confirmed before or during the meeting\n",
+    "company_name": "Stripe",
+    "run_id": "c5fe8141-6152-492a-a3f3-cacc299ced48",
+    "success": true,
+    "error": null,
+    "retrieval_counts": {
+      "profile_k": 2,
+      "news_k": 1,
+      "signals_k": 1
+    },
+    "retrieval_doc_ids": {
+      "profile": [
+        "harmonic_142540",
+        "swarm_enrichment"
+      ],
+      "news": [
+        "harmonic_142540_updates"
+      ],
+      "signals": [
+        "harmonic_142540_signals"
+      ]
+    },
+    "total_elapsed_ms": 167012,
+    "tldr": null,
+    "why_it_matters": null,
+    "company_snapshot": null,
+    "founders": null,
+    "signals": null,
+    "news": null,
+    "meeting_prep": null
+  },
+  "context_tags": {
+    "company": "stripe.com",
+    "data_sources": "founders",
+    "tldr_type": "standard"
+  }
+}
