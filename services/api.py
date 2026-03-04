@@ -76,8 +76,8 @@ logger.info(f"=== NEA API VERSION {API_VERSION} - WATCHLIST FIX DEPLOYED ===")
 # CORS - allow Lovable frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Lovable preview domains vary; restrict in production
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
