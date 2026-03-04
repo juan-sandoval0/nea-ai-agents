@@ -611,7 +611,8 @@ Remember: Use ONLY the data provided above. If something is not in the tables, s
     )
 
     try:
-        llm = ChatAnthropic(model=actual_model, temperature=temperature)
+        max_tokens = model_config.max_tokens if model_config and model_config.max_tokens else 4096
+        llm = ChatAnthropic(model=actual_model, temperature=temperature, max_tokens=max_tokens)
         messages = [
             SystemMessage(content=system_prompt_content),
             HumanMessage(content=user_prompt),

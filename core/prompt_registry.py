@@ -215,11 +215,12 @@ class PromptRegistry:
         # Main briefing generation
         self.register_model_config(ModelConfig(
             name="briefing",
-            model="claude-haiku-4-5-20251001",
+            model="claude-sonnet-4-6",
             provider=ModelProvider.ANTHROPIC,
             temperature=0.0,
+            max_tokens=4096,
             description="Primary model for meeting briefing generation",
-            version="2.0.0",
+            version="2.1.0",
         ))
 
         # Founder background summarization
