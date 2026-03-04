@@ -889,7 +889,7 @@ def _llm_classify_and_summarize(
 
     Returns (classification, synopsis, headline)
     """
-    from langchain_openai import ChatOpenAI
+    from langchain_anthropic import ChatAnthropic
     from langchain_core.messages import SystemMessage, HumanMessage
 
     types_str = ', '.join(VALID_TYPES)
@@ -956,7 +956,7 @@ Articles:
 
 Classify, write headline, and summarize:"""
 
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, max_tokens=300)
+    llm = ChatAnthropic(model="claude-haiku-4-5-20251001", temperature=0, max_tokens=600)
     response = llm.invoke([
         SystemMessage(content=system_prompt),
         HumanMessage(content=user_prompt),

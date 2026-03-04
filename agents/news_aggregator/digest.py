@@ -304,12 +304,8 @@ def _calculate_rank_score(signal: CompanySignal, company: WatchedCompany, is_qua
 
 def _summarize_article_with_llm(article: DigestArticle) -> str:
     """Use LLM to generate a concise summary for digest."""
-    if not os.getenv("OPENAI_API_KEY"):
-        # Fallback to synopsis or description
-        return article.signal.synopsis or article.signal.description or article.signal.headline
-
     try:
-        from langchain_openai import ChatOpenAI
+        from langchain_anthropic import ChatAnthropic
         from langchain_core.messages import SystemMessage, HumanMessage
 
         system_prompt = """You are a VC research assistant creating a weekly news digest.
@@ -326,7 +322,7 @@ Content: {content}
 
 Write a 1-2 sentence summary:"""
 
-        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        llm = ChatAnthropic(model="claude-haiku-4-5-20251001", temperature=0, max_tokens=300)
         messages = [
             SystemMessage(content=system_prompt),
             HumanMessage(content=user_prompt),
