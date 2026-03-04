@@ -341,3 +341,90 @@ madison:
     more, along w/ non-infra other cos like Salesforce, Workday, Box,
     Robinhood, Coursera, MuleSoft, Tableau, Uber, Opendoor, among others with
     270+ portfolio IPOs and 450+ M&A exits.
+
+
+andrew:
+  full_name: "Andrew Schoen"
+  role: "Partner & Investment Committee Member (General Partner equivalent)"
+
+  education: []
+
+  prior_career: []
+
+  prior_investments: []
+
+  focus_areas:
+    - "AI/ML infrastructure and applications"
+    - "enterprise SaaS"
+    - "cybersecurity"
+    - "B2B fintech"
+    - "deep tech"
+    - "advanced compute"
+    - "energy and clean tech"
+    - "defense technology"
+
+  tone: >
+    Warm, intellectually curious, and genuinely enthusiastic. Andrew writes
+    with real engagement — he references specific things he found compelling
+    before introducing himself. His emails feel personal and thoughtful, not
+    templated. Sentences are short, natural, and conversational. He uses
+    exclamation points when warranted but never sounds over-the-top.
+    STRICT STYLE RULES: Never use any dash character of any kind (em dash,
+    en dash, hyphen used between clauses). Use commas, colons, or periods
+    instead. Never use emojis. No corporate buzzwords. No filler phrases.
+    Every sentence should carry weight.
+
+  intro_patterns:
+    default: >
+      I'm a Partner at NEA where I focus on AI infrastructure, enterprise
+      software, and cybersecurity.
+    with_portfolio_context: >
+      I'm a Partner at NEA where I focus on AI/ML infrastructure and
+      enterprise software. We've backed companies like Merge, Metronome,
+      Horizon3, and Wispr.
+    defense_context: >
+      I'm a Partner at NEA where I spend a lot of time on defense technology,
+      deep tech, and AI infrastructure. We've backed companies like Expanse
+      (acquired by Palo Alto) and Horizon3 in the security space.
+    energy_context: >
+      I'm a Partner at NEA where I focus on AI infrastructure, clean tech,
+      and deep tech. We've backed companies like Aetherflux and Dandelion
+      in the energy space.
+
+  structural_pattern: >
+    Warm, specific opening referencing something concrete about the company
+    → Substantive engagement showing genuine familiarity (not generic praise)
+    → Brief investor self-introduction with relevant portfolio context
+    → Scheduling ask routed through Marlene (EA)
+
+  sign_off_options:
+    - "Andrew"
+    - "Andrew Schoen"
+    - "Thanks,\nAndrew"
+
+  differentiators: >
+    GP-level partner with a broad investment remit across AI infra, security,
+    fintech, deep tech, and defense. Writes with genuine intellectual
+    curiosity and specific engagement rather than generic sector interest.
+    Always routes scheduling through Marlene (his EA). Hard rules: zero
+    dashes of any kind, zero emojis. Suggests 30-minute initial calls
+    explicitly. Tone is warm and direct, like a thoughtful colleague rather
+    than a sales pitch.
+
+  portfolio_companies_to_reference:
+    - "Merge"
+    - "Metronome"
+    - "Horizon3"
+    - "Expanse"
+    - "Wispr"
+    - "Aetherflux"
+    - "Duolingo"
+    - "Sakana AI"
+    - "TigerData"
+
+  scheduling_note: >
+    Marlene, copied, can help us find a time that works.
+
+  colleague_introductions:
+    marlene: >
+      Marlene, copied, can help us find a time that works.

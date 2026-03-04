@@ -102,6 +102,7 @@ DEFAULT_INVESTORS = [
     "ashley",
     "danielle",
     "madison",
+    "andrew",
 ]
 
 # Formats to generate for outreach (usually email; linkedin is similar)

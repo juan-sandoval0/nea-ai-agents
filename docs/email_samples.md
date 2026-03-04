@@ -490,3 +490,68 @@ length: short
 ```
 
 Hey Chris—I wanted to say hi! I'm a former Meta AI researcher and now partner here focusing on infra/ai/dev tools. I work closely with Factory, Twelve Labs, Eleven Labs, Together. Would love to learn more about Blaxel and see how we can plug in to help.
+
+---
+
+```yaml
+investor: andrew
+recipient: Marcus
+company: Fortis AI
+context_type: cold_technical_interest
+personalization_signals: [product_capabilities, market_timing, sector_fit]
+length: medium
+```
+
+Hi Marcus,
+
+I came across Fortis AI recently and wanted to reach out directly. The approach you're taking to AI-native security operations is genuinely differentiated, and the timing feels right given how quickly enterprise AI adoption is outpacing security tooling.
+
+I'm a Partner at NEA where I focus on AI infrastructure, cybersecurity, and enterprise software. We've backed companies like Horizon3 and Expanse in the security space, so this is a category we know well and have spent a lot of time thinking about.
+
+Would love to find 30 minutes to hear more about your traction and how you're thinking about the market. Marlene, copied here, can help us find a time that works.
+
+Andrew
+
+---
+
+```yaml
+investor: andrew
+recipient: Priya
+company: Radiant ML
+context_type: thesis_driven_deep_dive
+personalization_signals: [technical_architecture, product_differentiation, market_thesis]
+length: long
+```
+
+Hi Priya,
+
+I came across Radiant ML last week and have been reading everything I can find since. The core thesis, that inference efficiency at the model layer is the actual bottleneck in enterprise AI deployment, is one I have been thinking about a lot from what we see across our portfolio.
+
+The combination of what you are building on the quantization side and the deployment abstraction layer is particularly interesting. Most of what I see in this space optimizes one layer or the other. You are going after both, which changes the unit economics story considerably.
+
+I'm a Partner at NEA where I focus on AI and ML infrastructure. We have partnered with companies across the compute and inference stack and spend a lot of time with engineering teams wrestling with exactly the problems you are solving.
+
+Would genuinely love 30 minutes to learn more about the technical roadmap and how you are thinking about enterprise go-to-market. Marlene, copied here, can help us coordinate a time. What does your schedule look like over the next couple of weeks?
+
+Andrew
+
+---
+
+```yaml
+investor: andrew
+recipient: James
+company: Aether Defense
+context_type: warm_intro_response
+personalization_signals: [sector_fit, founder_background, market_timing]
+length: medium
+```
+
+Sarah, thank you so much for the kind introduction! To bcc, with gratitude.
+
+James, great to meet via email. Sarah speaks extremely highly of you, and what you are building at Aether Defense is exactly the kind of problem I find compelling right now. The intersection of autonomous systems and real-time data processing for defense applications is where I expect a lot of the next generation of critical infrastructure to emerge.
+
+I'm a Partner at NEA where I spend a lot of time on defense technology, deep tech, and AI infrastructure. We have backed companies like Expanse and Horizon3 in the security and defense space and are actively looking to go deeper here.
+
+Would love to set up a 30-minute call to learn more. Marlene, copied, can help us find a time.
+
+Andrew Schoen
