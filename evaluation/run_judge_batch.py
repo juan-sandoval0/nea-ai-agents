@@ -158,7 +158,7 @@ def build_batch_requests(records: list[dict]) -> list[dict]:
                 continue
 
             # News aggregator has 12 rubric dimensions — needs more output space
-            max_tokens = 32000 if agent == "news_aggregator" else 8192
+            max_tokens = 32000 if agent == "news_aggregator" else 16000
 
             batch_requests.append({
                 "custom_id": test_case_id,

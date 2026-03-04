@@ -274,12 +274,12 @@ def _fmt_founders_input(founders: list) -> str:
     blocks = []
     for f in founders:
         name = f.get("name", "Unknown")
-        title = f.get("title", "")
+        title = f.get("role_title") or f.get("title") or ""
         linkedin = f.get("linkedin_url", "")
         background = f.get("background", "")
         blocks.append(
             f"  Name: {name}\n"
-            f"  Title: {title}\n"
+            f"  Title: {title or '(not specified)'}\n"
             f"  LinkedIn: {linkedin or 'N/A'}\n"
             f"  Background: {background or '(not available)'}"
         )

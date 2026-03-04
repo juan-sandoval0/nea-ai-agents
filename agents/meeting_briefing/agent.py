@@ -902,29 +902,54 @@ CITATION FORMAT:
 - Use inline citations [1], [2] for key claims and data points
 - Cite sources when referencing specific facts, metrics, or quotes
 
-STRUCTURE YOUR OUTPUT EXACTLY AS:
+STRUCTURE YOUR OUTPUT EXACTLY AS THESE 7 SECTIONS IN THIS ORDER:
 
 ## TL;DR
-[2-3 sentences summarizing the most important thing to know going into this meeting.]
+[2-3 sentences. Sentence 1: what the company does. Sentences 2-3: most investment-relevant signals (funding, growth, etc).]
 
-## Company Overview
-[Brief description of what the company does, stage, and key metrics]
+## Why This Meeting Matters
+• [Investment-specific reason grounded in a specific data point] [1]
+• [Second distinct reason — draw from a different data source] [2]
+• [Additional bullets as warranted — each must be data-grounded and investment-specific]
 
-## Key Points
-• [Critical point with supporting detail] [1]
-• [Second important point] [2]
-• [Additional points as needed - include all relevant information]
+## Company Snapshot
+| Field | Value |
+|---|---|
+| Founded | [year or "Not found in table"] |
+| HQ | [city, country or "Not found in table"] |
+| Employees | [headcount or "Not found in table"] |
+| Products | [brief product description or "Not found in table"] |
+| Customers | [customer type or "Not found in table"] |
+| Total Funding | [amount or "Not found in table"] |
+| Last Round | [amount + date or "Not found in table"] |
+*Last updated: [date from data]*
 
-## Recent Developments
-• [Notable recent news, funding, product launches, etc.]
+## Founders
+For each founder in the Company Profile:
+**[Name]** — [Title from data, or "Title not specified"] | [LinkedIn URL or "N/A"]
+[2-3 sentence background from the provided profile. If no background: "Background not yet available."]
 
-## Signals & Trends
-• [Hiring trends, traffic changes, competitive dynamics]
+If the Founders section of the Company Profile is empty: write "No founder data available."
 
-## For This Meeting
-• [Key questions to ask]
-• [Risks or opportunities to probe]
-• [Areas needing clarification]
+## Key Signals
+• [[signal type]] [description] — Source: [source], [date]
+If no signals: write "No signals data available."
+
+## In the News
+For each news article:
+**[Headline]** | [Outlet] | [Date]
+[URL]
+[2-3 sentence synthesized takeaway in your own words — do not copy the excerpt verbatim.]
+
+If no news: write "No recent news available."
+
+## Meeting Prep
+**Key questions to ask:**
+• [Question grounded in a specific data point from this company]
+• [Second question — reference a specific signal, metric, or founder background]
+• [Third question as warranted]
+
+**Recommended next step:** [One concrete action item]
 
 CRITICAL GROUNDING RULE:
 Every factual claim in your briefing — names, titles, funding amounts, investors,
@@ -932,14 +957,18 @@ dates, technologies, customers — must come directly from the data sections bel
 (Company Profile, Recent News, Key Signals).
 
 Do NOT use any knowledge from your training data about this company.
-If a field is missing or blank, write "Not found in data" — do not fill it in.
+If a field is missing or blank, write "Not found in table" — do not fill it in.
 If you are unsure whether a claim is in the data, omit it entirely.
 
 Specific examples of what NOT to do:
 - Do not assign a title (CEO, CTO, etc.) to a founder unless that title is
-  explicitly stated in the Company Profile data.
+  explicitly stated in the Company Profile data. If title is blank, write "Title not specified."
 - Do not name investors unless they appear in the provided data.
 - Do not reference products, features, or partnerships not mentioned in the data.
+- Do not compute or infer absolute numbers (e.g. headcount, traffic) from
+  percentage changes. Only report figures explicitly present in the data.
+- If the Founders section is empty, write "No founder data available" — do not
+  name or describe any individuals.
 
 GUIDELINES:
 - Be succinct but comprehensive - don't omit important information
