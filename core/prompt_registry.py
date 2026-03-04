@@ -215,31 +215,31 @@ class PromptRegistry:
         # Main briefing generation
         self.register_model_config(ModelConfig(
             name="briefing",
-            model="gpt-4o-mini",
-            provider=ModelProvider.OPENAI,
+            model="claude-haiku-4-5-20251001",
+            provider=ModelProvider.ANTHROPIC,
             temperature=0.0,
             description="Primary model for meeting briefing generation",
-            version="1.0.0",
+            version="2.0.0",
         ))
 
         # Founder background summarization
         self.register_model_config(ModelConfig(
             name="summarization",
-            model="gpt-4o-mini",
-            provider=ModelProvider.OPENAI,
+            model="claude-haiku-4-5-20251001",
+            provider=ModelProvider.ANTHROPIC,
             temperature=0.0,
             description="Model for summarizing founder backgrounds",
-            version="1.0.0",
+            version="2.0.0",
         ))
 
         # High-quality generation (for critical outputs)
         self.register_model_config(ModelConfig(
             name="high_quality",
-            model="gpt-4o",
-            provider=ModelProvider.OPENAI,
+            model="claude-sonnet-4-6",
+            provider=ModelProvider.ANTHROPIC,
             temperature=0.0,
             description="Higher quality model for critical generation tasks",
-            version="1.0.0",
+            version="2.0.0",
         ))
 
         # Outreach message generation (Claude Sonnet for superior writing quality)

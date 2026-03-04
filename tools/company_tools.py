@@ -530,10 +530,10 @@ def _summarize_website_updates(raw_content: str, company_name: str) -> str:
     Use OpenAI to summarize website updates into 1-2 VC-relevant sentences.
     """
     import os
-    from langchain_openai import ChatOpenAI
+    from langchain_anthropic import ChatAnthropic
     from langchain_core.messages import SystemMessage, HumanMessage
 
-    if not os.getenv("OPENAI_API_KEY"):
+    if not os.getenv("ANTHROPIC_API_KEY"):
         return raw_content[:200]
 
     system_prompt = """You are a VC research assistant. Summarize website updates into 1-2 sentences.
@@ -549,7 +549,7 @@ Be concise and factual."""
 Summary:"""
 
     try:
-        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        llm = ChatAnthropic(model="claude-haiku-4-5-20251001", temperature=0)
         messages = [
             SystemMessage(content=system_prompt),
             HumanMessage(content=user_prompt),
@@ -580,10 +580,10 @@ def _summarize_news_article(
         1-2 sentence VC-relevant summary
     """
     import os
-    from langchain_openai import ChatOpenAI
+    from langchain_anthropic import ChatAnthropic
     from langchain_core.messages import SystemMessage, HumanMessage
 
-    if not os.getenv("OPENAI_API_KEY"):
+    if not os.getenv("ANTHROPIC_API_KEY"):
         return headline[:200] if headline else excerpts[:200]
 
     system_prompt = """You are a VC research assistant. Summarize news articles into 1-2 sentences.
@@ -602,7 +602,7 @@ Content:
 Summary:"""
 
     try:
-        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        llm = ChatAnthropic(model="claude-haiku-4-5-20251001", temperature=0)
         messages = [
             SystemMessage(content=system_prompt),
             HumanMessage(content=user_prompt),
@@ -633,13 +633,13 @@ def _summarize_founder_background(
         Concise 2-4 sentence summary focused on prior experience
     """
     import os
-    from langchain_openai import ChatOpenAI
+    from langchain_anthropic import ChatAnthropic
     from langchain_core.messages import SystemMessage, HumanMessage
     from core.llm_validation import validate_founder_summary, LLMResponseError
 
-    # Skip if no OpenAI key
-    if not os.getenv("OPENAI_API_KEY"):
-        logger.warning("OPENAI_API_KEY not set - skipping LLM summarization")
+    # Skip if no Anthropic key
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        logger.warning("ANTHROPIC_API_KEY not set - skipping LLM summarization")
         return raw_background
 
     system_prompt = """You are a VC research assistant creating concise founder backgrounds.
@@ -666,7 +666,7 @@ Raw Background Data:
 Write 2-3 bullet points (•) focusing on their PRIOR experience and credentials (not their current role at {company_name}). Each bullet should be 5-10 words."""
 
     try:
-        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        llm = ChatAnthropic(model="claude-haiku-4-5-20251001", temperature=0)
         messages = [
             SystemMessage(content=system_prompt),
             HumanMessage(content=user_prompt),
