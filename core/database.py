@@ -56,6 +56,7 @@ class CompanyCore:
     arr_apr: Optional[str] = None
     last_round_date: Optional[str] = None
     last_round_funding: Optional[float] = None
+    investors: list = field(default_factory=list)  # list of investor names
     web_traffic_trend: Optional[str] = None  # e.g., "+5.2% (30d)"
     website_update: Optional[str] = None  # NULL; pending Tavily
     hiring_firing: Optional[str] = None  # e.g., "-9.7% (90d)"
@@ -66,6 +67,7 @@ class CompanyCore:
         """Convert to dictionary for DB storage."""
         d = asdict(self)
         d['source_map'] = json.dumps(d['source_map'])
+        d['investors'] = json.dumps(d['investors'])
         return d
 
     @classmethod
@@ -73,6 +75,7 @@ class CompanyCore:
         """Create from database row."""
         d = dict(row)
         d['source_map'] = json.loads(d.get('source_map', '{}'))
+        d['investors'] = json.loads(d.get('investors') or '[]')
         return cls(**d)
 
 
@@ -241,6 +244,7 @@ class Database:
                     arr_apr TEXT,
                     last_round_date TEXT,
                     last_round_funding REAL,
+                    investors TEXT DEFAULT '[]',
                     web_traffic_trend TEXT,
                     website_update TEXT,
                     hiring_firing TEXT,
@@ -284,6 +288,12 @@ class Database:
                     UNIQUE(company_id, url)
                 )
             """)
+
+            # Add investors column if it doesn't exist (migration for existing DBs)
+            try:
+                cursor.execute("ALTER TABLE company_core ADD COLUMN investors TEXT DEFAULT '[]'")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
 
             # Add columns if they don't exist (migration for existing DBs)
             for column in ['excerpts', 'synopsis', 'sentiment', 'news_type']:
@@ -332,12 +342,12 @@ class Database:
                 INSERT INTO company_core (
                     company_id, company_name, founding_date, hq, employee_count,
                     total_funding, products, customers, arr_apr, last_round_date,
-                    last_round_funding, web_traffic_trend, website_update,
+                    last_round_funding, investors, web_traffic_trend, website_update,
                     hiring_firing, observed_at, source_map
                 ) VALUES (
                     :company_id, :company_name, :founding_date, :hq, :employee_count,
                     :total_funding, :products, :customers, :arr_apr, :last_round_date,
-                    :last_round_funding, :web_traffic_trend, :website_update,
+                    :last_round_funding, :investors, :web_traffic_trend, :website_update,
                     :hiring_firing, :observed_at, :source_map
                 )
                 ON CONFLICT(company_id) DO UPDATE SET
@@ -351,6 +361,7 @@ class Database:
                     arr_apr = excluded.arr_apr,
                     last_round_date = excluded.last_round_date,
                     last_round_funding = excluded.last_round_funding,
+                    investors = excluded.investors,
                     web_traffic_trend = excluded.web_traffic_trend,
                     website_update = excluded.website_update,
                     hiring_firing = excluded.hiring_firing,

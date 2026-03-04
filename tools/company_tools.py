@@ -401,6 +401,7 @@ def get_company_profile(company_id: str) -> CompanyCore:
         arr_apr=None,
         last_round_date=company.funding_last_date,
         last_round_funding=company.funding_last_amount,
+        investors=company.investors[:10] if company.investors else [],
         web_traffic_trend=web_traffic_trend,
         website_update=existing_website_update,
         hiring_firing=hiring_firing,

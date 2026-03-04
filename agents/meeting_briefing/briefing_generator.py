@@ -141,6 +141,11 @@ def format_company_snapshot_data(company: CompanyCore) -> tuple[str, str]:
     else:
         lines.append("Last Round: Not found in table")
 
+    if company.investors:
+        lines.append(f"Key Investors: {', '.join(company.investors[:8])}")
+    else:
+        lines.append("Key Investors: Not found in table")
+
     # Extract just the date portion from the ISO timestamp for display
     last_updated = company.observed_at[:10] if company.observed_at else "Unknown"
 
@@ -507,6 +512,7 @@ Display as a formatted table or list:
 - Customers: [from table or "Not found in table"]
 - Total Funding: [from table or "Not found in table"]
 - Last Round: [from table or "Not found in table"]
+- Key Investors: [from table or "Not found in table"]
 
 ### 4) Founder Information
 For each founder, display:
