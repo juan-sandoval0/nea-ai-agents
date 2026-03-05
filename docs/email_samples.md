@@ -555,3 +555,45 @@ I'm a Partner at NEA where I spend a lot of time on defense technology, deep tec
 Would love to set up a 30-minute call to learn more. Marlene, copied, can help us find a time.
 
 Andrew Schoen
+
+---
+
+```yaml
+investor: ashley
+recipient: Maya
+company: "[Stealth]"
+context_type: stealth_founder_outreach
+personalization_signals: [founder_background, thesis_alignment, prior_research]
+length: short
+```
+
+Hi Maya,
+
+I've been thinking a lot about the infrastructure layer for agentic systems, and your work at DeepMind on multi-agent coordination kept coming up in my research. The problems you were working on there feel like exactly the right foundation for what the enterprise market is going to need in the next two years.
+
+I'm a Principal at NEA focused on AI infrastructure and developer tooling. We've backed a number of teams coming out of frontier labs, and I tend to be most useful early — when the problem is still being defined.
+
+I'd love to hear what you're exploring. No agenda beyond curiosity about where you think the most interesting problems are.
+
+Ashley
+
+---
+
+```yaml
+investor: andrew
+recipient: Daniel
+company: "[Stealth]"
+context_type: stealth_founder_outreach
+personalization_signals: [founder_background, thesis_alignment, shared_background]
+length: short
+```
+
+Hi Daniel,
+
+Your time at Stripe leading the ML infrastructure team crossed my desk recently, and I wanted to reach out directly. The operational challenges of running inference at Stripe's scale, and the abstractions your team built to manage that, are exactly the kind of hard-won insight that tends to become a company.
+
+I'm a Partner at NEA where I spend most of my time on AI infrastructure and developer tools. We've worked closely with teams coming out of companies like Stripe and Plaid, and I find the founder-coming-from-the-problem angle one of the most compelling signals.
+
+Curious what you're thinking about next — happy to keep it short and informal.
+
+Andrew Schoen

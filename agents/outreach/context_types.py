@@ -54,6 +54,9 @@ class ContextType(str, Enum):
     COLD_CONFERENCE_FOLLOWUP = "cold_conference_followup"
     WARM_PORTFOLIO_BRIDGE = "warm_portfolio_bridge"
 
+    # Stealth / person-only outreach
+    STEALTH_FOUNDER_OUTREACH = "stealth_founder_outreach"
+
 
 @dataclass(frozen=True)
 class ContextTypeConfig:
@@ -474,6 +477,29 @@ CONTEXT_TYPE_CONFIGS: dict[ContextType, ContextTypeConfig] = {
         ],
     ),
 
+    # ----- Stealth / Person-Only -----
+    ContextType.STEALTH_FOUNDER_OUTREACH: ContextTypeConfig(
+        description=(
+            "Cold outreach to a founder building in stealth. No company data is "
+            "available. Lead with the investor's thesis and the founder's background, "
+            "not product details. End with an open, curious ask about what they're working on."
+        ),
+        detection_signals=[],   # never auto-detected — only set programmatically
+        email_pattern=(
+            "Investor intro with thesis context relevant to the founder's background "
+            "→ Specific reference to the founder's work, research, or prior experience "
+            "→ Why the investor is reaching out now (thesis fit, network signal) "
+            "→ Soft, open-ended ask: curious about what they're exploring, not a pitch"
+        ),
+        preferred_length="short",
+        priority_personalization=[
+            "founder_background",
+            "thesis_alignment",
+            "shared_background",
+            "prior_research",
+        ],
+    ),
+
     # ----- Internal (excluded from outreach) -----
     ContextType.INTERNAL_DEEP_ANALYSIS: ContextTypeConfig(
         description=(
@@ -548,6 +574,7 @@ def detect_context_type(
         ContextType.POST_EVENT_FOLLOWUP,
         ContextType.COLD_CONFERENCE_FOLLOWUP,
         ContextType.INTERNAL_DEEP_ANALYSIS,
+        ContextType.STEALTH_FOUNDER_OUTREACH,  # only set programmatically
     }
 
     best_type = ContextType.COLD_WITH_FIRM_CONTEXT  # safe fallback

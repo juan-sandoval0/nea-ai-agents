@@ -243,6 +243,230 @@ def _extract_available_signals(bundle: CompanyBundle, contact: Optional[Founder]
 
 
 # =============================================================================
+# STEALTH OUTREACH GENERATION
+# =============================================================================
+
+def _generate_stealth_outreach(
+    founder_linkedin_url: str,
+    founder_background_notes: Optional[str],
+    contact_name: Optional[str],
+    investor_key: str,
+    output_format: str,
+    model: str,
+    outreach_goal: Optional[str],
+    event_details: Optional[str],
+    prior_relationship_details: Optional[str],
+) -> dict:
+    """
+    Generate a founder-centric outreach email for a stealth-mode contact.
+
+    Enriches the person via Swarm (LinkedIn scrape) and generates an email that
+    leads with the investor's thesis and the founder's background rather than
+    company details, since no public company exists to reference.
+    """
+    from core.clients import SwarmClient
+
+    result = {
+        "company_id": founder_linkedin_url,
+        "company_name": "[Stealth]",
+        "contact_name": contact_name,
+        "contact_title": None,
+        "contact_linkedin": founder_linkedin_url,
+        "investor_key": investor_key,
+        "output_format": output_format,
+        "context_type": ContextType.STEALTH_FOUNDER_OUTREACH.value,
+        "message": None,
+        "subject": None,
+        "generated_at": datetime.utcnow().isoformat(),
+        "data_sources": {
+            "company_core": False,
+            "founders": 0,
+            "signals": 0,
+            "news": 0,
+        },
+        "stealth_mode": True,
+        "success": False,
+        "error": None,
+    }
+
+    try:
+        # Step 1: Enrich via Swarm
+        swarm_succeeded = False
+        background_text = ""
+        resolved_name = contact_name or "there"
+        resolved_title = "Building in stealth"
+
+        try:
+            swarm = SwarmClient()
+            profile = swarm.get_profile_by_linkedin(founder_linkedin_url)
+            if profile:
+                background_text = profile.format_background()
+                if profile.full_name:
+                    resolved_name = profile.full_name
+                if profile.current_title:
+                    resolved_title = profile.current_title
+                result["contact_name"] = resolved_name
+                result["contact_title"] = resolved_title
+                result["data_sources"]["founders"] = 1
+                swarm_succeeded = True
+            else:
+                logger.warning(f"Swarm returned no profile for {founder_linkedin_url}")
+        except Exception as swarm_err:
+            logger.warning(f"Swarm enrichment failed for stealth outreach: {swarm_err}")
+
+        # Step 2: Build founder context string
+        founder_context_parts = [
+            f"Name: {resolved_name}",
+            f"Title: {resolved_title}",
+            f"LinkedIn: {founder_linkedin_url}",
+        ]
+        if background_text:
+            founder_context_parts.append(f"Background:\n{background_text}")
+        if founder_background_notes:
+            founder_context_parts.append(f"Additional context: {founder_background_notes}")
+        founder_context = "\n".join(founder_context_parts)
+
+        # Step 3: Build minimal company context string
+        company_context_parts = [
+            "Company: [Stealth]",
+            "Status: Building in stealth — no public company information available.",
+        ]
+        if founder_background_notes:
+            company_context_parts.append(f"Investor notes: {founder_background_notes}")
+        company_context = "\n".join(company_context_parts)
+
+        # Step 4: Security checks
+        for field_name, field_data in [
+            ("founder_context", founder_context),
+            ("company_context", company_context),
+        ]:
+            detection = detect_prompt_injection(field_data)
+            if detection.is_suspicious:
+                log_security_event(
+                    "prompt_injection_attempt",
+                    {
+                        "company_id": founder_linkedin_url,
+                        "field": field_name,
+                        "confidence": detection.confidence,
+                    },
+                    severity="warning",
+                )
+
+        safe_founder_context = sanitize_for_prompt(founder_context, escape_markdown=False)
+        safe_company_context = sanitize_for_prompt(company_context, escape_markdown=False)
+
+        # Step 5: Load investor profile and style examples
+        investor_profile = get_investor_context(investor_key)
+        ctx_type = ContextType.STEALTH_FOUNDER_OUTREACH
+        ctx_config = CONTEXT_TYPE_CONFIGS[ctx_type]
+
+        static_examples = load_samples(investor_key=investor_key, context_type=ctx_type.value)
+        try:
+            from services.feedback import load_promoted_samples
+            promoted = load_promoted_samples(investor_key)
+            promoted_matching = [s for s in promoted if s.context_type == ctx_type.value]
+            combined = promoted_matching + static_examples
+            style_examples = combined[:3]
+        except Exception:
+            style_examples = static_examples
+
+        # Step 6: Build prompts
+        messages = build_generation_prompt(
+            investor_profile=investor_profile,
+            founder_context=safe_founder_context,
+            company_context=safe_company_context,
+            style_examples=style_examples,
+            context_type_pattern=ctx_config.email_pattern,
+            output_format=output_format,
+            outreach_goal=outreach_goal,
+            event_details=event_details,
+            prior_relationship_details=prior_relationship_details,
+        )
+
+        system_prompt_content = messages[0].content
+        user_prompt = messages[1].content
+
+        # Step 7: Get model config and call LLM
+        try:
+            model_config = get_model_config("outreach")
+            actual_model = model_config.model if model == DEFAULT_LLM_MODEL else model
+            temperature = model_config.temperature
+        except KeyError:
+            model_config = None
+            actual_model = model
+            temperature = 0.3
+
+        is_anthropic = actual_model.startswith("claude")
+        if is_anthropic:
+            llm = ChatAnthropic(model=actual_model, temperature=temperature)
+        else:
+            llm = ChatOpenAI(model=actual_model, temperature=temperature)
+
+        start_time = time.time()
+        response = llm.invoke(messages)
+        latency_ms = int((time.time() - start_time) * 1000)
+
+        raw_content = response.content
+        tokens_in = response.usage_metadata.get("input_tokens", 0) if hasattr(response, "usage_metadata") and response.usage_metadata else 0
+        tokens_out = response.usage_metadata.get("output_tokens", 0) if hasattr(response, "usage_metadata") and response.usage_metadata else 0
+
+        # Step 8: Parse output
+        message_text = raw_content.strip()
+        subject = None
+        if output_format == "email" and message_text.lower().startswith("subject:"):
+            lines = message_text.split("\n", 1)
+            subject = lines[0].replace("Subject:", "").replace("subject:", "").strip()
+            message_text = lines[1].strip() if len(lines) > 1 else message_text
+
+        result["message"] = message_text
+        result["subject"] = subject
+        result["success"] = True
+
+        log_llm_interaction(
+            operation="outreach_stealth",
+            model=actual_model,
+            system_prompt=system_prompt_content,
+            user_prompt=user_prompt,
+            response=raw_content,
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            latency_ms=latency_ms,
+            success=True,
+            temperature=temperature,
+            company_id=founder_linkedin_url,
+        )
+
+        log_audit_event(
+            event_type="outreach",
+            action="create",
+            resource_type="outreach_message",
+            resource_id=founder_linkedin_url,
+            details={
+                "stealth_mode": True,
+                "contact_name": resolved_name,
+                "investor_key": investor_key,
+                "context_type": ctx_type.value,
+                "output_format": output_format,
+                "model": actual_model,
+                "swarm_enriched": swarm_succeeded,
+                "tokens_total": tokens_in + tokens_out,
+                "latency_ms": latency_ms,
+            },
+        )
+
+        logger.info(
+            f"Generated stealth outreach for {resolved_name} "
+            f"(investor: {investor_key}, swarm_enriched: {swarm_succeeded})"
+        )
+
+    except Exception as e:
+        result["error"] = f"Stealth outreach generation failed: {str(e)}"
+        logger.error(f"Stealth outreach generation failed for {founder_linkedin_url}: {e}")
+
+    return result
+
+
+# =============================================================================
 # OUTREACH GENERATION
 # =============================================================================
 
@@ -260,6 +484,9 @@ def generate_outreach(
     event_details: Optional[str] = None,
     has_prior_relationship: bool = False,
     prior_relationship_details: Optional[str] = None,
+    stealth_mode: bool = False,
+    founder_linkedin_url: Optional[str] = None,
+    founder_background_notes: Optional[str] = None,
 ) -> dict:
     """
     Generate a personalized outreach message for a founder at a target company.
@@ -307,6 +534,20 @@ def generate_outreach(
         "success": False,
         "error": None,
     }
+
+    # Stealth mode bypasses all company data — redirect immediately
+    if stealth_mode:
+        return _generate_stealth_outreach(
+            founder_linkedin_url=founder_linkedin_url,
+            founder_background_notes=founder_background_notes,
+            contact_name=contact_name,
+            investor_key=investor_key,
+            output_format=output_format,
+            model=model,
+            outreach_goal=outreach_goal,
+            event_details=event_details,
+            prior_relationship_details=prior_relationship_details,
+        )
 
     try:
         # Step 1: Ingest company data

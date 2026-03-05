@@ -4,7 +4,7 @@ Pydantic models for API request/response schemas.
 
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # =============================================================================
@@ -281,6 +281,15 @@ class OutreachRequest(BaseModel):
     event_details: Optional[str] = Field(default=None, description="Details about the event context")
     has_prior_relationship: bool = Field(default=False, description="True if investor has a prior relationship with the founder")
     prior_relationship_details: Optional[str] = Field(default=None, description="Details about the prior relationship")
+    stealth_mode: bool = Field(default=False, description="If True, bypasses company ingest and generates a founder-centric email")
+    founder_linkedin_url: Optional[str] = Field(default=None, description="Required when stealth_mode=True; LinkedIn profile URL of the stealth founder")
+    founder_background_notes: Optional[str] = Field(default=None, description="Investor's manual context about the founder (optional override/supplement)")
+
+    @model_validator(mode="after")
+    def require_linkedin_in_stealth(self) -> "OutreachRequest":
+        if self.stealth_mode and not self.founder_linkedin_url:
+            raise ValueError("founder_linkedin_url is required when stealth_mode=True")
+        return self
 
 
 class OutreachResponse(BaseModel):
@@ -299,6 +308,7 @@ class OutreachResponse(BaseModel):
     data_sources: dict = {}
     success: bool
     error: Optional[str] = None
+    stealth_mode: bool = False
 
 
 class OutreachFeedbackRequest(BaseModel):

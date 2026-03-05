@@ -1025,6 +1025,9 @@ async def generate_outreach_endpoint(request: OutreachRequest):
                 event_details=request.event_details,
                 has_prior_relationship=request.has_prior_relationship,
                 prior_relationship_details=request.prior_relationship_details,
+                stealth_mode=request.stealth_mode,
+                founder_linkedin_url=request.founder_linkedin_url,
+                founder_background_notes=request.founder_background_notes,
             )
         )
     except Exception as exc:
@@ -1052,6 +1055,7 @@ async def generate_outreach_endpoint(request: OutreachRequest):
         data_sources=result.get("data_sources", {}),
         success=result["success"],
         error=result.get("error"),
+        stealth_mode=result.get("stealth_mode", False),
     )
 
 
