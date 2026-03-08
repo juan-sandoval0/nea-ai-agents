@@ -525,7 +525,18 @@ If no founders: "No founder data available"
 - Summarize website signals concisely (don't just repeat page titles)
 - Include signal source and last updated timestamp
 
-### 6) In the News
+### 6) Company Snapshot (last updated: {snapshot_last_updated})
+Display as a formatted table or list:
+- Founded: [from table or "Not found in table"]
+- HQ: [from table or "Not found in table"]
+- Employees: [from table or "Not found in table"]
+- Products: [from table or "Not found in table"]
+- Customers: [from table or "Not found in table"]
+- Total Funding: [from table or "Not found in table"]
+- Last Round: [from table or "Not found in table"]
+- Key Investors: [from table or "Not found in table"]
+
+### 7) In the News
 For each news article, display in this format:
 - **[Article Headline]** | [Outlet] | [Published Date]
   - [URL]
@@ -534,7 +545,7 @@ For each news article, display in this format:
 STRICT: One sentence per takeaway. Lead with the fact, not "The article says...". No filler.
 If no news: "No recent news available (source not yet implemented)"
 
-### 7) Competitive Landscape
+### 8) Competitive Landscape
 Using data from the competitors table:
 
 **Startup Competitors** (top 3 max):
@@ -545,17 +556,6 @@ Using data from the competitors table:
 
 STRICT: One line per competitor. Differentiator = a short phrase, not a sentence (e.g., "focus on SMB market", "open-source alternative"). No descriptions, no context sentences.
 If no competitor data: "Competitive landscape data not available"
-
-### 8) Company Snapshot (last updated: {snapshot_last_updated})
-Display as a formatted table or list:
-- Founded: [from table or "Not found in table"]
-- HQ: [from table or "Not found in table"]
-- Employees: [from table or "Not found in table"]
-- Products: [from table or "Not found in table"]
-- Customers: [from table or "Not found in table"]
-- Total Funding: [from table or "Not found in table"]
-- Last Round: [from table or "Not found in table"]
-- Key Investors: [from table or "Not found in table"]
 
 ### 9) NEA Connections
 Using ONLY the nea_connections table data above, identify any connections between this company/founders and the NEA ecosystem.
