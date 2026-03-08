@@ -503,23 +503,19 @@ Generate the briefing with EXACTLY these sections:
 - Synthesize from ALL tables: company_core, founders, key_signals, and news
 - Focus on investment relevance
 
-### 3) Company Snapshot (last updated: {snapshot_last_updated})
-Display as a formatted table or list:
-- Founded: [from table or "Not found in table"]
-- HQ: [from table or "Not found in table"]
-- Employees: [from table or "Not found in table"]
-- Products: [from table or "Not found in table"]
-- Customers: [from table or "Not found in table"]
-- Total Funding: [from table or "Not found in table"]
-- Last Round: [from table or "Not found in table"]
-- Key Investors: [from table or "Not found in table"]
+### 3) For This Meeting
+- 2-3 suggested agenda items or questions
+- Key risks to probe
+- Recommended next steps
+- ALL must be grounded in table data
 
 ### 4) Founder Information
 For each founder, display:
 - **Name** - Title | [LinkedIn](url)
-- 2 bullet points max: most relevant prior role/company, and one notable credential or fact (e.g., domain expertise, prior exit, notable school)
+- 1 bullet: previous company/role (e.g., "Previously: VP Eng at Stripe")
+- 1 bullet: single most notable credential (e.g., "PhD MIT CSAIL" or "2x founder, prior exit to Google")
 
-IMPORTANT: Do NOT copy the raw background text. Synthesize it into 2 tight bullets. Omit anything not directly relevant to the investment context.
+STRICT: Max 2 bullets per founder. Each bullet = one short phrase, not a sentence. No adjectives, no filler. Facts only.
 If background is missing: "Background not yet available"
 If no founders: "No founder data available"
 
@@ -533,28 +529,33 @@ If no founders: "No founder data available"
 For each news article, display in this format:
 - **[Article Headline]** | [Outlet] | [Published Date]
   - [URL]
-  - Takeaway: [2-3 sentence summary of the key information and why it matters for the investment thesis]
+  - Takeaway: [1 sentence, max 20 words, stating the key fact and why it matters]
 
-IMPORTANT: Use the article excerpts provided in the data to generate meaningful takeaways. Do NOT display the raw excerpts - synthesize them into a concise takeaway.
+STRICT: One sentence per takeaway. Lead with the fact, not "The article says...". No filler.
 If no news: "No recent news available (source not yet implemented)"
 
 ### 7) Competitive Landscape
 Using data from the competitors table:
 
-**Startup Competitors** (top 1-3):
-- **[Name]** | [Stage] | Raised: $[total] | [One clause: how they compete]
+**Startup Competitors** (top 3 max):
+- **[Name]** | [Stage] | $[total raised] | [3-5 word differentiator]
 
-**Incumbent Competitors** (top 1-3):
-- **[Name]** | [One clause: how they compete]
+**Incumbent Competitors** (top 3 max):
+- **[Name]** | [3-5 word differentiator]
 
-Keep each entry to a single line. No multi-sentence descriptions.
+STRICT: One line per competitor. Differentiator = a short phrase, not a sentence (e.g., "focus on SMB market", "open-source alternative"). No descriptions, no context sentences.
 If no competitor data: "Competitive landscape data not available"
 
-### 8) For This Meeting
-- 2-3 suggested agenda items or questions
-- Key risks to probe
-- Recommended next steps
-- ALL must be grounded in table data
+### 8) Company Snapshot (last updated: {snapshot_last_updated})
+Display as a formatted table or list:
+- Founded: [from table or "Not found in table"]
+- HQ: [from table or "Not found in table"]
+- Employees: [from table or "Not found in table"]
+- Products: [from table or "Not found in table"]
+- Customers: [from table or "Not found in table"]
+- Total Funding: [from table or "Not found in table"]
+- Last Round: [from table or "Not found in table"]
+- Key Investors: [from table or "Not found in table"]
 
 ### 9) NEA Connections
 Using ONLY the nea_connections table data above, identify any connections between this company/founders and the NEA ecosystem.

@@ -1266,6 +1266,13 @@ def _classify_competitor_type(company: HarmonicCompany) -> str:
     return "startup"
 
 
+def _first_sentence(text: str) -> str:
+    """Return the first complete sentence of text."""
+    import re
+    match = re.search(r'.+?[.!?](?:\s|$)', text)
+    return match.group(0).strip() if match else text.strip()
+
+
 def get_competitors(company_id: str, max_per_type: int = 3) -> list[CompetitorSnapshot]:
     """
     Fetch top startup and incumbent competitors via Harmonic's similar_companies endpoint.
@@ -1345,7 +1352,7 @@ def get_competitors(company_id: str, max_per_type: int = 3) -> list[CompetitorSn
             competitor_name=hc.name,
             competitor_domain=hc.domain,
             competitor_type=ctype,
-            description=(hc.description or "")[:300] if hc.description else None,
+            description=_first_sentence(hc.description) if hc.description else None,
             funding_total=hc.funding_total,
             funding_stage=hc.funding_stage,
             funding_last_amount=hc.funding_last_amount,
