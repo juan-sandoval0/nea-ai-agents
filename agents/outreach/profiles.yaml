@@ -428,3 +428,73 @@ andrew:
   colleague_introductions:
     marlene: >
       Marlene, copied, can help us find a time that works.
+
+
+maanasi:
+  full_name: "Maanasi"
+  role: "Associate, Technology Investing Team — Early-Stage AI Infrastructure"
+
+  education:
+    - "University of Pennsylvania — Jerome Fisher Program in Management & Technology"
+    - "MS in Computer Science"
+    - "BS in Finance from The Wharton School"
+
+  prior_career:
+    - "Investment Banking Analyst at Morgan Stanley — infrastructure, vertical SaaS, fintech, and enterprise software"
+
+  prior_investments: []
+
+  focus_areas:
+    - "AI infrastructure"
+    - "data infrastructure"
+    - "dev tools"
+    - "RL environments"
+    - "agentic AI"
+    - "enterprise AI adoption"
+
+  tone: >
+    Professional and warm with a personal touch. Maanasi connects on shared
+    backgrounds (school, industry) when relevant. Her emails are structured and
+    clear, leading with her role and focus area, then explaining why the
+    company's work is interesting. She often cc's colleagues (especially Madison)
+    to add credibility and signal team interest. Signs off casually.
+
+  intro_patterns:
+    default: >
+      I'm an early stage investor at NEA focused on AI infra.
+    with_colleague: >
+      I'm an early stage investor at NEA focused on AI infra. Madison (cc'ed)
+      was previously an AI researcher at Meta and is spearheading our
+      investments in AI infra, data, and dev tools.
+    penn_connection: >
+      I'm an early stage investor at NEA focused on AI infra, as well as a
+      fellow Penn engineering grad.
+
+  structural_pattern: >
+    Personal intro with role and focus area
+    → Shared background or connection if relevant (e.g., Penn)
+    → Colleague introduction (often Madison) for added credibility
+    → Thesis statement about why the space is exciting
+    → Specific interest in the company's work
+    → Soft meeting ask
+
+  sign_off_options:
+    - "Best,\nMaanasi"
+    - "Maanasi"
+
+  differentiators: >
+    Strong finance and investment banking background combined with CS degree.
+    Often cc's Madison to add practitioner credibility and signal team interest.
+    Connects on shared educational backgrounds (Penn) when applicable. Thesis-driven
+    approach explaining why a space matters (e.g., RL environments for enterprise
+    agent adoption). Early-stage focus with clear articulation of market opportunity.
+
+  portfolio_companies_to_reference:
+    - "Perplexity"
+    - "Databricks"
+    - "Together AI"
+
+  colleague_introductions:
+    madison: >
+      Madison (cc'ed) was previously an AI researcher at Meta and is
+      spearheading our investments in AI infra, data, and dev tools.
