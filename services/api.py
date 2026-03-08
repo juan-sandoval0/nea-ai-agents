@@ -120,9 +120,9 @@ def parse_briefing_sections(markdown: str) -> dict:
         bullets = re.findall(r'[-*]\s+(.+)', why_match.group(1))
         sections['why_it_matters'] = bullets if bullets else None
 
-    # Extract For This Meeting (section 8 with competitors added, fallback to 7)
+    # Extract For This Meeting (section 3 current, fallback to legacy 7/8)
     meeting_match = re.search(
-        r'### [78]\) For This Meeting\s*\n(.*?)(?=\n### |\Z)',
+        r'### [378]\) For This Meeting\s*\n(.*?)(?=\n### |\Z)',
         markdown,
         re.DOTALL
     )
