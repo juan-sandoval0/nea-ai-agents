@@ -5,6 +5,34 @@
 ---
 
 ```yaml
+investor: alexa
+recipient: Shu
+company: Skyvern
+context_type: thesis_driven_conviction
+personalization_signals: [user_traction, technical_architecture, founder_background]
+length: medium
+```
+
+Subject: Hi from NEA!
+
+Hi Shu,
+
+My name is Alexa Grabelle, and I'm an investor at New Enterprise Associates (NEA). I'm reaching out with my colleague Danielle Lay (CC'd).
+
+Danielle and I have been actively exploring the computer use agent space, and we have strong conviction that computer use agents have massive potential to fundamentally transform how we interact with software and the internet. Throughout our research, we came across what you're building at Skyvern, and we especially admire your proven track record with 20K+ users, your ability to handle the messiest web workflows, and your flexible API-first architecture built for scaling startup customers.
+
+If you're open to it, we'd love to find time for a quick intro call next week to learn more about your vision at Skyvern and how we might be helpful. We're happy to work around your schedule.
+
+You may already be familiar with NEA from your time at Patreon! As quick context, NEA has been backing transformational companies for nearly 50 years, with 300+ IPOs in our portfolio. Across AI, we've invested in startups including Perplexity, Factory, Synthesia, ElevenLabs, TwelveLabs, and Sakana AI.
+
+Looking forward to connecting with you. Hope you have a great weekend!
+
+Best,
+Alexa
+
+---
+
+```yaml
 investor: ashley
 recipient: Arun
 company: LadybugDB

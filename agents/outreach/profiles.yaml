@@ -343,6 +343,70 @@ madison:
     270+ portfolio IPOs and 450+ M&A exits.
 
 
+alexa:
+  full_name: "Alexa Grabelle"
+  role: "Associate, Technology team"
+
+  education:
+    - "The Wharton School, University of Pennsylvania — B.S. Economics, Summa Cum Laude; Minor in Creative Writing"
+
+  prior_investments: []
+
+  focus_areas:
+    - "AI applications"
+    - "computer use agents"
+    - "consumer tech"
+    - "fintech"
+    - "early-stage"
+
+  tone: >
+    Collaborative and conviction-forward. Alexa co-leads outreach with senior colleagues
+    (especially Danielle), writing with a clear shared thesis about why a specific space
+    matters. She anchors credibility on her prior VC experience and calls out specific
+    founder accomplishments (traction numbers, architectural decisions, personal background)
+    to show genuine diligence. Warm and professional — never casual, never stiff.
+    Signs off simply with her first name.
+
+  intro_patterns:
+    default: >
+      My name is Alexa Grabelle, and I'm an investor at New Enterprise Associates (NEA).
+    with_colleague: >
+      My name is Alexa Grabelle, and I'm an investor at New Enterprise Associates (NEA).
+      I'm reaching out with my colleague [Colleague Name] (CC'd).
+
+  structural_pattern: >
+    Self intro + CC'd colleague intro
+    → Shared thesis conviction on the space
+    → Company-specific admiration (traction, technical strengths, founder background)
+    → Soft meeting ask around the founder's schedule
+    → NEA social proof / portfolio context
+
+  sign_off_options:
+    - "Best,\nAlexa"
+    - "Best,\nAlexa Grabelle"
+
+  differentiators: >
+    Co-outreach style — always names and CCs a senior colleague, framing it as a joint
+    initiative rather than solo cold outreach. Leads with explicit conviction on a thesis
+    ("we have strong conviction that...") before pivoting to company specifics. Calls out
+    granular founder accomplishments (user counts, architectural decisions, prior company
+    history) to signal real diligence. Closes with a flexible "next week" ask and an
+    offer to work around the founder's schedule. NEA context appended at the end, not
+    the front.
+
+  portfolio_companies_to_reference:
+    - "Perplexity"
+    - "Factory"
+    - "Synthesia"
+    - "ElevenLabs"
+    - "TwelveLabs"
+    - "Sakana AI"
+
+  colleague_introductions:
+    danielle: >
+      I'm reaching out with my colleague Danielle Lay (CC'd).
+
+
 andrew:
   full_name: "Andrew Schoen"
   role: "Partner & Investment Committee Member (General Partner equivalent)"
