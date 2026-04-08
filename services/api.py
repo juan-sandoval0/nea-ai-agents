@@ -249,6 +249,12 @@ async def root():
     return {"status": "ok", "service": "NEA Meeting Briefing API", "version": API_VERSION}
 
 
+@app.get("/health")
+async def health():
+    """Databricks Apps health check."""
+    return {"status": "ok"}
+
+
 @app.post("/api/briefing", response_model=BriefingResponse)
 async def create_briefing(request: BriefingRequest):
     """

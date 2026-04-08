@@ -1,0 +1,32 @@
+bundle_name: nea-ai-platform
+
+workspace:
+  host: ${var.databricks_host}
+
+variables:
+  databricks_host:
+    description: "Databricks workspace URL"
+
+targets:
+  dev:
+    mode: development
+  prod:
+    mode: production
+
+resources:
+  apps:
+    nea_api:
+      name: "nea-api"
+      description: "NEA AI Agents — FastAPI backend (briefing, digest, outreach)"
+      source_code_path: .
+      config:
+        command:
+          - uvicorn
+          - services.api:app
+          - --host
+          - "0.0.0.0"
+          - --port
+          - "8000"
+        env:
+          - name: APP_PORT
+            value: "8000"
