@@ -285,22 +285,20 @@ def run_outreach_cases(
 def run_tldr_cases(
     companies: list[str],
     output_dir: Path,
+    skip_ingest: bool = False,
 ) -> list[dict]:
     """
-    Run the meeting briefing agent for each company and save each result.
+    Run the briefing generator on each company using the production path
+    (ingest_company → generate_briefing), and save the result.
 
-    The TLDR judge accepts either a structured dict or raw markdown.
-    We capture both: the raw markdown from the agent and the company_bundle
-    from the shared SQLite DB for factual grounding.
-
-    Returns a list of summary dicts for reporting.
+    Matches what the API server does in services/api.py so eval measures
+    the same pipeline users hit in production.
     """
-    from agents.meeting_briefing.agent import MeetingBriefingAgent
-    from tools.company_tools import get_company_bundle, normalize_company_id
+    from tools.company_tools import ingest_company, get_company_bundle, normalize_company_id
+    from agents.meeting_briefing.briefing_generator import generate_briefing
 
     output_dir.mkdir(parents=True, exist_ok=True)
     summaries = []
-    agent = MeetingBriefingAgent()
 
     for company_id in companies:
         test_case_id = f"tldr_{company_id}"
@@ -319,75 +317,22 @@ def run_tldr_cases(
         }
 
         try:
-            # Step 1: Run briefing agent
-            run_result = agent.prepare_briefing(company_id)
+            if not skip_ingest:
+                ingest_company(company_id)
 
-            # Step 2: Build company_bundle from what the agent actually retrieved.
-            # The TLDR agent calls Harmonic directly (never writes to SQLite), so
-            # get_company_bundle() would return empty data and the judge would flag
-            # every claim as a hallucination. Instead we use the Harmonic data the
-            # agent had, supplemented by SQLite for founders/competitors (which are
-            # written there during enrichment).
-            retrieved = run_result.get("retrieved_content") or {}
-            company_raw = retrieved.get("company_raw")  # HarmonicCompany dict, raw_data stripped
+            run_result = generate_briefing(company_id)
 
             normalized = normalize_company_id(company_id)
-            bundle = get_company_bundle(normalized)
-            sqlite_dict = bundle.to_dict()
+            bundle_dict = get_company_bundle(normalized).to_dict()
 
-            # Build structured key_signals from Harmonic metric fields
-            key_signals = []
-            if company_raw:
-                hc = company_raw.get("headcount_change_90d")
-                wt = company_raw.get("web_traffic_change_30d")
-                fl_amount = company_raw.get("funding_last_amount")
-                fl_date = company_raw.get("funding_last_date")
-                if hc is not None:
-                    sign = "+" if hc > 0 else ""
-                    key_signals.append({
-                        "signal_type": "headcount",
-                        "description": f"Headcount change 90d: {sign}{hc:.1f}%",
-                        "source": "Harmonic",
-                        "observed_at": datetime.utcnow().date().isoformat(),
-                    })
-                if wt is not None:
-                    sign = "+" if wt > 0 else ""
-                    key_signals.append({
-                        "signal_type": "web_traffic",
-                        "description": f"Web traffic change 30d: {sign}{wt:.1f}%",
-                        "source": "Harmonic",
-                        "observed_at": datetime.utcnow().date().isoformat(),
-                    })
-                if fl_amount and fl_date:
-                    key_signals.append({
-                        "signal_type": "funding",
-                        "description": f"Last round: ${fl_amount:,.0f} ({fl_date})",
-                        "source": "Harmonic",
-                        "observed_at": fl_date,
-                    })
-
-            bundle_dict = {
-                "company_core": company_raw,
-                "founders": sqlite_dict.get("founders") or [],
-                "key_signals": key_signals,
-                "news": [],  # Harmonic has no news endpoint; metric changes are in signals
-                "competitors": sqlite_dict.get("competitors") or [],
-            }
-
-            # Step 3: Build agent_output the TLDR judge accepts
-            # The judge accepts: markdown string OR structured sections dict.
-            # We pass both; the builder will prefer structured if available.
             agent_output = {
-                "markdown": run_result.get("briefing_markdown") or "",
+                "markdown": run_result.get("markdown") or "",
                 "company_name": run_result.get("company_name"),
-                "run_id": run_result.get("run_id"),
                 "success": run_result.get("success", False),
                 "error": run_result.get("error"),
-                "retrieval_counts": run_result.get("retrieval_counts", {}),
-                "retrieval_doc_ids": run_result.get("retrieval_doc_ids", {}),
-                "total_elapsed_ms": run_result.get("total_elapsed_ms"),
-                # Structured sections — populate if the agent returns them;
-                # fallback to None so the judge knows to parse from markdown.
+                "data_sources": run_result.get("data_sources", {}),
+                "generated_at": run_result.get("generated_at"),
+                # Structured sections — none emitted; judge parses from markdown.
                 "tldr": None,
                 "why_it_matters": None,
                 "company_snapshot": None,
@@ -397,10 +342,8 @@ def run_tldr_cases(
                 "meeting_prep": None,
             }
 
-            # Step 4: Derive context tags
             context_tags = {
                 "company": company_id,
-                # Which data sources were populated
                 "data_sources": _describe_data_sources(bundle_dict),
                 "tldr_type": "standard",
             }
@@ -752,6 +695,7 @@ Examples:
             summaries = run_tldr_cases(
                 companies=args.companies,
                 output_dir=output_root / "tldr",
+                skip_ingest=args.skip_ingest,
             )
             all_summaries.extend(summaries)
             ok = sum(1 for s in summaries if s["success"])

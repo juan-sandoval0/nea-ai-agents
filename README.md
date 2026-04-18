@@ -104,7 +104,7 @@ python -m agents.meeting_briefing.agent stripe.com
 
 1. **Input**: Company URL (e.g., `stripe.com`)
 2. **Data Ingestion**: `tools/company_tools.py` fetches from Harmonic, Parallel Search, Swarm
-3. **Processing**: Agent-specific LangGraph workflow processes data
+3. **Processing**: Agent-specific pipeline reads from the database and assembles context
 4. **LLM Synthesis**: Claude generates final output (briefing, message, digest)
 5. **Storage**: Results saved to Supabase for history/audit
 
@@ -116,22 +116,21 @@ python -m agents.meeting_briefing.agent stripe.com
 
 **Purpose**: Generate comprehensive meeting prep documents for investor meetings.
 
-**Location**: `agents/meeting_briefing/agent.py`
+**Location**: `agents/meeting_briefing/briefing_generator.py`
 
 **How it works**:
 ```
-URL Input → Validate Company → [PARALLEL: Profile | News | Signals] → Synthesize Briefing
+URL Input → ingest_company() (Harmonic + Swarm + Tavily → DB) → generate_briefing() → Claude
 ```
 
-The agent uses LangGraph to run three retrieval operations in parallel, then synthesizes everything with Claude into a structured briefing.
+`ingest_company()` populates the company bundle (profile, founders, signals, news, competitors)
+in the database; `generate_briefing()` reads that bundle and synthesizes the final markdown
+with Claude.
 
 **Run it**:
 ```bash
 # Basic usage
-python -m agents.meeting_briefing.agent stripe.com
-
-# With LangSmith tracing
-LANGSMITH_TRACING=true python -m agents.meeting_briefing.agent stripe.com
+python -m agents.meeting_briefing.briefing_generator --company_url stripe.com
 ```
 
 **Output sections**:
@@ -146,8 +145,7 @@ LANGSMITH_TRACING=true python -m agents.meeting_briefing.agent stripe.com
 **Key files**:
 | File | Purpose |
 |------|---------|
-| `agent.py` | Main workflow, LangGraph state machine |
-| `harmonic_source.py` | Harmonic API data source implementation |
+| `briefing_generator.py` | Reads the company bundle from the DB and calls Claude to produce the briefing |
 
 ---
 
@@ -283,7 +281,7 @@ cp .env.example .env
 
 Models are configured in each agent file. Here's where to change them:
 
-**Meeting Briefing Agent** (`agents/meeting_briefing/agent.py:99`):
+**Meeting Briefing Agent** (`agents/meeting_briefing/briefing_generator.py`):
 ```python
 DEFAULT_LLM_MODEL = "claude-sonnet-4-6"  # Change this
 ```
@@ -310,27 +308,8 @@ DEFAULT_LLM_MODEL = "claude-sonnet-4-5-20250929"  # Change this
 
 ### Changing API Providers
 
-**To add a new data source**, implement the `DataSource` protocol in `agents/meeting_briefing/agent.py`:
-
-```python
-class MyNewDataSource:
-    def get_company_profile(self, url: str) -> RetrievalResult:
-        # Implement
-        pass
-
-    def get_recent_news(self, url: str, days: int = 30) -> RetrievalResult:
-        # Implement
-        pass
-
-    def get_key_signals(self, url: str) -> RetrievalResult:
-        # Implement
-        pass
-
-    def list_companies(self) -> list[str]:
-        return ["*"]  # Dynamic lookup
-```
-
-**To replace an existing client**, edit the relevant file in `core/clients/`:
+**To add or replace a data source**, edit the relevant client in `core/clients/` and wire it into
+`tools/company_tools.py` (which orchestrates ingestion into the shared `CompanyBundle`).
 
 | Client | File | Replace to change... |
 |--------|------|---------------------|
@@ -381,9 +360,7 @@ print(f"Per company: ${costs['cost_per_company']:.4f}")
 nea-ai-agents/
 ├── agents/                      # The three AI agents
 │   ├── meeting_briefing/        # Meeting prep briefings
-│   │   ├── agent.py             # Main LangGraph workflow
-│   │   ├── harmonic_source.py   # Harmonic API integration
-│   │   └── chroma_db/           # Local vector cache
+│   │   └── briefing_generator.py # DB-read → Claude briefing
 │   ├── news_aggregator/         # Signal tracking
 │   │   ├── agent.py             # CLI and orchestration
 │   │   ├── detector.py          # Signal detection
