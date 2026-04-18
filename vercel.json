@@ -6,8 +6,22 @@
   "installCommand": "cd frontend && npm install",
   "outputDirectory": "frontend/.next",
   "functions": {
-    "api/py/**/*.py": {
-      "maxDuration": 300
+    "api/py/briefing.py": {
+      "maxDuration": 300,
+      "includeFiles": "{core,tools,agents,services}/**"
+    },
+    "api/py/outreach.py": {
+      "maxDuration": 300,
+      "includeFiles": "{core,tools,agents,services}/**"
+    },
+    "api/py/outreach-feedback.py": {
+      "maxDuration": 60,
+      "includeFiles": "{core,services}/**"
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/api/briefing", "destination": "/api/py/briefing" },
+    { "source": "/api/outreach", "destination": "/api/py/outreach" },
+    { "source": "/api/outreach/feedback", "destination": "/api/py/outreach-feedback" }
+  ]
 }
