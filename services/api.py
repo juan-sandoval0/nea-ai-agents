@@ -16,13 +16,15 @@ Run with:
 from dotenv import load_dotenv
 load_dotenv(override=False)
 
+import hmac
+import logging
+import os
+import re
 from datetime import datetime
 from typing import Optional
 from uuid import uuid4
-import logging
-import re
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -73,14 +75,51 @@ app = FastAPI(
 API_VERSION = "1.0.3"
 logger.info(f"=== NEA API VERSION {API_VERSION} - WATCHLIST FIX DEPLOYED ===")
 
-# CORS - allow Lovable frontend
+# CORS — allowlist from ALLOWED_ORIGINS env (comma-separated).
+# Defaults to localhost dev only; production must set ALLOWED_ORIGINS explicitly.
+_allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+ALLOWED_ORIGINS = [o.strip() for o in _allowed_origins_env.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "X-NEA-Key"],
 )
+logger.info(f"CORS allowlist: {ALLOWED_ORIGINS}")
+
+# Interim shared-secret guard on write endpoints.
+# Set NEA_API_KEY in env; clients send it as X-NEA-Key header.
+# Leave unset in local dev to disable the check. Replaced by real auth in Phase 3.
+NEA_API_KEY = os.getenv("NEA_API_KEY")
+_PROTECTED_METHODS = {"POST", "DELETE", "PUT", "PATCH"}
+_PROTECTED_PATH_PREFIX = "/api/"
+_UNPROTECTED_PATHS = {"/", "/health"}
+
+
+@app.middleware("http")
+async def require_api_key_on_writes(request: Request, call_next):
+    """Gate write endpoints on X-NEA-Key until real auth lands in Phase 3."""
+    if (
+        NEA_API_KEY
+        and request.method in _PROTECTED_METHODS
+        and request.url.path.startswith(_PROTECTED_PATH_PREFIX)
+        and request.url.path not in _UNPROTECTED_PATHS
+    ):
+        provided = request.headers.get("x-nea-key", "")
+        if not hmac.compare_digest(provided, NEA_API_KEY):
+            logger.warning(
+                "Rejected %s %s — missing/invalid X-NEA-Key",
+                request.method, request.url.path,
+            )
+            return _json_error(401, "Missing or invalid X-NEA-Key")
+    return await call_next(request)
+
+
+def _json_error(status_code: int, detail: str):
+    from fastapi.responses import JSONResponse
+    return JSONResponse(status_code=status_code, content={"detail": detail})
+
 
 # Initialize history database
 history_db = BriefingHistoryDB()
