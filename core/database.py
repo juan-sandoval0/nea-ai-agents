@@ -668,11 +668,15 @@ def sync_company_to_supabase(company: CompanyCore) -> dict:
             'total_funding': company.total_funding,
             'products': company.products,
             'customers': company.customers,
+            'arr_apr': company.arr_apr,
             'last_round_date': company.last_round_date,
             'last_round_funding': company.last_round_funding,
+            'investors': company.investors,
             'web_traffic_trend': company.web_traffic_trend,
+            'website_update': company.website_update,
             'hiring_firing': company.hiring_firing,
             'observed_at': company.observed_at,
+            'source_map': company.source_map,
         }
 
         # Upsert (insert or update on conflict)
@@ -726,6 +730,7 @@ def sync_news_to_supabase(news: list[NewsArticle], company_id: str) -> dict:
                 'sentiment': article.sentiment,
                 'news_type': article.news_type,
                 'observed_at': article.observed_at,
+                'source': article.source,
             }
 
             # Upsert (insert or update on conflict)
@@ -800,3 +805,275 @@ def sync_competitors_to_supabase(competitors: list[CompetitorSnapshot]) -> dict:
         logger.info(f"Synced {synced} competitors to Supabase")
 
     return {'synced': synced, 'errors': errors}
+
+
+def sync_signals_to_supabase(signals: list[KeySignal]) -> dict:
+    """
+    Sync key signals to Supabase briefing_signals table.
+
+    Returns:
+        Dict with 'synced' count and 'errors' list
+    """
+    if not signals:
+        return {'synced': 0, 'errors': []}
+
+    try:
+        from core.clients import get_supabase
+        supabase = get_supabase()
+    except Exception as e:
+        logger.warning(f"Supabase not configured, skipping signals sync: {e}")
+        return {'synced': 0, 'errors': [str(e)]}
+
+    synced = 0
+    errors = []
+
+    for signal in signals:
+        try:
+            data = {
+                'company_id': signal.company_id,
+                'signal_type': signal.signal_type,
+                'description': signal.description,
+                'source': signal.source,
+                'observed_at': signal.observed_at,
+            }
+            supabase.table('briefing_signals').upsert(
+                data,
+                on_conflict='company_id,signal_type,description'
+            ).execute()
+            synced += 1
+        except Exception as e:
+            errors.append(f"{signal.signal_type}: {str(e)}")
+            logger.warning(f"Failed to sync signal {signal.signal_type}: {e}")
+
+    if synced > 0:
+        logger.info(f"Synced {synced} signals to Supabase")
+
+    return {'synced': synced, 'errors': errors}
+
+
+# =============================================================================
+# SUPABASE READ FUNCTIONS
+# =============================================================================
+
+def _coerce_json(value, default):
+    if value is None:
+        return default
+    if isinstance(value, (dict, list)):
+        return value
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (json.JSONDecodeError, TypeError):
+            return default
+    return default
+
+
+def read_company_from_supabase(company_id: str) -> Optional[CompanyCore]:
+    """Read company core data from Supabase briefing_companies."""
+    try:
+        from core.clients import get_supabase
+        supabase = get_supabase()
+    except Exception as e:
+        logger.warning(f"Supabase not configured: {e}")
+        return None
+
+    try:
+        resp = (
+            supabase.table('briefing_companies')
+            .select('*')
+            .eq('company_id', company_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception as e:
+        logger.warning(f"Failed to read company from Supabase: {e}")
+        return None
+
+    rows = resp.data or []
+    if not rows:
+        return None
+
+    row = rows[0]
+    return CompanyCore(
+        company_id=row['company_id'],
+        company_name=row.get('company_name') or '',
+        founding_date=row.get('founding_date'),
+        hq=row.get('hq'),
+        employee_count=row.get('employee_count'),
+        total_funding=row.get('total_funding'),
+        products=row.get('products'),
+        customers=row.get('customers'),
+        arr_apr=row.get('arr_apr'),
+        last_round_date=row.get('last_round_date'),
+        last_round_funding=row.get('last_round_funding'),
+        investors=_coerce_json(row.get('investors'), []),
+        web_traffic_trend=row.get('web_traffic_trend'),
+        website_update=row.get('website_update'),
+        hiring_firing=row.get('hiring_firing'),
+        observed_at=row.get('observed_at') or datetime.utcnow().isoformat(),
+        source_map=_coerce_json(row.get('source_map'), {}),
+    )
+
+
+def read_founders_from_supabase(company_id: str) -> list[Founder]:
+    """Read founders from Supabase founders table."""
+    try:
+        from core.clients import get_supabase
+        supabase = get_supabase()
+    except Exception as e:
+        logger.warning(f"Supabase not configured: {e}")
+        return []
+
+    try:
+        resp = (
+            supabase.table('founders')
+            .select('*')
+            .eq('company_id', company_id)
+            .execute()
+        )
+    except Exception as e:
+        logger.warning(f"Failed to read founders from Supabase: {e}")
+        return []
+
+    out = []
+    for row in (resp.data or []):
+        out.append(Founder(
+            company_id=row['company_id'],
+            name=row['name'],
+            role_title=row.get('role_title'),
+            linkedin_url=row.get('linkedin_url'),
+            background=row.get('background'),
+            observed_at=row.get('observed_at') or datetime.utcnow().isoformat(),
+            source=row.get('source') or 'harmonic',
+        ))
+    return out
+
+
+def read_news_from_supabase(company_id: str, limit: int = 10) -> list[NewsArticle]:
+    """Read news articles from Supabase briefing_news."""
+    try:
+        from core.clients import get_supabase
+        supabase = get_supabase()
+    except Exception as e:
+        logger.warning(f"Supabase not configured: {e}")
+        return []
+
+    try:
+        resp = (
+            supabase.table('briefing_news')
+            .select('*')
+            .eq('company_id', company_id)
+            .order('published_date', desc=True)
+            .order('observed_at', desc=True)
+            .limit(limit)
+            .execute()
+        )
+    except Exception as e:
+        logger.warning(f"Failed to read news from Supabase: {e}")
+        return []
+
+    out = []
+    for row in (resp.data or []):
+        out.append(NewsArticle(
+            company_id=row['company_id'],
+            article_headline=row['article_headline'],
+            outlet=row.get('outlet'),
+            url=row.get('url'),
+            published_date=row.get('published_date'),
+            excerpts=row.get('excerpts'),
+            synopsis=row.get('synopsis'),
+            sentiment=row.get('sentiment'),
+            news_type=row.get('news_type'),
+            observed_at=row.get('observed_at') or datetime.utcnow().isoformat(),
+            source=row.get('source') or 'news_api',
+        ))
+    return out
+
+
+def read_signals_from_supabase(company_id: str) -> list[KeySignal]:
+    """Read key signals from Supabase briefing_signals."""
+    try:
+        from core.clients import get_supabase
+        supabase = get_supabase()
+    except Exception as e:
+        logger.warning(f"Supabase not configured: {e}")
+        return []
+
+    try:
+        resp = (
+            supabase.table('briefing_signals')
+            .select('*')
+            .eq('company_id', company_id)
+            .order('observed_at', desc=True)
+            .execute()
+        )
+    except Exception as e:
+        logger.warning(f"Failed to read signals from Supabase: {e}")
+        return []
+
+    out = []
+    for row in (resp.data or []):
+        out.append(KeySignal(
+            company_id=row['company_id'],
+            signal_type=row['signal_type'],
+            description=row['description'],
+            observed_at=row.get('observed_at') or datetime.utcnow().isoformat(),
+            source=row.get('source') or 'harmonic',
+        ))
+    return out
+
+
+def read_competitors_from_supabase(company_id: str) -> list[CompetitorSnapshot]:
+    """Read competitors from Supabase briefing_competitors."""
+    try:
+        from core.clients import get_supabase
+        supabase = get_supabase()
+    except Exception as e:
+        logger.warning(f"Supabase not configured: {e}")
+        return []
+
+    try:
+        resp = (
+            supabase.table('briefing_competitors')
+            .select('*')
+            .eq('company_id', company_id)
+            .execute()
+        )
+    except Exception as e:
+        logger.warning(f"Failed to read competitors from Supabase: {e}")
+        return []
+
+    out = []
+    for row in (resp.data or []):
+        row.pop('id', None)
+        row.pop('created_at', None)
+        out.append(CompetitorSnapshot(**row))
+    return out
+
+
+def get_company_bundle_from_supabase(company_id: str) -> CompanyBundle:
+    """Assemble complete CompanyBundle from Supabase only (no SQLite)."""
+    return CompanyBundle(
+        company_core=read_company_from_supabase(company_id),
+        founders=read_founders_from_supabase(company_id),
+        news=read_news_from_supabase(company_id),
+        key_signals=read_signals_from_supabase(company_id),
+        competitors=read_competitors_from_supabase(company_id),
+    )
+
+
+def patch_company_website_update(company_id: str, website_update: str) -> None:
+    """Update only the website_update field on briefing_companies."""
+    try:
+        from core.clients import get_supabase
+        supabase = get_supabase()
+    except Exception as e:
+        logger.warning(f"Supabase not configured, skipping website_update patch: {e}")
+        return
+
+    try:
+        supabase.table('briefing_companies').update(
+            {'website_update': website_update}
+        ).eq('company_id', company_id).execute()
+    except Exception as e:
+        logger.warning(f"Failed to patch website_update for {company_id}: {e}")

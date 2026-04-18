@@ -1,0 +1,9 @@
+# Python dependencies for Vercel Functions under api/py/
+# Mirrors the subset of repo-root requirements.txt that the functions need.
+# Expanded in Task 2.4 when actual functions land.
+langchain-anthropic>=0.1.0
+langchain-core>=0.1.0
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+supabase>=2.0.0
+requests>=2.28.0

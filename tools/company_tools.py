@@ -50,6 +50,11 @@ from core.database import (
     sync_company_to_supabase,
     sync_news_to_supabase,
     sync_competitors_to_supabase,
+    sync_signals_to_supabase,
+    read_company_from_supabase,
+    read_founders_from_supabase,
+    get_company_bundle_from_supabase,
+    patch_company_website_update,
 )
 from core.clients.harmonic import HarmonicClient, HarmonicCompany, HarmonicAPIError
 from core.clients.tavily import TavilyClient, TavilyAPIError
@@ -304,7 +309,6 @@ def get_company_profile(company_id: str) -> CompanyCore:
         ValueError: If company not found
     """
     client = get_harmonic_client()
-    db = get_db()
 
     url_type, normalized = parse_company_url(company_id)
     normalized_id = normalize_company_id(company_id)
@@ -379,10 +383,10 @@ def get_company_profile(company_id: str) -> CompanyCore:
     products = company.description
     customers = company.customer_type
 
-    # Preserve existing website_update from DB (populated by Tavily during signal ingestion)
+    # Preserve existing website_update from Supabase (populated by Tavily during signal ingestion)
     existing_website_update = None
     try:
-        existing = db.get_company(normalized_id)
+        existing = read_company_from_supabase(normalized_id)
         if existing and existing.website_update:
             existing_website_update = existing.website_update
     except Exception:
@@ -409,8 +413,7 @@ def get_company_profile(company_id: str) -> CompanyCore:
         source_map=source_map,
     )
 
-    db.upsert_company(company_core)
-    logger.info(f"Fetched and stored company profile: {company.name} ({normalized_id})")
+    logger.info(f"Fetched company profile: {company.name} ({normalized_id})")
     return company_core
 
 
@@ -434,7 +437,6 @@ def get_founders(company_id: str) -> list[Founder]:
         ValueError: If company not found
     """
     client = get_harmonic_client()
-    db = get_db()
 
     normalized_id = normalize_company_id(company_id)
 
@@ -513,8 +515,7 @@ def get_founders(company_id: str) -> list[Founder]:
                 logger.warning(f"Could not fetch person {person_id}: {e}")
 
     if founders_list:
-        db.upsert_founders(founders_list)
-        logger.info(f"Fetched and stored {len(founders_list)} founders for {normalized_id}")
+        logger.info(f"Fetched {len(founders_list)} founders for {normalized_id}")
     else:
         logger.warning(f"No founders found for {normalized_id}")
 
@@ -742,14 +743,13 @@ def enrich_founder_backgrounds(company_id: str, summarize: bool = True) -> dict:
             "skipped_reason": "SWARM_API_KEY not set",
         }
 
-    db = get_db()
     normalized_id = normalize_company_id(company_id)
 
-    # Get existing founders from database
-    founders = db.get_founders(normalized_id)
+    # Get existing founders from Supabase
+    founders = read_founders_from_supabase(normalized_id)
 
     if not founders:
-        logger.info(f"No founders found in database for {normalized_id}")
+        logger.info(f"No founders found in Supabase for {normalized_id}")
         return {
             "company_id": normalized_id,
             "enriched_count": 0,
@@ -759,7 +759,7 @@ def enrich_founder_backgrounds(company_id: str, summarize: bool = True) -> dict:
         }
 
     # Get company name for context
-    company = db.get_company(normalized_id)
+    company = read_company_from_supabase(normalized_id)
     company_name = company.company_name if company else None
 
     results = {
@@ -908,7 +908,7 @@ def enrich_founder_backgrounds(company_id: str, summarize: bool = True) -> dict:
             else:
                 founder.linkedin_url = profile.linkedin_url
 
-        db.upsert_founders([founder])
+        sync_founders_to_supabase([founder], company_name=company_name)
 
         founder_result["status"] = "enriched"
         founder_result["sources"] = sources
@@ -944,7 +944,6 @@ def get_recent_news(company_id: str, days: int = 30) -> list[NewsArticle]:
     Returns:
         List of NewsArticle objects
     """
-    db = get_db()
     normalized_id = normalize_company_id(company_id)
 
     parallel = get_parallel_client()
@@ -954,7 +953,7 @@ def get_recent_news(company_id: str, days: int = 30) -> list[NewsArticle]:
 
     # Resolve company name for search
     company_name = None
-    existing = db.get_company(normalized_id)
+    existing = read_company_from_supabase(normalized_id)
     if existing:
         company_name = existing.company_name
     if not company_name:
@@ -1022,8 +1021,7 @@ def get_recent_news(company_id: str, days: int = 30) -> list[NewsArticle]:
                 logger.warning(f"Failed to generate synopsis for '{article.article_headline[:50]}': {e}")
 
     if articles:
-        db.insert_news(articles)
-        logger.info(f"Stored {len(articles)} news articles for {normalized_id}")
+        logger.info(f"Fetched {len(articles)} news articles for {normalized_id}")
 
     return articles
 
@@ -1048,7 +1046,6 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
         List of KeySignal objects from implemented sources
     """
     client = get_harmonic_client()
-    db = get_db()
 
     normalized_id = normalize_company_id(company_id)
 
@@ -1207,18 +1204,10 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
 
                 logger.info(f"Tavily: {len(relevant_updates)} relevant signals for {normalized_id}")
 
-            # Update website_update field on CompanyCore
+            # Update website_update field on briefing_companies (Supabase)
             if relevant_updates:
                 summary = f"{len(relevant_updates)} website updates detected"
-                conn = db._get_connection()
-                try:
-                    conn.execute(
-                        "UPDATE company_core SET website_update = ? WHERE company_id = ?",
-                        (summary, normalized_id),
-                    )
-                    conn.commit()
-                finally:
-                    conn.close()
+                patch_company_website_update(normalized_id, summary)
         except TavilyAPIError as e:
             logger.error(f"Tavily API error for {normalized_id}: {e}")
         except Exception as e:
@@ -1236,8 +1225,7 @@ def get_key_signals(company_id: str) -> list[KeySignal]:
     # via get_recent_news(). We don't duplicate it as signals here.
 
     if signals:
-        db.upsert_signals(signals)
-        logger.info(f"Fetched and stored {len(signals)} signals for {normalized_id}")
+        logger.info(f"Fetched {len(signals)} signals for {normalized_id}")
 
     return signals
 
@@ -1440,15 +1428,21 @@ def ingest_company(
         logger.error(f"Failed to ingest company profile for {company_id}: {e}")
         return results
 
-    # 2. Fetch founders
+    # 2. Fetch founders (sync to Supabase immediately so enrichment can read them)
     try:
         founders = get_founders(company_id)
         results["founders_count"] = len(founders)
+        if founders:
+            try:
+                sync_founders_to_supabase(founders, company_name=results.get("company_name"))
+            except Exception as e:
+                results["errors"].append(f"Founder Supabase sync: {str(e)}")
+                logger.error(f"Failed to sync founders to Supabase for {company_id}: {e}")
     except Exception as e:
         results["errors"].append(f"Founders: {str(e)}")
         logger.error(f"Failed to ingest founders for {company_id}: {e}")
 
-    # 2b. Enrich founder backgrounds (optional)
+    # 2b. Enrich founder backgrounds (reads from Supabase, writes enriched rows back)
     if enrich_backgrounds and results["founders_count"] > 0:
         try:
             enrichment = enrich_founder_backgrounds(company_id)
@@ -1457,21 +1451,17 @@ def ingest_company(
             results["errors"].append(f"Founder backgrounds: {str(e)}")
             logger.error(f"Failed to enrich founder backgrounds for {company_id}: {e}")
 
-    # 2c. Sync founders to Supabase for Lovable UI
-    if results["founders_count"] > 0:
-        try:
-            db = get_db()
-            founders_to_sync = db.get_founders(normalized_id)
-            sync_founders_to_supabase(founders_to_sync, company_name=normalized_id)
-            logger.info(f"Synced {len(founders_to_sync)} founders to Supabase for {normalized_id}")
-        except Exception as e:
-            results["errors"].append(f"Founder Supabase sync: {str(e)}")
-            logger.error(f"Failed to sync founders to Supabase for {company_id}: {e}")
-
     # 3. Fetch key signals
     try:
         signals = get_key_signals(company_id)
         results["signals_count"] = len(signals)
+
+        if signals:
+            try:
+                sync_signals_to_supabase(signals)
+            except Exception as e:
+                results["errors"].append(f"Signals Supabase sync: {str(e)}")
+                logger.error(f"Failed to sync signals to Supabase for {company_id}: {e}")
     except Exception as e:
         results["errors"].append(f"Signals: {str(e)}")
         logger.error(f"Failed to ingest signals for {company_id}: {e}")
@@ -1531,38 +1521,15 @@ def ingest_company(
 
 def get_company_bundle(company_id: str) -> CompanyBundle:
     """
-    Read-only database accessor for briefing generation.
+    Read-only accessor for briefing generation. Pulls from Supabase only.
 
     Returns all stored data for a company. Does NOT fetch from APIs.
-    Competitors are loaded from Supabase (briefing_competitors table).
 
     Args:
         company_id: Company URL or domain
 
     Returns:
-        CompanyBundle with all available data from database
+        CompanyBundle with all available data from Supabase
     """
-    db = get_db()
     normalized_id = normalize_company_id(company_id)
-    bundle = db.get_company_bundle(normalized_id)
-
-    # Load competitors from Supabase (not stored in local SQLite)
-    try:
-        from core.clients import get_supabase
-        supabase = get_supabase()
-        resp = (
-            supabase.table("briefing_competitors")
-            .select("*")
-            .eq("company_id", normalized_id)
-            .execute()
-        )
-        competitors = []
-        for row in (resp.data or []):
-            row.pop("id", None)
-            row.pop("created_at", None)
-            competitors.append(CompetitorSnapshot(**row))
-        bundle.competitors = competitors
-    except Exception as e:
-        logger.warning(f"Could not load competitors from Supabase for {normalized_id}: {e}")
-
-    return bundle
+    return get_company_bundle_from_supabase(normalized_id)

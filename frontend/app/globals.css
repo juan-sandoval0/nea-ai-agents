@@ -1,0 +1,75 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-playfair);
+
+  /* NEA Blue Palette */
+  --color-nea-blue: #1B5276;
+  --color-nea-blue-hover: #154360;
+  --color-nea-blue-light: #EAF2F8;
+  --color-nea-blue-mid: #5B8DB8;
+
+  /* Neutral */
+  --color-nea-dark: #111827;
+  --color-nea-mid: #6B7280;
+  --color-nea-muted: #9CA3AF;
+  --color-nea-surface: #F9FAFB;
+  --color-nea-border: #E5E7EB;
+
+  --radius-lg: 0.75rem;
+  --radius-md: 0.5rem;
+  --radius-sm: 0.375rem;
+}
+
+/* Font helpers */
+.font-display {
+  font-family: var(--font-playfair), Georgia, serif;
+}
+.font-ui {
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+/* ── Animations ── */
+@keyframes logo-reveal {
+  0%   { opacity: 0; transform: scale(0.75); filter: blur(12px); }
+  60%  { opacity: 1; transform: scale(1.03); filter: blur(0px); }
+  100% { opacity: 1; transform: scale(1);    filter: blur(0px); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes line-expand {
+  from { width: 0; }
+  to   { width: 3rem; }
+}
+
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-logo-reveal {
+  animation: logo-reveal 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-fade-up {
+  animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both;
+}
+.animate-line-expand {
+  animation: line-expand 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.9s both;
+}
+.animate-card-1 {
+  animation: card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.8s both;
+}
+.animate-card-2 {
+  animation: card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 1.0s both;
+}
+.animate-card-3 {
+  animation: card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 1.2s both;
+}
