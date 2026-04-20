@@ -1,0 +1,22 @@
+# Data artifacts - Vercel Lambda filesystem is read-only, SQLite/cache files
+# should not ship with the deployment. Production persistence is Supabase.
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Local envs and secrets
+.env
+.env.local
+.env.*.local
+
+# Python caches
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Evaluation outputs
+eval_results/
+logs/

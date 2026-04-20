@@ -40,6 +40,7 @@ Usage:
 from __future__ import annotations
 
 import csv
+import os
 import sqlite3
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
@@ -52,6 +53,12 @@ logger = logging.getLogger(__name__)
 
 # Use same database as main data
 DEFAULT_DB_PATH = Path(__file__).parent.parent / "data" / "nea_agents.db"
+
+
+def _is_readonly_env() -> bool:
+    """Detect read-only serverless environments (Vercel, AWS Lambda) where
+    SQLite writes to the bundle path will fail."""
+    return bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
 
 
 @dataclass
@@ -662,15 +669,67 @@ class Tracker:
             conn.close()
 
 
+class NullTracker:
+    """No-op tracker for read-only serverless environments. Logging lives in
+    LangSmith + structured logs on Vercel; SQLite tracking is legacy local
+    observability that can't run on a read-only filesystem."""
+
+    def log_usage(self, *args, **kwargs) -> int:
+        return 0
+
+    def log_api_call(self, *args, **kwargs) -> int:
+        return 0
+
+    def log_llm_call(self, *args, **kwargs) -> str:
+        return kwargs.get("call_id", "")
+
+    def log_llm_call_from_metadata(self, metadata) -> str:
+        return getattr(metadata, "call_id", "")
+
+    def log_feedback(self, *args, **kwargs) -> int:
+        return 0
+
+    def get_usage_history(self, *args, **kwargs) -> list[dict]:
+        return []
+
+    def get_llm_call(self, *args, **kwargs):
+        return None
+
+    def get_llm_calls_by_prompt(self, *args, **kwargs) -> list[dict]:
+        return []
+
+    def get_llm_stats(self, *args, **kwargs) -> dict:
+        return {"period_days": 0, "by_model": {}, "by_prompt": {}, "by_operation": {}}
+
+    def get_api_stats(self, *args, **kwargs) -> dict:
+        return {}
+
+    def get_stats(self, *args, **kwargs) -> dict:
+        return {
+            "period_days": 0,
+            "usage": {"total_events": 0, "unique_companies": 0, "unique_users": 0, "by_action": {}},
+            "top_companies": [],
+            "api": {},
+        }
+
+
 # Singleton tracker instance
-_tracker: Optional[Tracker] = None
+_tracker: Optional[Union[Tracker, NullTracker]] = None
 
 
-def get_tracker() -> Tracker:
-    """Get or create global tracker instance."""
+def get_tracker() -> Union[Tracker, NullTracker]:
+    """Get or create global tracker instance.
+
+    On Vercel / AWS Lambda the filesystem is read-only, so SQLite writes fail.
+    Return a NullTracker in those environments — LangSmith + structured logs
+    are the production observability path there.
+    """
     global _tracker
     if _tracker is None:
-        _tracker = Tracker()
+        if _is_readonly_env():
+            _tracker = NullTracker()
+        else:
+            _tracker = Tracker()
     return _tracker
 
 
