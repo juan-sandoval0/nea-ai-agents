@@ -39,7 +39,7 @@ is kept as documentation for potential future use on a paid tier.
 
 ### 2.7: Decommission Railway (DONE)
 
-**Commit:** (pending push)
+**Commit:** 41e770d
 
 **Summary:** Railway and SQLite backend removed. All persistence now via Supabase.
 
@@ -57,7 +57,7 @@ is kept as documentation for potential future use on a paid tier.
 
 ### 2.8: Observability floor (DONE)
 
-**Commit:** (pending push)
+**Commit:** 5f584af
 
 **Summary:** Added observability infrastructure for production monitoring.
 
