@@ -12,24 +12,13 @@ bundle:
   name: nea-ai-platform
 
 variables:
-  databricks_host:
-    description: "Databricks workspace URL, e.g. https://dbc-xxxx.cloud.databricks.com"
   notification_email:
     description: "Email to notify on job failure"
     default: ""
-  supabase_url:
-    description: "Supabase project URL"
-  supabase_service_key:
-    description: "Supabase service_role key — store as Databricks secret"
-  anthropic_api_key:
-    description: "Anthropic API key — store as Databricks secret"
-  harmonic_api_key:
-    description: "Harmonic API key — store as Databricks secret"
-  parallel_api_key:
-    description: "Parallel Search API key — store as Databricks secret"
 
-workspace:
-  host: ${var.databricks_host}
+# Workspace host comes from the Databricks CLI profile (DATABRICKS_HOST or
+# the DEFAULT profile created by `databricks auth login`). Not templated here
+# to avoid bundle-auth resolution chicken-and-egg.
 
 sync:
   include:
@@ -60,14 +49,10 @@ resources:
         pause_status: PAUSED  # unpause after Task 2.6 lands
       max_concurrent_runs: 1
       timeout_seconds: 3600
-      email_notifications:
-        on_failure:
-          - ${var.notification_email}
-        no_alert_for_skipped_runs: true
       tasks:
         - task_key: refresh
           notebook_task:
-            notebook_path: ../notebooks/batch/news_refresh
+            notebook_path: ./notebooks/batch/news_refresh.py
             base_parameters:
               days: "7"
               refresh_competitors: "true"
@@ -77,7 +62,7 @@ resources:
           spec:
             client: "2"
             dependencies:
-              - -r /Workspace${workspace.file_path}/notebooks/batch/requirements.txt
+              - -r ${workspace.file_path}/notebooks/batch/requirements.txt
 
     investor_digest:
       name: nea-investor-digest
@@ -90,14 +75,10 @@ resources:
         pause_status: PAUSED  # unpause after Task 2.6 lands
       max_concurrent_runs: 1
       timeout_seconds: 3600
-      email_notifications:
-        on_failure:
-          - ${var.notification_email}
-        no_alert_for_skipped_runs: true
       tasks:
         - task_key: digest
           notebook_task:
-            notebook_path: ../notebooks/batch/investor_digest
+            notebook_path: ./notebooks/batch/investor_digest.py
             base_parameters:
               days: "7"
           environment_key: nea_batch
@@ -106,14 +87,12 @@ resources:
           spec:
             client: "2"
             dependencies:
-              - -r /Workspace${workspace.file_path}/notebooks/batch/requirements.txt
+              - -r ${workspace.file_path}/notebooks/batch/requirements.txt
 
 targets:
   dev:
     mode: development
     default: true
-    workspace:
-      host: ${var.databricks_host}
     resources:
       jobs:
         news_refresh:
@@ -126,7 +105,6 @@ targets:
   prod:
     mode: production
     workspace:
-      host: ${var.databricks_host}
       root_path: /Shared/nea-ai-platform
     run_as:
       user_name: ${workspace.current_user.userName}
