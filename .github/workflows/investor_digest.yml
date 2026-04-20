@@ -1,0 +1,51 @@
+# =============================================================================
+# Investor Digest Scheduled Workflow
+# =============================================================================
+#
+# VERIFICATION (read before first run):
+# -------------------------------------
+# 1. The FIRST run must be a manual workflow_dispatch, NOT the cron schedule.
+# 2. Trigger manually via GitHub Actions UI: Actions -> Investor Digest -> Run workflow
+# 3. After the run completes, verify:
+#    - A new row appears in the job_runs table in Supabase
+#    - The result_summary shows featured_count and summary_count > 0
+#    - The status is "completed" (not "failed")
+# 4. Only after successful verification should you let the cron schedule run.
+#
+# Schedule: Mondays at 16:00 UTC (09:00 PT)
+# =============================================================================
+
+name: Investor Digest
+
+on:
+  workflow_dispatch:  # Manual trigger for initial verification
+  schedule:
+    - cron: "0 16 * * 1"  # Mondays 16:00 UTC = 09:00 PT
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55  # Alert if pathologically slow (free tier cap is 6h)
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run investor digest
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          HARMONIC_API_KEY: ${{ secrets.HARMONIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PARALLEL_API_KEY: ${{ secrets.PARALLEL_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python scripts/run_investor_digest.py

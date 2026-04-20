@@ -1,0 +1,51 @@
+# =============================================================================
+# News Refresh Scheduled Workflow
+# =============================================================================
+#
+# VERIFICATION (read before first run):
+# -------------------------------------
+# 1. The FIRST run must be a manual workflow_dispatch, NOT the cron schedule.
+# 2. Trigger manually via GitHub Actions UI: Actions -> News Refresh -> Run workflow
+# 3. After the run completes, verify:
+#    - A new row appears in the job_runs table in Supabase
+#    - The briefing_signals and briefing_news tables have new data
+#    - The status is "completed" (not "failed")
+# 4. Only after successful verification should you let the cron schedule run.
+#
+# Schedule: Every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
+# =============================================================================
+
+name: News Refresh
+
+on:
+  workflow_dispatch:  # Manual trigger for initial verification
+  schedule:
+    - cron: "0 */6 * * *"  # Every 6 hours UTC
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55  # Alert if pathologically slow (free tier cap is 6h)
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run news refresh
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          HARMONIC_API_KEY: ${{ secrets.HARMONIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PARALLEL_API_KEY: ${{ secrets.PARALLEL_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python scripts/run_news_refresh.py
