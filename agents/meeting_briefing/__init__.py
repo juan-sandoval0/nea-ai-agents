@@ -25,7 +25,6 @@ CLI Commands:
 
 # Re-export from shared modules for convenience
 from core.database import (
-    Database,
     CompanyCore,
     Founder,
     KeySignal,
@@ -46,7 +45,6 @@ from agents.meeting_briefing.briefing_generator import generate_briefing
 
 __all__ = [
     # Database models (from core)
-    "Database",
     "CompanyCore",
     "Founder",
     "KeySignal",
