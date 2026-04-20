@@ -2,7 +2,7 @@ import Sidebar from "@/components/layout/Sidebar";
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-nea-surface">
+    <div className="flex h-screen overflow-hidden bg-nea-shell">
       <Sidebar />
       <main className="flex-1 overflow-y-auto bg-white">
         {children}
