@@ -472,6 +472,37 @@ LANGSMITH_PROJECT=meeting-briefing-mvp
 LANGSMITH_TRACING=true python -m agents.meeting_briefing.agent stripe.com
 ```
 
+### Vercel Log Drains
+
+For production observability, set up a log drain to forward Vercel logs to your monitoring platform.
+
+**Supported platforms**: Axiom, BetterStack, Datadog, Logflare, Papertrail, and others.
+
+**Setup steps**:
+
+1. Go to your Vercel project dashboard
+2. Navigate to **Settings** → **Log Drains**
+3. Click **Add Log Drain**
+4. Select your provider (e.g., Axiom, BetterStack)
+5. Configure the endpoint URL and authentication token
+6. Select which environments to drain (Production, Preview, Development)
+
+**Recommended providers**:
+
+| Provider | Free Tier | Best For |
+|----------|-----------|----------|
+| [Axiom](https://axiom.co) | 500GB/month ingest | Full-text search, dashboards |
+| [BetterStack](https://betterstack.com) | 1GB/month | Simple setup, alerts |
+| [Logflare](https://logflare.app) | 12.5M events/month | BigQuery integration |
+
+**Log format**: The API endpoints output structured JSON logs with:
+- `ts`: ISO timestamp
+- `level`: Log level (INFO, ERROR, etc.)
+- `logger`: Source module
+- `msg`: Log message
+- `job_id`: Job identifier (for batch jobs)
+- `trace_id`: Request trace ID
+
 ---
 
 ## Troubleshooting

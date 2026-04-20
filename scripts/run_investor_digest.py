@@ -37,13 +37,13 @@ if str(REPO_ROOT) not in sys.path:
 from dotenv import load_dotenv
 load_dotenv(override=False)
 
-# Configure logging for GitHub Actions log stream
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-logger = logging.getLogger("run_investor_digest")
+from services.logging_setup import setup_logging, setup_langsmith, get_logger
+
+# Configure structured logging (use plain format for GH Actions readability)
+# and LangSmith tracing
+setup_logging(use_json=False)
+setup_langsmith(project="nea-investor-digest")
+logger = get_logger("run_investor_digest")
 
 
 def main() -> int:

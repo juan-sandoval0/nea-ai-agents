@@ -55,12 +55,26 @@ is kept as documentation for potential future use on a paid tier.
 **User action required:**
 - Shut down the Railway service in the Railway dashboard
 
-### 2.8: Observability floor (Pending)
+### 2.8: Observability floor (DONE)
 
-- LangSmith tracing integration
-- Structured JSON logging
-- Vercel log drain documentation
-- Upstash Redis rate limiting
+**Commit:** (pending push)
+
+**Summary:** Added observability infrastructure for production monitoring.
+
+**Changes:**
+- `services/logging_setup.py` - Structured JSON logging + LangSmith setup helper
+- `services/rate_limit.py` - Upstash Redis rate limiting (graceful fallback if not configured)
+- Updated `api/py/briefing.py` - LangSmith tracing + rate limit (10/min per key)
+- Updated `api/py/outreach.py` - LangSmith tracing + rate limit (5/min per key)
+- Updated `scripts/run_news_refresh.py` - LangSmith tracing
+- Updated `scripts/run_investor_digest.py` - LangSmith tracing
+- Updated `README.md` - Vercel log drain documentation
+
+**Environment variables:**
+- `LANGSMITH_API_KEY` - Enable LangSmith tracing (optional)
+- `LANGSMITH_PROJECT` - LangSmith project name (optional)
+- `UPSTASH_REDIS_REST_URL` - Enable rate limiting (optional)
+- `UPSTASH_REDIS_REST_TOKEN` - Upstash auth token (optional)
 
 ## Phase 3: (Not started)
 

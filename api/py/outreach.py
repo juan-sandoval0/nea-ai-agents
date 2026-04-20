@@ -24,9 +24,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from services.models import OutreachRequest, OutreachResponse
+from services.logging_setup import setup_logging, setup_langsmith, get_logger
+from services.rate_limit import check_rate_limit, RateLimitExceeded
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Configure structured logging and LangSmith tracing
+setup_logging(use_json=True)
+setup_langsmith(project="nea-outreach")
+logger = get_logger(__name__)
 
 app = FastAPI(title="NEA Outreach Function", version="2.4.0")
 
@@ -42,13 +46,37 @@ app.add_middleware(
 
 NEA_API_KEY = os.getenv("NEA_API_KEY")
 
+# Rate limit: 5 outreach per minute per X-NEA-Key
+OUTREACH_RATE_LIMIT = 5
+OUTREACH_RATE_WINDOW = 60  # seconds
+
 
 @app.middleware("http")
-async def require_api_key(request: Request, call_next):
-    if NEA_API_KEY and request.method == "POST":
+async def require_api_key_and_rate_limit(request: Request, call_next):
+    if request.method == "POST":
         provided = request.headers.get("x-nea-key", "")
-        if not hmac.compare_digest(provided, NEA_API_KEY):
+
+        # Check API key
+        if NEA_API_KEY and not hmac.compare_digest(provided, NEA_API_KEY):
             return JSONResponse(status_code=401, content={"detail": "Missing or invalid X-NEA-Key"})
+
+        # Check rate limit (use API key as identifier, fallback to "anonymous")
+        identifier = provided or "anonymous"
+        try:
+            check_rate_limit(
+                key="outreach",
+                identifier=identifier,
+                limit=OUTREACH_RATE_LIMIT,
+                window=OUTREACH_RATE_WINDOW,
+            )
+        except RateLimitExceeded as e:
+            logger.warning("Rate limit exceeded for outreach: %s", identifier)
+            return JSONResponse(
+                status_code=429,
+                content={"detail": str(e)},
+                headers={"Retry-After": str(e.retry_after)},
+            )
+
     return await call_next(request)
 
 
