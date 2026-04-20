@@ -231,10 +231,9 @@ def evaluate_entity_resolution(
         EntityResolutionResult with accuracy assessment
     """
     if retrieved_data is None:
-        # Fetch from database
-        from core.database import Database
-        db = Database()
-        company = db.get_company(company_id)
+        # Fetch from Supabase
+        from core.database import read_company_from_supabase
+        company = read_company_from_supabase(company_id)
         if company:
             retrieved_data = {
                 "company_name": company.company_name,
@@ -391,9 +390,8 @@ def evaluate_retrieval_accuracy(
     # Get company name for matching
     company_name = ground_truth_name
     if not company_name:
-        from core.database import Database
-        db = Database()
-        company = db.get_company(company_id)
+        from core.database import read_company_from_supabase
+        company = read_company_from_supabase(company_id)
         company_name = company.company_name if company else company_id.split(".")[0]
 
     relevant_count = 0
@@ -476,18 +474,22 @@ def evaluate_signal_coverage(
     Returns:
         SignalCoverageResult with coverage metrics
     """
-    from core.database import Database
-    db = Database()
+    from core.database import (
+        read_signals_from_supabase,
+        read_founders_from_supabase,
+        read_news_from_supabase,
+        read_company_from_supabase,
+    )
 
     # Default: expect all categories
     if expected_categories is None:
         expected_categories = [c.value for c in SignalCategory]
 
-    # Get signals from database
-    signals = db.get_signals(company_id)
-    founders = db.get_founders(company_id)
-    news = db.get_news(company_id)
-    company = db.get_company(company_id)
+    # Get data from Supabase
+    signals = read_signals_from_supabase(company_id)
+    founders = read_founders_from_supabase(company_id)
+    news = read_news_from_supabase(company_id)
+    company = read_company_from_supabase(company_id)
 
     # Determine which categories we found
     found_categories = set()

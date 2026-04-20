@@ -48,8 +48,6 @@ from services.models import (
     WatchlistCompanyResponse,
     WatchlistResponse,
     JobRunResponse,
-    NewsRefreshRequest,
-    NewsRefreshResponse,
     OutreachRequest,
     OutreachResponse,
     OutreachFeedbackRequest,
@@ -844,92 +842,12 @@ async def delete_company(company_id: str, hard_delete: bool = False):
 
 
 # =============================================================================
-# NEWS REFRESH ENDPOINTS
+# NEWS STATUS ENDPOINTS
 # =============================================================================
-
-def _run_news_refresh_job(job_id: str, days: int, refresh_competitors: bool):
-    """Background task to run news refresh."""
-    from services.job_manager import get_job_manager
-    from agents.news_aggregator.agent import cmd_check
-    from agents.news_aggregator.investor_digest import generate_investor_digest
-
-    job_manager = get_job_manager()
-
-    try:
-        # Start the job
-        job_manager.start_job(job_id)
-
-        # Step 1: Check for new signals
-        logger.info(f"Job {job_id}: Checking for new signals...")
-        cmd_check(refresh_competitors=refresh_competitors, quiet=True)
-
-        # Step 2: Generate investor digest (this saves stories to Supabase)
-        logger.info(f"Job {job_id}: Generating investor digest...")
-        digest = generate_investor_digest(days=days)
-
-        # Build result summary
-        result_summary = {
-            "story_count": len(digest.stories) if hasattr(digest, 'stories') else 0,
-            "days": days,
-        }
-
-        # Complete the job
-        job_manager.complete_job(job_id, result_summary)
-        logger.info(f"Job {job_id}: Completed with {result_summary['story_count']} stories")
-
-    except Exception as e:
-        logger.exception(f"Job {job_id} failed: {e}")
-        job_manager.fail_job(job_id, str(e))
-
-
-@app.post("/api/news/refresh", response_model=NewsRefreshResponse)
-async def refresh_news(request: NewsRefreshRequest = None):
-    """
-    Trigger a news refresh to fetch latest signals and generate digest.
-
-    This creates a job that runs in the background:
-    1. Checks all watched companies for new signals
-    2. Discovers competitors if refresh_competitors=True
-    3. Generates investor digest with clustered stories
-    4. Saves stories to Supabase for the frontend
-
-    Returns immediately with job_id. Poll GET /api/news/status/{job_id}
-    or query job_runs table directly to track progress.
-    """
-    import threading
-    from services.job_manager import get_job_manager
-
-    if request is None:
-        request = NewsRefreshRequest()
-
-    job_manager = get_job_manager()
-
-    # Check if there's already a running job
-    running = job_manager.get_running_job("news_aggregator")
-    if running:
-        return NewsRefreshResponse(
-            job_id=running.id,
-            status="running",
-            message="A news refresh is already in progress"
-        )
-
-    # Create new job
-    job = job_manager.create_job("news_aggregator", triggered_by="api")
-
-    # Run in background thread
-    thread = threading.Thread(
-        target=_run_news_refresh_job,
-        args=(job.id, request.days, request.refresh_competitors),
-        daemon=True
-    )
-    thread.start()
-
-    return NewsRefreshResponse(
-        job_id=job.id,
-        status="pending",
-        message="News refresh started. Poll /api/news/status/{job_id} for progress."
-    )
-
+# Note: POST /api/news/refresh has been removed. News refresh is now handled
+# by GitHub Actions scheduled workflows (see .github/workflows/news_refresh.yml).
+# These GET endpoints remain for checking job status.
+# =============================================================================
 
 @app.get("/api/news/status/{job_id}", response_model=JobRunResponse)
 async def get_news_job_status(job_id: str):

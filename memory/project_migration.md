@@ -37,16 +37,23 @@ is kept as documentation for potential future use on a paid tier.
 2. Confirm job_runs row appears in Supabase with status="completed"
 3. Confirm downstream data (briefing_signals, briefing_news, stories) is populated
 
-### 2.7: Decommission Railway (Pending)
+### 2.7: Decommission Railway (DONE)
 
-Blocked until 2.6 is verified in production.
+**Commit:** (pending push)
 
-Steps:
-- Delete railway.toml
-- Delete core/database.py's Database class
-- Delete data/nea_agents.db
-- Delete _run_news_refresh_job and POST /api/news/refresh from services/api.py
-- Run test suite / manual endpoint verification
+**Summary:** Railway and SQLite backend removed. All persistence now via Supabase.
+
+**Changes:**
+- Deleted `railway.toml`
+- Deleted `data/nea_agents.db` (SQLite file)
+- Removed `Database` class from `core/database.py` (kept data models + Supabase functions)
+- Removed `get_db()` singleton from `tools/company_tools.py`
+- Refactored `core/evaluation.py` to use Supabase read functions
+- Removed `_run_news_refresh_job` and `POST /api/news/refresh` from `services/api.py`
+- Updated `core/__init__.py` exports
+
+**User action required:**
+- Shut down the Railway service in the Railway dashboard
 
 ### 2.8: Observability floor (Pending)
 

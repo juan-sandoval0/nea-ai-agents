@@ -39,7 +39,6 @@ from datetime import datetime
 from typing import Optional
 
 from core.database import (
-    Database,
     CompanyCore,
     Founder,
     NewsArticle,
@@ -161,18 +160,6 @@ def _clean_excerpt(excerpt: str, max_chars: int = 200) -> str:
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
-
-# Singleton database instance
-_db: Optional[Database] = None
-
-
-def get_db() -> Database:
-    """Get or create database instance."""
-    global _db
-    if _db is None:
-        _db = Database()
-    return _db
-
 
 # Singleton Harmonic client
 _harmonic_client: Optional[HarmonicClient] = None
