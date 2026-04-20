@@ -74,3 +74,4 @@ htmlcov/
 
 # Submodules
 nea-ai-agents/
+.databricks.env

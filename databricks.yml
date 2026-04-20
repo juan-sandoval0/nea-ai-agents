@@ -1,12 +1,32 @@
 # Databricks Asset Bundle — NEA AI Platform batch jobs.
 #
+# STATUS: DOCUMENTATION ONLY — NOT CURRENTLY DEPLOYED.
+#
+# This bundle was validated and deploy-tested against a Databricks Free
+# Edition workspace in 2026-04. It does not run there: Free Edition allows
+# only serverless compute, and serverless has restricted DNS egress that
+# cannot reach Supabase / Anthropic / OpenAI / Harmonic / Parallel /
+# Tavily. The paid-tier escape hatches (Network Connectivity Configuration
+# for serverless, or classic job clusters with unrestricted egress) are
+# both unavailable on Free Edition — the workspace rejects classic-cluster
+# deploys with "Only serverless compute is supported in the workspace."
+#
+# The batch scheduler for news_refresh and investor_digest is therefore
+# GitHub Actions (see .github/workflows/news_refresh.yml and
+# investor_digest.yml). The notebooks under notebooks/batch/ contain the
+# real production logic and remain deployable on a paid Databricks tier
+# without code changes.
+#
+# To re-activate Databricks as the scheduler on a paid tier:
+#   1. Attach a Network Connectivity Configuration (NCC) to the workspace
+#      allowlisting the external hosts above, OR switch the job_clusters
+#      block below to a classic cluster.
+#   2. databricks bundle deploy --target prod
+#   3. Unpause the two schedules (currently pause_status: PAUSED).
+#
 # Deploy:     databricks bundle deploy --target prod
 # Validate:   databricks bundle validate --target dev
 # Run once:   databricks bundle run news_refresh --target prod
-#
-# Notebooks referenced here are Databricks "source" notebooks living under
-# notebooks/batch/. They are dual-write: Delta for history + Supabase for the
-# app-facing slice (see Phase 2 design). Implementation lands in Task 2.6.
 
 bundle:
   name: nea-ai-platform
@@ -15,10 +35,12 @@ variables:
   notification_email:
     description: "Email to notify on job failure"
     default: ""
-
-# Workspace host comes from the Databricks CLI profile (DATABRICKS_HOST or
-# the DEFAULT profile created by `databricks auth login`). Not templated here
-# to avoid bundle-auth resolution chicken-and-egg.
+  node_type_id:
+    description: "EC2 node type for job clusters"
+    default: "m5.large"
+  spark_version:
+    description: "Databricks Runtime version"
+    default: "15.4.x-scala2.12"
 
 sync:
   include:
@@ -46,23 +68,58 @@ resources:
       schedule:
         quartz_cron_expression: "0 0 */6 * * ?"  # every 6 hours
         timezone_id: "America/Los_Angeles"
-        pause_status: PAUSED  # unpause after Task 2.6 lands
+        pause_status: PAUSED  # unpause after end-to-end verified
       max_concurrent_runs: 1
       timeout_seconds: 3600
+      job_clusters:
+        - job_cluster_key: batch_cluster
+          new_cluster:
+            spark_version: ${var.spark_version}
+            node_type_id: ${var.node_type_id}
+            num_workers: 0   # single-node; driver-only
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: local[*]
+            custom_tags:
+              ResourceClass: SingleNode
+            data_security_mode: SINGLE_USER
       tasks:
         - task_key: refresh
+          job_cluster_key: batch_cluster
           notebook_task:
             notebook_path: ./notebooks/batch/news_refresh.py
             base_parameters:
               days: "7"
               refresh_competitors: "true"
-          environment_key: nea_batch
-      environments:
-        - environment_key: nea_batch
-          spec:
-            client: "2"
-            dependencies:
-              - -r ${workspace.file_path}/notebooks/batch/requirements.txt
+          libraries:
+            - pypi:
+                package: "langchain>=0.1.0"
+            - pypi:
+                package: "langchain-core>=0.1.0"
+            - pypi:
+                package: "langchain-anthropic>=0.1.0"
+            - pypi:
+                package: "langchain-openai>=0.0.5"
+            - pypi:
+                package: "langsmith>=0.0.77"
+            - pypi:
+                package: "openai>=1.0.0"
+            - pypi:
+                package: "python-dotenv>=1.0.0"
+            - pypi:
+                package: "python-dateutil>=2.8.0"
+            - pypi:
+                package: "aiohttp>=3.8.0"
+            - pypi:
+                package: "tavily-python>=0.5.0"
+            - pypi:
+                package: "parallel-web>=0.4.0"
+            - pypi:
+                package: "supabase>=2.0.0"
+            - pypi:
+                package: "pydantic>=2.0.0"
+            - pypi:
+                package: "pyyaml>=6.0"
 
     investor_digest:
       name: nea-investor-digest
@@ -72,22 +129,57 @@ resources:
       schedule:
         quartz_cron_expression: "0 0 9 ? * MON"  # Mondays at 09:00 PT
         timezone_id: "America/Los_Angeles"
-        pause_status: PAUSED  # unpause after Task 2.6 lands
+        pause_status: PAUSED  # unpause after end-to-end verified
       max_concurrent_runs: 1
       timeout_seconds: 3600
+      job_clusters:
+        - job_cluster_key: batch_cluster
+          new_cluster:
+            spark_version: ${var.spark_version}
+            node_type_id: ${var.node_type_id}
+            num_workers: 0
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: local[*]
+            custom_tags:
+              ResourceClass: SingleNode
+            data_security_mode: SINGLE_USER
       tasks:
         - task_key: digest
+          job_cluster_key: batch_cluster
           notebook_task:
             notebook_path: ./notebooks/batch/investor_digest.py
             base_parameters:
               days: "7"
-          environment_key: nea_batch
-      environments:
-        - environment_key: nea_batch
-          spec:
-            client: "2"
-            dependencies:
-              - -r ${workspace.file_path}/notebooks/batch/requirements.txt
+          libraries:
+            - pypi:
+                package: "langchain>=0.1.0"
+            - pypi:
+                package: "langchain-core>=0.1.0"
+            - pypi:
+                package: "langchain-anthropic>=0.1.0"
+            - pypi:
+                package: "langchain-openai>=0.0.5"
+            - pypi:
+                package: "langsmith>=0.0.77"
+            - pypi:
+                package: "openai>=1.0.0"
+            - pypi:
+                package: "python-dotenv>=1.0.0"
+            - pypi:
+                package: "python-dateutil>=2.8.0"
+            - pypi:
+                package: "aiohttp>=3.8.0"
+            - pypi:
+                package: "tavily-python>=0.5.0"
+            - pypi:
+                package: "parallel-web>=0.4.0"
+            - pypi:
+                package: "supabase>=2.0.0"
+            - pypi:
+                package: "pydantic>=2.0.0"
+            - pypi:
+                package: "pyyaml>=6.0"
 
 targets:
   dev:
