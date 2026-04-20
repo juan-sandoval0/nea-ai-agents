@@ -1,32 +1,132 @@
-bundle_name: nea-ai-platform
+# Databricks Asset Bundle — NEA AI Platform batch jobs.
+#
+# Deploy:     databricks bundle deploy --target prod
+# Validate:   databricks bundle validate --target dev
+# Run once:   databricks bundle run news_refresh --target prod
+#
+# Notebooks referenced here are Databricks "source" notebooks living under
+# notebooks/batch/. They are dual-write: Delta for history + Supabase for the
+# app-facing slice (see Phase 2 design). Implementation lands in Task 2.6.
+
+bundle:
+  name: nea-ai-platform
+
+variables:
+  databricks_host:
+    description: "Databricks workspace URL, e.g. https://dbc-xxxx.cloud.databricks.com"
+  notification_email:
+    description: "Email to notify on job failure"
+    default: ""
+  supabase_url:
+    description: "Supabase project URL"
+  supabase_service_key:
+    description: "Supabase service_role key — store as Databricks secret"
+  anthropic_api_key:
+    description: "Anthropic API key — store as Databricks secret"
+  harmonic_api_key:
+    description: "Harmonic API key — store as Databricks secret"
+  parallel_api_key:
+    description: "Parallel Search API key — store as Databricks secret"
 
 workspace:
   host: ${var.databricks_host}
 
-variables:
-  databricks_host:
-    description: "Databricks workspace URL"
+sync:
+  include:
+    - agents/**
+    - core/**
+    - tools/**
+    - services/**
+    - notebooks/batch/**
+  exclude:
+    - "**/__pycache__/**"
+    - "**/*.pyc"
+    - "**/*.db"
+    - .git/**
+    - frontend/**
+    - api/**
+
+resources:
+  jobs:
+    news_refresh:
+      name: nea-news-refresh
+      description: >
+        Checks all watched companies for new signals and generates the
+        investor digest. Replaces the Railway threading.Thread background task
+        in services/api.py::_run_news_refresh_job.
+      schedule:
+        quartz_cron_expression: "0 0 */6 * * ?"  # every 6 hours
+        timezone_id: "America/Los_Angeles"
+        pause_status: PAUSED  # unpause after Task 2.6 lands
+      max_concurrent_runs: 1
+      timeout_seconds: 3600
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+        no_alert_for_skipped_runs: true
+      tasks:
+        - task_key: refresh
+          notebook_task:
+            notebook_path: ../notebooks/batch/news_refresh
+            base_parameters:
+              days: "7"
+              refresh_competitors: "true"
+          environment_key: nea_batch
+      environments:
+        - environment_key: nea_batch
+          spec:
+            client: "2"
+            dependencies:
+              - -r /Workspace${workspace.file_path}/notebooks/batch/requirements.txt
+
+    investor_digest:
+      name: nea-investor-digest
+      description: >
+        Weekly clustering + summarization of signals into the investor digest.
+        Replaces the synchronous GET /api/digest/weekly call path.
+      schedule:
+        quartz_cron_expression: "0 0 9 ? * MON"  # Mondays at 09:00 PT
+        timezone_id: "America/Los_Angeles"
+        pause_status: PAUSED  # unpause after Task 2.6 lands
+      max_concurrent_runs: 1
+      timeout_seconds: 3600
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+        no_alert_for_skipped_runs: true
+      tasks:
+        - task_key: digest
+          notebook_task:
+            notebook_path: ../notebooks/batch/investor_digest
+            base_parameters:
+              days: "7"
+          environment_key: nea_batch
+      environments:
+        - environment_key: nea_batch
+          spec:
+            client: "2"
+            dependencies:
+              - -r /Workspace${workspace.file_path}/notebooks/batch/requirements.txt
 
 targets:
   dev:
     mode: development
+    default: true
+    workspace:
+      host: ${var.databricks_host}
+    resources:
+      jobs:
+        news_refresh:
+          schedule:
+            pause_status: PAUSED
+        investor_digest:
+          schedule:
+            pause_status: PAUSED
+
   prod:
     mode: production
-
-resources:
-  apps:
-    nea_api:
-      name: "nea-api"
-      description: "NEA AI Agents — FastAPI backend (briefing, digest, outreach)"
-      source_code_path: .
-      config:
-        command:
-          - uvicorn
-          - services.api:app
-          - --host
-          - "0.0.0.0"
-          - --port
-          - "8000"
-        env:
-          - name: APP_PORT
-            value: "8000"
+    workspace:
+      host: ${var.databricks_host}
+      root_path: /Shared/nea-ai-platform
+    run_as:
+      user_name: ${workspace.current_user.userName}
