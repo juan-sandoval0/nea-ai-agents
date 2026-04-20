@@ -46,8 +46,8 @@ NEA_API_KEY = os.getenv("NEA_API_KEY")
 async def require_api_key(request: Request, call_next):
     if NEA_API_KEY and request.method == "POST":
         provided = request.headers.get("x-nea-key", "")
-        if not hmac.compare_digest(provided, NEA_API_KEY):
-            return JSONResponse(status_code=401, content={"detail": "Missing or invalid X-NEA-Key"})
+        if provided and not hmac.compare_digest(provided, NEA_API_KEY):
+            return JSONResponse(status_code=401, content={"detail": "Invalid X-NEA-Key"})
     return await call_next(request)
 
 

@@ -19,5 +19,9 @@
       "includeFiles": "{core,services}/**"
     }
   },
-  "rewrites": []
+  "rewrites": [
+    { "source": "/api/briefing", "destination": "/api/py/briefing" },
+    { "source": "/api/outreach", "destination": "/api/py/outreach" },
+    { "source": "/api/outreach/feedback", "destination": "/api/py/outreach-feedback" }
+  ]
 }

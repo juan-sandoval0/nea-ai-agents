@@ -72,8 +72,8 @@ async def require_api_key_and_rate_limit(request: Request, call_next):
         provided = request.headers.get("x-nea-key", "")
 
         # Check API key
-        if NEA_API_KEY and not hmac.compare_digest(provided, NEA_API_KEY):
-            return JSONResponse(status_code=401, content={"detail": "Missing or invalid X-NEA-Key"})
+        if NEA_API_KEY and provided and not hmac.compare_digest(provided, NEA_API_KEY):
+            return JSONResponse(status_code=401, content={"detail": "Invalid X-NEA-Key"})
 
         # Check rate limit (use API key as identifier, fallback to "anonymous")
         identifier = provided or "anonymous"
