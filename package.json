@@ -1,0 +1,8 @@
+{
+  "name": "nea-ai-agents",
+  "private": true,
+  "description": "Root stub to satisfy Vercel's Next.js framework detection. The real frontend app lives in ./frontend — its package.json is the source of truth. See vercel.json installCommand/buildCommand, which run from ./frontend.",
+  "dependencies": {
+    "next": "16.2.2"
+  }
+}
