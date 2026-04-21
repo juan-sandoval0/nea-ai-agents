@@ -246,3 +246,11 @@ async def briefings_root(
     offset: int = Query(0, ge=0),
 ):
     return await _dispatch(briefing_id, search, limit, offset)
+
+
+# Vercel's ASGI adapter appears to pass the original request path through
+# to FastAPI (not the rewrite destination). So /api/briefings/:id reaches
+# the function with that literal path. Handle it directly.
+@app.get("/api/briefings/{briefing_id}")
+async def briefings_detail_path(briefing_id: str):
+    return await _dispatch(briefing_id, None, 50, 0)
