@@ -1,11 +1,18 @@
 """Database layer for news aggregator using Supabase PostgreSQL."""
 
 import json
+import os
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from typing import Optional, List
 
 from core.clients.supabase_client import get_supabase
+
+
+def _is_readonly_env() -> bool:
+    """Detect read-only serverless environments (Vercel, AWS Lambda) where
+    SQLite writes to the bundle path will fail."""
+    return bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
 
 
 @dataclass
@@ -1140,8 +1147,12 @@ def _init_embedding_cache():
     conn.close()
 
 
-# Initialize embedding cache on import
-_init_embedding_cache()
+# Initialize embedding cache on import, unless we're in a read-only serverless
+# env (Vercel, Lambda) where the bundle path is not writable. The embedding
+# cache is only used by GitHub-Actions-scheduled news refresh scripts; Vercel
+# functions that import this module (e.g. digest) never read/write embeddings.
+if not _is_readonly_env():
+    _init_embedding_cache()
 
 
 def get_cached_embedding(url_hash: str) -> Optional[bytes]:
@@ -1154,6 +1165,8 @@ def get_cached_embedding(url_hash: str) -> Optional[bytes]:
     Returns:
         Embedding bytes if cached, None otherwise
     """
+    if _is_readonly_env():
+        return None
     conn = _get_embedding_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -1183,6 +1196,8 @@ def save_embedding(
     Returns:
         True if saved successfully
     """
+    if _is_readonly_env():
+        return False
     conn = _get_embedding_connection()
     cursor = conn.cursor()
     try:
@@ -1216,6 +1231,8 @@ def delete_old_embeddings(keep_days: int = 30) -> int:
     Returns:
         Number of deleted embeddings
     """
+    if _is_readonly_env():
+        return 0
     conn = _get_embedding_connection()
     cursor = conn.cursor()
 
@@ -1230,6 +1247,8 @@ def delete_old_embeddings(keep_days: int = 30) -> int:
 
 def get_embedding_cache_stats() -> dict:
     """Get embedding cache statistics."""
+    if _is_readonly_env():
+        return {'count': 0, 'oldest': None, 'newest': None}
     conn = _get_embedding_connection()
     cursor = conn.cursor()
 
