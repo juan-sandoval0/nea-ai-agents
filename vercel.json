@@ -14,6 +14,10 @@
       "maxDuration": 60,
       "includeFiles": "{core,tools,agents,services}/**"
     },
+    "api/py/digest.py": {
+      "maxDuration": 120,
+      "includeFiles": "{core,tools,agents,services}/**"
+    },
     "api/py/outreach.py": {
       "maxDuration": 300,
       "includeFiles": "{core,tools,agents,services}/**"
@@ -27,6 +31,7 @@
     { "source": "/api/briefing", "destination": "/api/py/briefing" },
     { "source": "/api/briefings", "destination": "/api/py/briefings" },
     { "source": "/api/briefings/:id", "destination": "/api/py/briefings/:id" },
+    { "source": "/api/digest/weekly", "destination": "/api/py/digest" },
     { "source": "/api/outreach", "destination": "/api/py/outreach" },
     { "source": "/api/outreach/feedback", "destination": "/api/py/outreach-feedback" }
   ]
