@@ -235,11 +235,11 @@ def build_response(briefing_id: str, result: dict, bundle, created_at: datetime)
     )
 
 
-async def _generate_briefing(request: BriefingRequest) -> BriefingResponse:
+async def _generate_briefing(body: BriefingRequest, user_id: Optional[str] = None) -> BriefingResponse:
     from tools.company_tools import ingest_company, get_company_bundle, normalize_company_id
     from agents.meeting_briefing.briefing_generator import generate_briefing
 
-    url = request.url.strip()
+    url = body.url.strip()
     logger.info("Generating briefing for: %s", url)
 
     ingest_result = ingest_company(url)
@@ -262,16 +262,19 @@ async def _generate_briefing(request: BriefingRequest) -> BriefingResponse:
     created_at = datetime.utcnow()
     response = build_response(briefing_id, result, bundle, created_at)
 
-    history_db.save_briefing(BriefingRecord(
-        id=briefing_id,
-        company_id=response.company_id,
-        company_name=response.company_name,
-        created_at=created_at,
-        markdown=response.markdown,
-        success=response.success,
-        error=response.error,
-        data_sources=response.data_sources,
-    ))
+    history_db.save_briefing(
+        BriefingRecord(
+            id=briefing_id,
+            company_id=response.company_id,
+            company_name=response.company_name,
+            created_at=created_at,
+            markdown=response.markdown,
+            success=response.success,
+            error=response.error,
+            data_sources=response.data_sources,
+        ),
+        user_id=user_id,
+    )
 
     logger.info("Briefing generated successfully: %s", response.company_name)
     return response
@@ -280,9 +283,10 @@ async def _generate_briefing(request: BriefingRequest) -> BriefingResponse:
 # Vercel rewrites /api/briefing → this function; FastAPI sees the original path.
 # Also register "/" so direct invocation at the function path works.
 @app.post("/api/briefing", response_model=BriefingResponse)
-async def create_briefing_rewritten(request: BriefingRequest):
+async def create_briefing_rewritten(request: Request, body: BriefingRequest):
     try:
-        return await _generate_briefing(request)
+        user_id = getattr(request.state, "user_id", None)
+        return await _generate_briefing(body, user_id=user_id)
     except HTTPException:
         raise
     except Exception as exc:
@@ -291,9 +295,10 @@ async def create_briefing_rewritten(request: BriefingRequest):
 
 
 @app.post("/", response_model=BriefingResponse)
-async def create_briefing_root(request: BriefingRequest):
+async def create_briefing_root(request: Request, body: BriefingRequest):
     try:
-        return await _generate_briefing(request)
+        user_id = getattr(request.state, "user_id", None)
+        return await _generate_briefing(body, user_id=user_id)
     except HTTPException:
         raise
     except Exception as exc:
