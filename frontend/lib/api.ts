@@ -230,20 +230,6 @@ export function getWeeklyDigest(
   return apiFetch<WeeklyDigestResponse>(`/api/digest/weekly?${params}`, { getToken });
 }
 
-/**
- * @deprecated The POST /api/news/refresh endpoint was removed in Phase 2.7
- * (news refresh is now a GitHub Actions cron, not a user-triggered endpoint).
- * Kept as a stub until the UI consumer is removed in Phase 3.C.
- */
-export function refreshNews(
-  _days = 7,
-  _getToken?: GetToken
-): Promise<JobRunResponse> {
-  return Promise.reject(
-    new Error("refreshNews is deprecated: news refresh runs on a GitHub Actions cron")
-  );
-}
-
 export function getNewsJobStatus(
   jobId: string,
   getToken?: GetToken

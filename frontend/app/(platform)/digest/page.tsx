@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { getWeeklyDigest, refreshNews, getNewsJobStatus, type WeeklyDigestResponse, type DigestArticle, type JobRunResponse } from "@/lib/api";
+import { getWeeklyDigest, type WeeklyDigestResponse, type DigestArticle } from "@/lib/api";
 
 const SIG_LABEL: Record<string, string> = {
   funding: "Funding", FUNDING: "Funding",
@@ -95,8 +95,6 @@ export default function DigestPage() {
   const [digest, setDigest] = useState<WeeklyDigestResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [jobStatus, setJobStatus] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
 
   const loadDigest = useCallback(async (d: number) => {
     setLoading(true); setError(null);
@@ -106,23 +104,6 @@ export default function DigestPage() {
   }, [getToken]);
 
   useEffect(() => { loadDigest(days); }, [days, loadDigest]);
-
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true); setJobStatus("Starting…");
-    try {
-      const job = await refreshNews(days, getToken);
-      let cur: JobRunResponse = job;
-      setJobStatus("Fetching signals…");
-      while (cur.status === "pending" || cur.status === "running") {
-        await new Promise(r => setTimeout(r, 3000));
-        cur = await getNewsJobStatus(cur.id, getToken);
-        if (cur.status === "running") setJobStatus("Generating digest…");
-      }
-      if (cur.status === "completed") { setJobStatus(null); await loadDigest(days); }
-      else setJobStatus("Failed: " + (cur.error ?? "unknown"));
-    } catch (e) { setJobStatus("Error: " + (e instanceof Error ? e.message : "unknown")); }
-    finally { setRefreshing(false); }
-  }, [days, loadDigest, getToken]);
 
   return (
     <div className="flex flex-col h-full">
@@ -139,19 +120,6 @@ export default function DigestPage() {
               </button>
             ))}
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing || loading}
-            className="font-ui flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-nea-border text-xs text-nea-mid hover:bg-nea-surface hover:border-nea-blue disabled:opacity-40 transition-colors"
-          >
-            <svg className={"w-3.5 h-3.5 " + (refreshing ? "animate-spin" : "")} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Refresh
-          </button>
-          {jobStatus && (
-            <span className="font-ui text-xs text-nea-blue bg-nea-blue-light px-3 py-1.5 rounded-md">{jobStatus}</span>
-          )}
         </div>
       </div>
 
