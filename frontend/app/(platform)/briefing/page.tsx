@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useAuth } from "@clerk/nextjs";
 import {
   generateBriefing, listBriefings, getBriefing,
   type BriefingResponse, type BriefingListItem,
@@ -50,6 +51,7 @@ function Section({ title, children, defaultOpen = true }: { title: string; child
 }
 
 export default function BriefingPage() {
+  const { getToken } = useAuth();
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,25 +64,25 @@ export default function BriefingPage() {
     const trimmed = url.trim();
     if (!trimmed) return;
     setLoading(true); setError(null); setResult(null);
-    try { setResult(await generateBriefing(trimmed)); }
+    try { setResult(await generateBriefing(trimmed, getToken)); }
     catch (e) { setError(e instanceof Error ? e.message : "Generation failed"); }
     finally { setLoading(false); }
-  }, [url]);
+  }, [url, getToken]);
 
   const openHistory = useCallback(async () => {
     setHistoryOpen(v => !v);
     if (!historyOpen) {
-      try { const { briefings } = await listBriefings(undefined, 10); setHistory(briefings); }
+      try { const { briefings } = await listBriefings(undefined, 10, getToken); setHistory(briefings); }
       catch { /* silent */ }
     }
-  }, [historyOpen]);
+  }, [historyOpen, getToken]);
 
   const loadHistoryItem = useCallback(async (id: string) => {
     setLoading(true); setHistoryOpen(false);
-    try { setResult(await getBriefing(id)); }
+    try { setResult(await getBriefing(id, getToken)); }
     catch (e) { setError(e instanceof Error ? e.message : "Failed to load"); }
     finally { setLoading(false); }
-  }, []);
+  }, [getToken]);
 
   const copyMarkdown = useCallback(() => {
     if (result?.markdown) {

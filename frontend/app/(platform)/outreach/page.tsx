@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useId } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { generateOutreach, submitOutreachFeedback, type OutreachResponse } from "@/lib/api";
 
 const INVESTORS = [
@@ -22,6 +23,7 @@ const CTX_TYPES = [
 ];
 
 export default function OutreachPage() {
+  const { getToken } = useAuth();
   const fid = useId();
   const [company, setCompany]       = useState("");
   const [investor, setInvestor]     = useState("ashley");
@@ -49,11 +51,11 @@ export default function OutreachPage() {
         contact_name: contact.trim() || undefined,
         context_type_override: ctx || undefined,
         skip_ingest: skipIngest,
-      });
+      }, getToken);
       setResult(r); setEdited(r.message ?? "");
     } catch (e) { setError(e instanceof Error ? e.message : "Generation failed"); }
     finally { setLoading(false); }
-  }, [company, investor, format, contact, ctx, skipIngest]);
+  }, [company, investor, format, contact, ctx, skipIngest, getToken]);
 
   const handleFeedback = useCallback(async (status: "approved" | "edited" | "rejected") => {
     if (!result) return;
@@ -67,11 +69,11 @@ export default function OutreachPage() {
         original_message: result.message ?? "",
         edited_message: status === "edited" ? edited : undefined,
         approval_status: status,
-      });
+      }, getToken);
       setFbMode("done");
     } catch (e) { setError(e instanceof Error ? e.message : "Feedback failed"); }
     finally { setFbBusy(false); }
-  }, [result, edited]);
+  }, [result, edited, getToken]);
 
   const copyEmail = useCallback(() => {
     const txt = result?.subject ? "Subject: " + result.subject + "\n\n" + result.message : result?.message ?? "";

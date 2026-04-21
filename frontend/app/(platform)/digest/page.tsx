@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { getWeeklyDigest, refreshNews, getNewsJobStatus, type WeeklyDigestResponse, type DigestArticle, type JobRunResponse } from "@/lib/api";
 
 const SIG_LABEL: Record<string, string> = {
@@ -89,6 +90,7 @@ function ArticleRow({ a }: { a: DigestArticle }) {
 }
 
 export default function DigestPage() {
+  const { getToken } = useAuth();
   const [days, setDays] = useState<7 | 14 | 30>(7);
   const [digest, setDigest] = useState<WeeklyDigestResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -98,29 +100,29 @@ export default function DigestPage() {
 
   const loadDigest = useCallback(async (d: number) => {
     setLoading(true); setError(null);
-    try { setDigest(await getWeeklyDigest(d, 3, 12)); }
+    try { setDigest(await getWeeklyDigest(d, 3, 12, getToken)); }
     catch (e) { setError(e instanceof Error ? e.message : "Failed to load"); }
     finally { setLoading(false); }
-  }, []);
+  }, [getToken]);
 
   useEffect(() => { loadDigest(days); }, [days, loadDigest]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true); setJobStatus("Starting…");
     try {
-      const job = await refreshNews(days);
+      const job = await refreshNews(days, getToken);
       let cur: JobRunResponse = job;
       setJobStatus("Fetching signals…");
       while (cur.status === "pending" || cur.status === "running") {
         await new Promise(r => setTimeout(r, 3000));
-        cur = await getNewsJobStatus(cur.id);
+        cur = await getNewsJobStatus(cur.id, getToken);
         if (cur.status === "running") setJobStatus("Generating digest…");
       }
       if (cur.status === "completed") { setJobStatus(null); await loadDigest(days); }
       else setJobStatus("Failed: " + (cur.error ?? "unknown"));
     } catch (e) { setJobStatus("Error: " + (e instanceof Error ? e.message : "unknown")); }
     finally { setRefreshing(false); }
-  }, [days, loadDigest]);
+  }, [days, loadDigest, getToken]);
 
   return (
     <div className="flex flex-col h-full">

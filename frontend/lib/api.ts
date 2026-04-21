@@ -2,6 +2,10 @@
 // Set NEXT_PUBLIC_API_URL to override (e.g. http://localhost:8000 for local backend dev)
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
+// Provided by Clerk's `useAuth().getToken`. Optional so the helpers work
+// both when Clerk is active and during the USE_CLERK_AUTH=false rollback path.
+export type GetToken = () => Promise<string | null>;
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export interface CompanySnapshot {
@@ -159,10 +163,18 @@ export interface OutreachResponse {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+type ApiInit = RequestInit & { getToken?: GetToken };
+
+async function apiFetch<T>(path: string, init?: ApiInit): Promise<T> {
+  const { getToken, headers, ...rest } = init ?? {};
+  const token = getToken ? await getToken() : null;
   const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...init?.headers },
-    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(headers as Record<string, string> | undefined),
+    },
+    ...rest,
   });
   if (!res.ok) {
     const body = await res.text();
@@ -173,24 +185,32 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 // ── Briefing ───────────────────────────────────────────────────────────────
 
-export function generateBriefing(url: string): Promise<BriefingResponse> {
+export function generateBriefing(
+  url: string,
+  getToken?: GetToken
+): Promise<BriefingResponse> {
   return apiFetch<BriefingResponse>("/api/briefing", {
     method: "POST",
     body: JSON.stringify({ url }),
+    getToken,
   });
 }
 
 export function listBriefings(
   search?: string,
-  limit = 10
+  limit = 10,
+  getToken?: GetToken
 ): Promise<{ briefings: BriefingListItem[]; total: number }> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (search) params.set("search", search);
-  return apiFetch(`/api/briefings?${params}`);
+  return apiFetch(`/api/briefings?${params}`, { getToken });
 }
 
-export function getBriefing(id: string): Promise<BriefingResponse> {
-  return apiFetch<BriefingResponse>(`/api/briefings/${id}`);
+export function getBriefing(
+  id: string,
+  getToken?: GetToken
+): Promise<BriefingResponse> {
+  return apiFetch<BriefingResponse>(`/api/briefings/${id}`, { getToken });
 }
 
 // ── Digest ─────────────────────────────────────────────────────────────────
@@ -198,7 +218,8 @@ export function getBriefing(id: string): Promise<BriefingResponse> {
 export function getWeeklyDigest(
   days = 7,
   featuredCount = 3,
-  summaryCount = 10
+  summaryCount = 10,
+  getToken?: GetToken
 ): Promise<WeeklyDigestResponse> {
   const params = new URLSearchParams({
     days: String(days),
@@ -206,22 +227,34 @@ export function getWeeklyDigest(
     summary_count: String(summaryCount),
     include_markdown: "false",
   });
-  return apiFetch<WeeklyDigestResponse>(`/api/digest/weekly?${params}`);
+  return apiFetch<WeeklyDigestResponse>(`/api/digest/weekly?${params}`, { getToken });
 }
 
-export function refreshNews(days = 7): Promise<JobRunResponse> {
-  return apiFetch<JobRunResponse>("/api/news/refresh", {
-    method: "POST",
-    body: JSON.stringify({ days, refresh_competitors: true }),
-  });
+/**
+ * @deprecated The POST /api/news/refresh endpoint was removed in Phase 2.7
+ * (news refresh is now a GitHub Actions cron, not a user-triggered endpoint).
+ * Kept as a stub until the UI consumer is removed in Phase 3.C.
+ */
+export function refreshNews(
+  _days = 7,
+  _getToken?: GetToken
+): Promise<JobRunResponse> {
+  return Promise.reject(
+    new Error("refreshNews is deprecated: news refresh runs on a GitHub Actions cron")
+  );
 }
 
-export function getNewsJobStatus(jobId: string): Promise<JobRunResponse> {
-  return apiFetch<JobRunResponse>(`/api/news/status/${jobId}`);
+export function getNewsJobStatus(
+  jobId: string,
+  getToken?: GetToken
+): Promise<JobRunResponse> {
+  return apiFetch<JobRunResponse>(`/api/news/status/${jobId}`, { getToken });
 }
 
-export function getLatestNewsStatus(): Promise<JobRunResponse> {
-  return apiFetch<JobRunResponse>("/api/news/status");
+export function getLatestNewsStatus(
+  getToken?: GetToken
+): Promise<JobRunResponse> {
+  return apiFetch<JobRunResponse>("/api/news/status", { getToken });
 }
 
 // ── Outreach ───────────────────────────────────────────────────────────────
@@ -236,7 +269,8 @@ export interface OutreachParams {
 }
 
 export function generateOutreach(
-  params: OutreachParams
+  params: OutreachParams,
+  getToken?: GetToken
 ): Promise<OutreachResponse> {
   return apiFetch<OutreachResponse>("/api/outreach", {
     method: "POST",
@@ -245,21 +279,26 @@ export function generateOutreach(
       skip_ingest: false,
       ...params,
     }),
+    getToken,
   });
 }
 
-export function submitOutreachFeedback(params: {
-  outreach_id: string;
-  investor_key: string;
-  company_id: string;
-  context_type?: string;
-  original_message: string;
-  edited_message?: string;
-  approval_status: "approved" | "edited" | "rejected";
-  investor_notes?: string;
-}): Promise<{ id: string; approval_status: string; promoted: boolean }> {
+export function submitOutreachFeedback(
+  params: {
+    outreach_id: string;
+    investor_key: string;
+    company_id: string;
+    context_type?: string;
+    original_message: string;
+    edited_message?: string;
+    approval_status: "approved" | "edited" | "rejected";
+    investor_notes?: string;
+  },
+  getToken?: GetToken
+): Promise<{ id: string; approval_status: string; promoted: boolean }> {
   return apiFetch("/api/outreach/feedback", {
     method: "POST",
     body: JSON.stringify(params),
+    getToken,
   });
 }
