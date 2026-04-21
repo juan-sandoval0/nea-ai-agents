@@ -10,6 +10,10 @@
       "maxDuration": 300,
       "includeFiles": "{core,tools,agents,services}/**"
     },
+    "api/py/briefings.py": {
+      "maxDuration": 60,
+      "includeFiles": "{core,tools,agents,services}/**"
+    },
     "api/py/outreach.py": {
       "maxDuration": 300,
       "includeFiles": "{core,tools,agents,services}/**"
@@ -21,6 +25,8 @@
   },
   "rewrites": [
     { "source": "/api/briefing", "destination": "/api/py/briefing" },
+    { "source": "/api/briefings", "destination": "/api/py/briefings" },
+    { "source": "/api/briefings/:id", "destination": "/api/py/briefings/:id" },
     { "source": "/api/outreach", "destination": "/api/py/outreach" },
     { "source": "/api/outreach/feedback", "destination": "/api/py/outreach-feedback" }
   ]

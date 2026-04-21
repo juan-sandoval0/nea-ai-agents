@@ -28,3 +28,9 @@ supabase>=2.0.0
 
 # YAML for investor profiles
 pyyaml>=6.0
+
+# Authentication (Phase 3.1 - Clerk JWT verification)
+# Required by services/auth.py; without pyjwt installed, verify_clerk_token
+# silently returns None and every token looks "invalid or expired".
+pyjwt[crypto]>=2.0.0
+httpx>=0.24.0
