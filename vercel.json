@@ -34,7 +34,7 @@
   "rewrites": [
     { "source": "/api/briefing", "destination": "/api/py/briefing" },
     { "source": "/api/briefings", "destination": "/api/py/briefings" },
-    { "source": "/api/briefings/:id", "destination": "/api/py/briefings/:id" },
+    { "source": "/api/briefings/:id", "destination": "/api/py/briefings?briefing_id=:id" },
     { "source": "/api/digest/weekly", "destination": "/api/py/digest" },
     { "source": "/api/news/status", "destination": "/api/py/news_status" },
     { "source": "/api/news/status/:job_id", "destination": "/api/py/news_status/:job_id" },

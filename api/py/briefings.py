@@ -7,7 +7,10 @@ so briefing history can be read without depending on Railway.
 
 Mounted externally via vercel.json rewrites:
   /api/briefings           → /api/py/briefings
-  /api/briefings/:path*    → /api/py/briefings/:path*
+  /api/briefings/:id       → /api/py/briefings?briefing_id=:id
+
+Vercel's Python runtime only serves the exact path the file is mounted at,
+so the detail route routes the ID as a query param rather than a subpath.
 """
 from __future__ import annotations
 
@@ -203,43 +206,43 @@ async def _get_briefing(briefing_id: str) -> BriefingResponse:
     return _build_briefing_response(record, bundle)
 
 
-# Vercel rewrites /api/briefings → this function; also handle the function's
-# native path ("/") and ID suffix variants so direct invocations work too.
-@app.get("/api/briefings", response_model=BriefingListResponse)
-async def list_briefings_rewritten(
+# Single dispatcher for list + get-by-id. Vercel's Python runtime only maps a
+# single file to its exact path (/api/py/briefings), with no subpath forwarding,
+# so we cannot use a path param. vercel.json rewrites both /api/briefings and
+# /api/briefings/:id into this function, passing :id via ?briefing_id= when
+# present. Registered on the rewrite target and on "/" so direct invocations work.
+async def _dispatch(
+    briefing_id: Optional[str],
+    search: Optional[str],
+    limit: int,
+    offset: int,
+):
+    if briefing_id:
+        try:
+            return await _get_briefing(briefing_id)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.exception("Error fetching briefing %s: %s", briefing_id, exc)
+            raise HTTPException(status_code=500, detail=str(exc))
+    return await _list_briefings(search, limit, offset)
+
+
+@app.get("/api/briefings")
+async def briefings_rewritten(
+    briefing_id: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
-    return await _list_briefings(search, limit, offset)
+    return await _dispatch(briefing_id, search, limit, offset)
 
 
-@app.get("/", response_model=BriefingListResponse)
-async def list_briefings_root(
+@app.get("/")
+async def briefings_root(
+    briefing_id: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
-    return await _list_briefings(search, limit, offset)
-
-
-@app.get("/api/briefings/{briefing_id}", response_model=BriefingResponse)
-async def get_briefing_rewritten(briefing_id: str):
-    try:
-        return await _get_briefing(briefing_id)
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.exception("Error fetching briefing %s: %s", briefing_id, exc)
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
-@app.get("/{briefing_id}", response_model=BriefingResponse)
-async def get_briefing_root(briefing_id: str):
-    try:
-        return await _get_briefing(briefing_id)
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.exception("Error fetching briefing %s: %s", briefing_id, exc)
-        raise HTTPException(status_code=500, detail=str(exc))
+    return await _dispatch(briefing_id, search, limit, offset)
