@@ -23,11 +23,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from services.models import OutreachFeedbackRequest, OutreachFeedbackResponse
+from services.logging_setup import setup_logging, setup_langsmith, get_logger
+from services.auth import USE_CLERK_AUTH, verify_clerk_token
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Configure structured logging and LangSmith tracing
+setup_logging(use_json=True)
+setup_langsmith(project="nea-outreach-feedback")
+logger = get_logger(__name__)
 
-app = FastAPI(title="NEA Outreach Feedback Function", version="2.4.0")
+app = FastAPI(title="NEA Outreach Feedback Function", version="3.0.0")
 
 _allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
 ALLOWED_ORIGINS = [o.strip() for o in _allowed_origins_env.split(",") if o.strip()]
@@ -36,18 +40,36 @@ app.add_middleware(
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,
     allow_methods=["POST", "OPTIONS"],
-    allow_headers=["Content-Type", "X-NEA-Key"],
+    allow_headers=["Content-Type", "X-NEA-Key", "Authorization"],
 )
 
 NEA_API_KEY = os.getenv("NEA_API_KEY")
 
 
 @app.middleware("http")
-async def require_api_key(request: Request, call_next):
-    if NEA_API_KEY and request.method == "POST":
-        provided = request.headers.get("x-nea-key", "")
-        if provided and not hmac.compare_digest(provided, NEA_API_KEY):
-            return JSONResponse(status_code=401, content={"detail": "Invalid X-NEA-Key"})
+async def require_auth(request: Request, call_next):
+    """
+    Phase 3.1: Dual-mode authentication.
+    """
+    if request.method == "POST":
+        if USE_CLERK_AUTH:
+            # Clerk JWT authentication
+            auth_header = request.headers.get("Authorization", "")
+            if not auth_header.startswith("Bearer "):
+                return JSONResponse(status_code=401, content={"detail": "Missing Authorization header"})
+
+            token = auth_header[7:]
+            claims = verify_clerk_token(token)
+            if not claims:
+                return JSONResponse(status_code=401, content={"detail": "Invalid or expired token"})
+
+            request.state.user_id = claims.get("sub")
+        elif NEA_API_KEY:
+            # Legacy X-NEA-Key authentication
+            provided = request.headers.get("x-nea-key", "")
+            if provided and not hmac.compare_digest(provided, NEA_API_KEY):
+                return JSONResponse(status_code=401, content={"detail": "Invalid X-NEA-Key"})
+
     return await call_next(request)
 
 

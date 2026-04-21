@@ -55,9 +55,10 @@ from services.models import (
 )
 from services.history import BriefingHistoryDB, BriefingRecord
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Configure structured logging for JSON output (Vercel log drain compatible)
+from services.logging_setup import setup_logging, get_logger
+setup_logging(use_json=True)
+logger = get_logger(__name__)
 
 # =============================================================================
 # FASTAPI APP
@@ -82,13 +83,14 @@ app.add_middleware(
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "X-NEA-Key"],
+    allow_headers=["Content-Type", "X-NEA-Key", "Authorization"],
 )
 logger.info(f"CORS allowlist: {ALLOWED_ORIGINS}")
 
-# Interim shared-secret guard on write endpoints.
-# Set NEA_API_KEY in env; clients send it as X-NEA-Key header.
-# Leave unset in local dev to disable the check. Replaced by real auth in Phase 3.
+# Import auth utilities (Phase 3.1)
+from services.auth import USE_CLERK_AUTH, verify_clerk_token, get_user_id
+
+# Interim shared-secret guard on write endpoints (legacy, replaced by Clerk in Phase 3).
 NEA_API_KEY = os.getenv("NEA_API_KEY")
 _PROTECTED_METHODS = {"POST", "DELETE", "PUT", "PATCH"}
 _PROTECTED_PATH_PREFIX = "/api/"
@@ -96,21 +98,52 @@ _UNPROTECTED_PATHS = {"/", "/health"}
 
 
 @app.middleware("http")
-async def require_api_key_on_writes(request: Request, call_next):
-    """Gate write endpoints on X-NEA-Key until real auth lands in Phase 3."""
+async def require_auth(request: Request, call_next):
+    """
+    Gate write endpoints on authentication.
+
+    Phase 3.1: Supports dual-mode auth controlled by USE_CLERK_AUTH env var.
+    - USE_CLERK_AUTH=true: Requires Bearer token with Clerk JWT
+    - USE_CLERK_AUTH=false: Uses legacy X-NEA-Key shared secret
+    """
     if (
-        NEA_API_KEY
-        and request.method in _PROTECTED_METHODS
+        request.method in _PROTECTED_METHODS
         and request.url.path.startswith(_PROTECTED_PATH_PREFIX)
         and request.url.path not in _UNPROTECTED_PATHS
     ):
-        provided = request.headers.get("x-nea-key", "")
-        if not hmac.compare_digest(provided, NEA_API_KEY):
-            logger.warning(
-                "Rejected %s %s — missing/invalid X-NEA-Key",
-                request.method, request.url.path,
-            )
-            return _json_error(401, "Missing or invalid X-NEA-Key")
+        if USE_CLERK_AUTH:
+            # Clerk JWT authentication
+            auth_header = request.headers.get("Authorization", "")
+            if not auth_header.startswith("Bearer "):
+                logger.warning(
+                    "Rejected %s %s — missing Authorization header",
+                    request.method, request.url.path,
+                )
+                return _json_error(401, "Missing Authorization header")
+
+            token = auth_header[7:]  # Remove "Bearer " prefix
+            claims = verify_clerk_token(token)
+            if not claims:
+                logger.warning(
+                    "Rejected %s %s — invalid or expired token",
+                    request.method, request.url.path,
+                )
+                return _json_error(401, "Invalid or expired token")
+
+            # Attach user_id to request state for downstream use
+            request.state.user_id = claims.get("sub")
+            logger.info(f"Authenticated user: {request.state.user_id}")
+
+        elif NEA_API_KEY:
+            # Legacy X-NEA-Key authentication
+            provided = request.headers.get("x-nea-key", "")
+            if not hmac.compare_digest(provided, NEA_API_KEY):
+                logger.warning(
+                    "Rejected %s %s — missing/invalid X-NEA-Key",
+                    request.method, request.url.path,
+                )
+                return _json_error(401, "Missing or invalid X-NEA-Key")
+
     return await call_next(request)
 
 
@@ -177,10 +210,20 @@ def build_response(
 ) -> BriefingResponse:
     """Build BriefingResponse from generate_briefing result and company bundle."""
 
-    # Parse sections from markdown
-    sections = {}
-    if result.get('markdown'):
+    # Phase 3.4: Check for pre-parsed structured fields first (from with_structured_output)
+    # If present, use them directly; otherwise fall back to regex parsing
+    if result.get('tldr') is not None:
+        # Structured output was used - fields are already parsed
+        sections = {
+            'tldr': result['tldr'],
+            'why_it_matters': result.get('why_it_matters'),
+            'meeting_prep': result.get('meeting_prep'),
+        }
+    elif result.get('markdown'):
+        # Legacy path: parse sections from markdown using regex
         sections = parse_briefing_sections(result['markdown'])
+    else:
+        sections = {}
 
     # Build company snapshot
     company_snapshot = None

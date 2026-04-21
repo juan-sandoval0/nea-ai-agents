@@ -42,6 +42,7 @@ class BriefingRecord:
     success: bool
     error: Optional[str] = None
     data_sources: dict = None
+    user_id: Optional[str] = None  # Phase 3.1: Clerk user ID
 
     def to_dict(self) -> dict:
         """Convert to dictionary for DB storage."""
@@ -67,6 +68,7 @@ class BriefingRecord:
             success=row.get('success', True),
             error=row.get('error'),
             data_sources=row.get('data_sources') or {},
+            user_id=row.get('user_id'),  # Phase 3.1
         )
 
 
@@ -82,8 +84,14 @@ class BriefingHistoryDB:
         # db_path is ignored, we use Supabase
         pass
 
-    def save_briefing(self, record: BriefingRecord) -> None:
-        """Save a briefing to history."""
+    def save_briefing(self, record: BriefingRecord, user_id: Optional[str] = None) -> None:
+        """Save a briefing to history.
+
+        Args:
+            record: The briefing record to save
+            user_id: Optional Clerk user ID (Phase 3.1). If not provided,
+                    uses record.user_id if set.
+        """
         supabase = get_supabase()
         data = {
             "id": record.id,
@@ -95,8 +103,14 @@ class BriefingHistoryDB:
             "data_sources": record.data_sources or {},
         }
 
+        # Phase 3.1: Include user_id if available
+        effective_user_id = user_id or record.user_id
+        if effective_user_id:
+            data["user_id"] = effective_user_id
+
         supabase.table("briefing_history").insert(data).execute()
-        logger.info(f"Saved briefing for {record.company_name}")
+        logger.info(f"Saved briefing for {record.company_name}" +
+                   (f" (user: {effective_user_id})" if effective_user_id else ""))
 
     def get_briefing(self, briefing_id: str) -> Optional[BriefingRecord]:
         """Get a briefing by ID."""

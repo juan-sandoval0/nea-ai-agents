@@ -30,6 +30,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime
 from typing import Optional
 
@@ -75,6 +76,10 @@ logger = get_logger(__name__)
 # =============================================================================
 
 DEFAULT_LLM_MODEL = "claude-sonnet-4-6"
+
+# Feature flag for structured output (Phase 3.4)
+# When enabled, uses Claude's with_structured_output() instead of regex parsing
+USE_STRUCTURED_BRIEFING = os.getenv("USE_STRUCTURED_BRIEFING", "false").lower() == "true"
 
 # Mandatory system prompt - enforces data-only generation
 SYSTEM_PROMPT = """You are an AI assistant generating meeting briefings for venture capital investors.
@@ -620,14 +625,44 @@ Remember: Use ONLY the data provided above. If something is not in the tables, s
         ]
 
         start_time = time.time()
-        response = llm.invoke(messages)
-        latency_ms = int((time.time() - start_time) * 1000)
 
-        raw_content = response.content
+        # Phase 3.4: Use structured output when enabled
+        if USE_STRUCTURED_BRIEFING:
+            from agents.meeting_briefing.models import BriefingLLMOutput
 
-        # Track LLM API call
-        tokens_in = response.usage_metadata.get("input_tokens", 0) if hasattr(response, "usage_metadata") else 0
-        tokens_out = response.usage_metadata.get("output_tokens", 0) if hasattr(response, "usage_metadata") else 0
+            structured_llm = llm.with_structured_output(BriefingLLMOutput, include_raw=True)
+            structured_response = structured_llm.invoke(messages)
+            latency_ms = int((time.time() - start_time) * 1000)
+
+            # Extract structured fields - these bypass regex parsing
+            parsed_output: BriefingLLMOutput = structured_response["parsed"]
+            result["tldr"] = parsed_output.tldr
+            result["why_it_matters"] = parsed_output.why_this_meeting_matters
+            result["meeting_prep"] = parsed_output.for_this_meeting
+
+            # Get the raw content for markdown
+            raw_content = parsed_output.full_markdown
+
+            # Get token counts from raw response if available
+            raw_response = structured_response.get("raw")
+            if raw_response and hasattr(raw_response, "usage_metadata"):
+                tokens_in = raw_response.usage_metadata.get("input_tokens", 0)
+                tokens_out = raw_response.usage_metadata.get("output_tokens", 0)
+            else:
+                tokens_in = 0
+                tokens_out = 0
+
+            logger.info(f"Used structured output for {normalized_id}")
+        else:
+            # Legacy path: generate markdown and parse with regex later
+            response = llm.invoke(messages)
+            latency_ms = int((time.time() - start_time) * 1000)
+
+            raw_content = response.content
+
+            # Track LLM API call
+            tokens_in = response.usage_metadata.get("input_tokens", 0) if hasattr(response, "usage_metadata") else 0
+            tokens_out = response.usage_metadata.get("output_tokens", 0) if hasattr(response, "usage_metadata") else 0
 
         # Update metadata with actual metrics
         call_metadata.tokens_in = tokens_in
@@ -851,7 +886,8 @@ def main():
     from dotenv import load_dotenv
     load_dotenv()
 
-    logging.basicConfig(level=logging.INFO)
+    from services.logging_setup import setup_logging
+    setup_logging(use_json=False)  # Human-readable for CLI
 
     print(f"Generating briefing for: {args.company_url}")
     print("-" * 50)
