@@ -99,7 +99,7 @@ async def auth_and_rate_limit(request: Request, call_next):
     return await call_next(request)
 
 
-async def _generate(request: OutreachRequest) -> OutreachResponse:
+async def _generate(body: OutreachRequest, user_id: Optional[str] = None) -> OutreachResponse:
     from agents.outreach.generator import generate_outreach
 
     loop = asyncio.get_event_loop()
@@ -107,20 +107,21 @@ async def _generate(request: OutreachRequest) -> OutreachResponse:
         result = await loop.run_in_executor(
             None,
             lambda: generate_outreach(
-                company_id=request.company_id,
-                output_format=request.output_format,
-                contact_name=request.contact_name,
-                investor_key=request.investor_key,
-                skip_ingest=request.skip_ingest,
-                context_type_override=request.context_type_override,
-                outreach_goal=request.outreach_goal,
-                has_event_context=request.has_event_context,
-                event_details=request.event_details,
-                has_prior_relationship=request.has_prior_relationship,
-                prior_relationship_details=request.prior_relationship_details,
-                stealth_mode=request.stealth_mode,
-                founder_linkedin_url=request.founder_linkedin_url,
-                founder_background_notes=request.founder_background_notes,
+                company_id=body.company_id,
+                output_format=body.output_format,
+                contact_name=body.contact_name,
+                investor_key=body.investor_key,
+                skip_ingest=body.skip_ingest,
+                context_type_override=body.context_type_override,
+                outreach_goal=body.outreach_goal,
+                has_event_context=body.has_event_context,
+                event_details=body.event_details,
+                has_prior_relationship=body.has_prior_relationship,
+                prior_relationship_details=body.prior_relationship_details,
+                stealth_mode=body.stealth_mode,
+                founder_linkedin_url=body.founder_linkedin_url,
+                founder_background_notes=body.founder_background_notes,
+                user_id=user_id,
             ),
         )
     except Exception as exc:
@@ -150,10 +151,12 @@ async def _generate(request: OutreachRequest) -> OutreachResponse:
 
 
 @app.post("/api/outreach", response_model=OutreachResponse)
-async def create_outreach_rewritten(request: OutreachRequest):
-    return await _generate(request)
+async def create_outreach_rewritten(request: Request, body: OutreachRequest):
+    user_id = getattr(request.state, "user_id", None)
+    return await _generate(body, user_id=user_id)
 
 
 @app.post("/", response_model=OutreachResponse)
-async def create_outreach_root(request: OutreachRequest):
-    return await _generate(request)
+async def create_outreach_root(request: Request, body: OutreachRequest):
+    user_id = getattr(request.state, "user_id", None)
+    return await _generate(body, user_id=user_id)

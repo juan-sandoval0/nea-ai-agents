@@ -487,6 +487,7 @@ def generate_outreach(
     stealth_mode: bool = False,
     founder_linkedin_url: Optional[str] = None,
     founder_background_notes: Optional[str] = None,
+    user_id: Optional[str] = None,
 ) -> dict:
     """
     Generate a personalized outreach message for a founder at a target company.
@@ -828,6 +829,7 @@ def generate_outreach(
                 tokens_total=tokens_in + tokens_out,
                 latency_ms=latency_ms,
                 success=True,
+                user_id=user_id,
             )
 
             # Also save to persistent audit log

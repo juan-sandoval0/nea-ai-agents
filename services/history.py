@@ -338,8 +338,26 @@ class OutreachHistoryDB:
         latency_ms: int = 0,
         success: bool = True,
         error: Optional[str] = None,
+        user_id: Optional[str] = None,
     ) -> str:
-        """Save an outreach message to history. Returns the record ID."""
+        """Save an outreach message to history. Returns the record ID.
+
+        Args:
+            company_id: Normalized company identifier
+            company_name: Company display name
+            contact_name: Founder/contact name
+            investor_key: Investor profile key
+            context_type: Context type used for generation
+            output_format: 'email' or 'linkedin'
+            message_preview: First 500 chars of message
+            full_message: Complete message content
+            model: LLM model used
+            tokens_total: Total token count
+            latency_ms: Generation latency
+            success: Whether generation succeeded
+            error: Error message if failed
+            user_id: Optional Clerk user ID (Phase 3.1)
+        """
         supabase = get_supabase()
         data = {
             "company_id": company_id,
@@ -355,6 +373,7 @@ class OutreachHistoryDB:
             "latency_ms": latency_ms,
             "success": success,
             "error": error,
+            "user_id": user_id,
         }
 
         result = supabase.table("outreach_history").insert(data).execute()

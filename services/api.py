@@ -994,7 +994,7 @@ async def get_stories(
 # =============================================================================
 
 @app.post("/api/outreach", response_model=OutreachResponse)
-async def generate_outreach_endpoint(request: OutreachRequest):
+async def generate_outreach_endpoint(request: Request, body: OutreachRequest):
     """
     Generate a personalized cold outreach email or LinkedIn message.
 
@@ -1013,6 +1013,9 @@ async def generate_outreach_endpoint(request: OutreachRequest):
     import asyncio
     from agents.outreach.generator import generate_outreach
 
+    # Phase 3.1: Extract user_id from request state (set by auth middleware)
+    user_id = getattr(request.state, "user_id", None)
+
     try:
         # generate_outreach is synchronous — run in thread pool to avoid
         # blocking the event loop
@@ -1020,20 +1023,21 @@ async def generate_outreach_endpoint(request: OutreachRequest):
         result = await loop.run_in_executor(
             None,
             lambda: generate_outreach(
-                company_id=request.company_id,
-                output_format=request.output_format,
-                contact_name=request.contact_name,
-                investor_key=request.investor_key,
-                skip_ingest=request.skip_ingest,
-                context_type_override=request.context_type_override,
-                outreach_goal=request.outreach_goal,
-                has_event_context=request.has_event_context,
-                event_details=request.event_details,
-                has_prior_relationship=request.has_prior_relationship,
-                prior_relationship_details=request.prior_relationship_details,
-                stealth_mode=request.stealth_mode,
-                founder_linkedin_url=request.founder_linkedin_url,
-                founder_background_notes=request.founder_background_notes,
+                company_id=body.company_id,
+                output_format=body.output_format,
+                contact_name=body.contact_name,
+                investor_key=body.investor_key,
+                skip_ingest=body.skip_ingest,
+                context_type_override=body.context_type_override,
+                outreach_goal=body.outreach_goal,
+                has_event_context=body.has_event_context,
+                event_details=body.event_details,
+                has_prior_relationship=body.has_prior_relationship,
+                prior_relationship_details=body.prior_relationship_details,
+                stealth_mode=body.stealth_mode,
+                founder_linkedin_url=body.founder_linkedin_url,
+                founder_background_notes=body.founder_background_notes,
+                user_id=user_id,
             )
         )
     except Exception as exc:
