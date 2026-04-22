@@ -96,18 +96,18 @@ export default function BriefingPage() {
     <div className="flex h-full">
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Page header */}
-        <div className="h-12 border-b border-nea-border px-5 flex items-center gap-3 bg-white shrink-0">
+        <div className="min-h-12 border-b border-nea-border px-5 py-2 flex items-center flex-wrap gap-y-2 gap-x-3 bg-white shrink-0">
           <div className="flex-1 min-w-0">
-            <h1 className="font-ui text-sm font-semibold text-nea-dark leading-none">Meeting Briefing</h1>
+            <h1 className="font-ui text-sm font-semibold text-nea-dark leading-tight">Meeting Briefing</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <input
               type="text"
               placeholder="stripe.com"
               value={url}
               onChange={e => setUrl(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleGenerate()}
-              className="font-ui w-48 px-3 py-1.5 rounded-md border border-nea-border text-sm text-nea-dark placeholder:text-nea-muted focus:outline-none focus:ring-2 focus:ring-nea-blue/20 focus:border-nea-blue bg-white"
+              className="font-ui w-44 sm:w-48 px-3 py-1.5 rounded-md border border-nea-border text-sm text-nea-dark placeholder:text-nea-muted focus:outline-none focus:ring-2 focus:ring-nea-blue/20 focus:border-nea-blue bg-white"
             />
             <button
               onClick={handleGenerate}
@@ -156,16 +156,16 @@ export default function BriefingPage() {
           {result && !loading && (
             <div className="space-y-3 max-w-3xl">
               {/* Result header */}
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <h2 className="font-ui text-xl font-semibold text-nea-dark leading-tight">{result.company_name}</h2>
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-ui text-xl font-semibold text-nea-dark leading-tight break-words">{result.company_name}</h2>
                   {result.company_snapshot?.hq && (
-                    <p className="font-ui text-xs text-nea-muted mt-0.5">{result.company_snapshot.hq}</p>
+                    <p className="font-ui text-xs text-nea-muted mt-0.5 break-words">{result.company_snapshot.hq}</p>
                   )}
                 </div>
                 <button
                   onClick={copyMarkdown}
-                  className="font-ui flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-nea-border text-xs text-nea-mid hover:border-nea-blue hover:text-nea-blue transition-colors"
+                  className="font-ui shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-nea-border text-xs text-nea-mid hover:border-nea-blue hover:text-nea-blue transition-colors whitespace-nowrap"
                 >
                   {copied ? "✓ Copied" : "Copy Markdown"}
                 </button>
@@ -190,13 +190,13 @@ export default function BriefingPage() {
                 </Section>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {result.company_snapshot && (
                   <div className="border border-nea-border rounded-lg overflow-hidden">
                     <div className="px-4 py-2 bg-nea-surface border-b border-nea-border">
                       <span className="font-ui font-semibold text-[11px] text-nea-dark uppercase tracking-wider">Company Snapshot</span>
                     </div>
-                    <table className="w-full text-sm bg-white">
+                    <table className="w-full text-sm bg-white table-fixed">
                       <tbody className="divide-y divide-nea-border">
                         {([
                           ["Founded", result.company_snapshot.founded],
@@ -208,8 +208,8 @@ export default function BriefingPage() {
                           ["Last Round", result.company_snapshot.last_round],
                         ] as [string, string | null | undefined][]).filter(([, v]) => v).map(([label, value]) => (
                           <tr key={label}>
-                            <td className="py-2 px-4 text-nea-muted font-ui font-medium w-28 text-xs">{label}</td>
-                            <td className="py-2 px-4 text-nea-dark font-ui text-xs">{value}</td>
+                            <td className="py-2 px-4 text-nea-muted font-ui font-medium w-28 text-xs align-top">{label}</td>
+                            <td className="py-2 px-4 text-nea-dark font-ui text-xs break-words">{value}</td>
                           </tr>
                         ))}
                       </tbody>

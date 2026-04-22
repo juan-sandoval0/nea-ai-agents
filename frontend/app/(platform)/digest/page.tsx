@@ -42,22 +42,22 @@ const sentimentIcon = (s?: string | null) =>
 
 function FeaturedCard({ a }: { a: DigestArticle }) {
   return (
-    <div className="bg-white rounded-lg border border-nea-border p-4 hover:border-nea-blue/40 transition-colors">
-      <div className="flex items-center gap-1.5 mb-2.5">
-        <span className={"font-ui text-[10px] font-semibold px-1.5 py-0.5 rounded " + (a.category === "portfolio" ? "bg-nea-blue text-white" : "border border-nea-border text-nea-mid")}>
+    <div className="bg-white rounded-lg border border-nea-border p-4 hover:border-nea-blue/40 transition-colors h-full flex flex-col">
+      <div className="flex items-center gap-1.5 mb-2.5 min-w-0">
+        <span className={"font-ui text-[10px] font-semibold px-1.5 py-0.5 rounded truncate max-w-[50%] " + (a.category === "portfolio" ? "bg-nea-blue text-white" : "border border-nea-border text-nea-mid")}>
           {a.company}
         </span>
-        <span className={"font-ui text-[10px] font-semibold px-1.5 py-0.5 rounded " + sigBadge(a.signal_type)}>
+        <span className={"font-ui text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 " + sigBadge(a.signal_type)}>
           {SIG_LABEL[a.signal_type] ?? a.signal_type}
         </span>
-        <span className={"font-ui text-xs ml-auto " + sentimentColor(a.sentiment)}>{sentimentIcon(a.sentiment)}</span>
+        <span className={"font-ui text-xs ml-auto shrink-0 " + sentimentColor(a.sentiment)}>{sentimentIcon(a.sentiment)}</span>
       </div>
       {a.url
-        ? <a href={a.url} target="_blank" rel="noopener noreferrer" className="font-ui text-sm font-semibold text-nea-dark hover:text-nea-blue hover:underline leading-snug block mb-1.5">{a.headline}</a>
-        : <p className="font-ui text-sm font-semibold text-nea-dark leading-snug mb-1.5">{a.headline}</p>
+        ? <a href={a.url} target="_blank" rel="noopener noreferrer" className="font-ui text-sm font-semibold text-nea-dark hover:text-nea-blue hover:underline leading-snug block mb-1.5 line-clamp-3 break-words">{a.headline}</a>
+        : <p className="font-ui text-sm font-semibold text-nea-dark leading-snug mb-1.5 line-clamp-3 break-words">{a.headline}</p>
       }
-      {a.synopsis && <p className="font-ui text-xs text-nea-mid leading-relaxed">{a.synopsis}</p>}
-      <p className="font-ui text-[10px] text-nea-muted mt-2">{[a.source, a.published_date].filter(Boolean).join(" · ")}</p>
+      {a.synopsis && <p className="font-ui text-xs text-nea-mid leading-relaxed line-clamp-2">{a.synopsis}</p>}
+      <p className="font-ui text-[10px] text-nea-muted mt-auto pt-2">{[a.source, a.published_date].filter(Boolean).join(" · ")}</p>
     </div>
   );
 }
@@ -65,8 +65,8 @@ function FeaturedCard({ a }: { a: DigestArticle }) {
 function ArticleRow({ a }: { a: DigestArticle }) {
   return (
     <div className="flex items-start gap-3 py-2.5 border-b border-nea-border last:border-0">
-      <div className="w-28 shrink-0 pt-0.5">
-        <span className={`font-ui text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+      <div className="w-28 shrink-0 pt-0.5 min-w-0">
+        <span className={`font-ui text-[10px] font-semibold px-1.5 py-0.5 rounded block truncate max-w-full ${
           a.category === "portfolio" ? "bg-nea-blue-light text-nea-blue" : "text-nea-muted"
         }`}>
           {a.company}
@@ -138,17 +138,17 @@ export default function DigestPage() {
         {digest && (
           <div className="space-y-6 max-w-4xl">
             {/* Stats row */}
-            <div className="flex items-center gap-5 pb-4 border-b border-nea-border">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pb-4 border-b border-nea-border">
               <div>
                 <span className="font-ui text-xl font-semibold text-nea-dark tabular-nums">{digest.stats.total_signals}</span>
                 <span className="font-ui text-xs text-nea-muted ml-1.5">signals</span>
               </div>
-              <div className="w-px h-5 bg-nea-border" />
+              <div className="w-px h-5 bg-nea-border hidden sm:block" />
               <div>
                 <span className="font-ui text-xl font-semibold text-nea-dark tabular-nums">{digest.stats.companies_covered}</span>
                 <span className="font-ui text-xs text-nea-muted ml-1.5">companies</span>
               </div>
-              <div className="w-px h-5 bg-nea-border" />
+              <div className="w-px h-5 bg-nea-border hidden sm:block" />
               <div>
                 <span className="font-ui text-sm font-semibold text-nea-blue tabular-nums">{digest.stats.portfolio_signals}</span>
                 <span className="font-ui text-xs text-nea-muted ml-1.5">portfolio</span>
@@ -157,7 +157,7 @@ export default function DigestPage() {
                 <span className="font-ui text-sm font-semibold text-nea-mid tabular-nums">{digest.stats.competitor_signals}</span>
                 <span className="font-ui text-xs text-nea-muted ml-1.5">competitor</span>
               </div>
-              <div className="w-px h-5 bg-nea-border" />
+              <div className="w-px h-5 bg-nea-border hidden sm:block" />
               <div>
                 <span className="font-ui text-sm font-semibold text-green-600 tabular-nums">↑{digest.sentiment_rollup.positive}</span>
                 <span className="font-ui text-xs text-nea-muted ml-1">positive</span>

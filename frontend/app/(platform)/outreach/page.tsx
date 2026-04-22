@@ -87,7 +87,7 @@ export default function OutreachPage() {
   return (
     <div className="flex h-full">
       {/* Config panel */}
-      <div className="w-68 shrink-0 border-r border-nea-border bg-nea-surface overflow-y-auto flex flex-col" style={{ width: "17rem" }}>
+      <div className="w-72 shrink-0 border-r border-nea-border bg-nea-surface overflow-y-auto flex flex-col">
         <div className="h-12 px-5 border-b border-nea-border bg-white flex items-center shrink-0">
           <h1 className="font-ui text-sm font-semibold text-nea-dark">Outreach</h1>
         </div>
@@ -212,19 +212,21 @@ export default function OutreachPage() {
         {result && !loading && (
           <div className="max-w-2xl">
             {/* Result meta */}
-            <div className="flex items-center gap-2 mb-4 flex-wrap">
-              <span className="font-ui text-lg font-semibold text-nea-dark">{result.company_name}</span>
-              <span className="font-ui text-xs px-2 py-0.5 rounded bg-nea-blue text-white">{selInv?.name ?? result.investor_key}</span>
-              {result.context_type && (
-                <span className="font-ui text-xs px-2 py-0.5 rounded border border-nea-border text-nea-muted">
-                  {result.context_type.replace(/_/g, " ")}
-                </span>
-              )}
+            <div className="mb-4">
+              <div className="flex items-center gap-2 flex-wrap min-w-0">
+                <span className="font-ui text-lg font-semibold text-nea-dark break-words">{result.company_name}</span>
+                <span className="font-ui text-xs px-2 py-0.5 rounded bg-nea-blue text-white">{selInv?.name ?? result.investor_key}</span>
+                {result.context_type && (
+                  <span className="font-ui text-xs px-2 py-0.5 rounded border border-nea-border text-nea-muted">
+                    {result.context_type.replace(/_/g, " ")}
+                  </span>
+                )}
+              </div>
               {result.contact_name && (
-                <div className="ml-auto flex items-center gap-1.5 font-ui text-xs text-nea-muted">
-                  To: {result.contact_name}{result.contact_title ? ` (${result.contact_title})` : ""}
+                <div className="mt-1.5 flex items-center gap-1.5 font-ui text-xs text-nea-muted min-w-0">
+                  <span className="break-words">To: {result.contact_name}{result.contact_title ? ` (${result.contact_title})` : ""}</span>
                   {result.contact_linkedin && (
-                    <a href={result.contact_linkedin} target="_blank" rel="noopener noreferrer" className="text-nea-muted hover:text-nea-blue">
+                    <a href={result.contact_linkedin} target="_blank" rel="noopener noreferrer" className="text-nea-muted hover:text-nea-blue shrink-0">
                       <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
                       </svg>
@@ -239,7 +241,7 @@ export default function OutreachPage() {
               {result.subject && (
                 <div className="px-5 py-2.5 border-b border-nea-border bg-nea-surface flex items-baseline gap-2">
                   <span className="font-ui text-[11px] font-semibold text-nea-muted uppercase tracking-wide shrink-0">Subject</span>
-                  <span className="font-ui text-sm font-semibold text-nea-dark">{result.subject}</span>
+                  <span className="font-ui text-sm font-semibold text-nea-dark min-w-0 break-words">{result.subject}</span>
                 </div>
               )}
               {fbMode === "editing"
