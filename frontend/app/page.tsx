@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+const NEA_FILTER = "brightness(0) saturate(100%) invert(25%) sepia(60%) saturate(700%) hue-rotate(180deg) brightness(80%)";
+
 const workflows = [
   {
     href: "/briefing",
@@ -39,55 +41,52 @@ const workflows = [
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-nea-shell flex flex-col">
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-        <div className="animate-logo-in">
-          <Image
-            src="/nea-logo.png"
-            alt="NEA"
-            width={220}
-            height={88}
-            priority
-            className="select-none animate-logo-float"
-            style={{ filter: "brightness(0) saturate(100%) invert(25%) sepia(60%) saturate(700%) hue-rotate(180deg) brightness(80%)" }}
-          />
-        </div>
-        <h1
-          className="font-ui text-xl font-medium text-nea-dark mt-8 animate-fade-up"
-          style={{ animationDelay: "300ms" }}
-        >
-          How can I help?
-        </h1>
-      </main>
+    <div className="min-h-screen bg-zinc-50 flex flex-col">
+      <main className="flex-1 flex flex-col items-center justify-center px-6">
+        <div className="w-full max-w-sm">
 
-      <div
-        className="px-6 pb-10 animate-fade-up"
-        style={{ animationDelay: "550ms" }}
-      >
-        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-3">
-          {workflows.map((w) => (
-            <Link
-              key={w.href}
-              href={w.href}
-              className="bg-white rounded-lg border border-nea-border p-4 hover:border-nea-blue/40 hover:shadow-sm transition-all group flex flex-col gap-2"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded bg-nea-blue-light text-nea-blue flex items-center justify-center shrink-0 group-hover:bg-nea-blue group-hover:text-white transition-colors">
+          {/* Logo */}
+          <div className="flex justify-center mb-8 animate-logo-in">
+            <Image
+              src="/nea-logo.png"
+              alt="NEA"
+              width={160}
+              height={64}
+              priority
+              className="select-none"
+              style={{ filter: NEA_FILTER }}
+            />
+          </div>
+
+          {/* Workflow list */}
+          <div className="flex flex-col gap-2 animate-fade-up" style={{ animationDelay: "150ms" }}>
+            {workflows.map((w) => (
+              <Link
+                key={w.href}
+                href={w.href}
+                className="group flex items-center gap-3.5 px-4 py-3.5 bg-white border border-zinc-200 rounded-xl hover:border-nea-blue/40 hover:shadow-sm transition-all"
+              >
+                <div className="w-8 h-8 rounded-lg bg-nea-blue-light text-nea-blue flex items-center justify-center shrink-0 group-hover:bg-nea-blue group-hover:text-white transition-colors">
                   {w.icon}
                 </div>
-                <span className="font-ui text-sm font-semibold text-nea-dark">{w.label}</span>
-              </div>
-              <p className="font-ui text-xs text-nea-muted leading-relaxed">{w.description}</p>
-            </Link>
-          ))}
-        </div>
-      </div>
+                <p className="flex-1 text-sm font-medium text-zinc-900">{w.label}</p>
+                <svg
+                  className="w-4 h-4 text-zinc-300 group-hover:text-zinc-500 group-hover:translate-x-0.5 transition-all shrink-0"
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 18l6-6-6-6" />
+                </svg>
+              </Link>
+            ))}
+          </div>
 
-      <footer className="shrink-0 px-6 py-4 border-t border-nea-border bg-white">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <span className="font-ui text-xs text-nea-muted">New Enterprise Associates</span>
-          <span className="font-ui text-xs text-nea-muted">Internal use only</span>
         </div>
+      </main>
+
+      <footer className="border-t border-zinc-200 px-6 py-4">
+        <p className="text-center text-xs text-zinc-400">
+          New Enterprise Associates · Internal use only
+        </p>
       </footer>
     </div>
   );

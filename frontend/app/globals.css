@@ -4,66 +4,44 @@
 @theme inline {
   --font-sans: var(--font-inter);
 
-  /* NEA Blue */
-  --color-nea-blue: #1B5276;
+  /* NEA brand blue */
+  --color-nea-blue: #1b5276;
   --color-nea-blue-dark: #154360;
-  --color-nea-blue-light: #EAF2F8;
-  --color-nea-blue-mid: #5B8DB8;
+  --color-nea-blue-light: #e8f2f8;
+  --color-nea-blue-mid: #5b8db8;
 
-  /* Neutral */
-  --color-nea-dark: #111827;
-  --color-nea-mid: #6B7280;
-  --color-nea-muted: #9CA3AF;
-  --color-nea-surface: #F9FAFB;
-  --color-nea-shell: #F1F3F5;
-  --color-nea-border: #E5E7EB;
+  /* Neutral aliases — map to zinc so existing classes keep working */
+  --color-nea-dark: #18181b;
+  --color-nea-mid: #71717a;
+  --color-nea-muted: #a1a1aa;
+  --color-nea-surface: #ffffff;
+  --color-nea-shell: #fafafa;
+  --color-nea-border: #e4e4e7;
 }
 
 .font-ui {
   font-family: var(--font-inter), system-ui, sans-serif;
 }
 
-@keyframes card-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.animate-card-in {
-  animation: card-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
 @keyframes logo-in {
-  from { opacity: 0; transform: scale(0.92) translateY(10px); }
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
-
 .animate-logo-in {
-  animation: logo-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@keyframes logo-float {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-6px); }
-}
-
-.animate-logo-float {
-  animation: logo-float 5s ease-in-out 0.9s infinite;
+  animation: logo-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
 .animate-fade-up {
-  animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-logo-in,
-  .animate-logo-float,
-  .animate-fade-up,
-  .animate-card-in {
+  .animate-fade-up {
     animation: none !important;
   }
 }

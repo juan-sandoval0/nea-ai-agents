@@ -22,6 +22,9 @@ const CTX_TYPES = [
   { value: "stealth_founder_outreach",      label: "Stealth founder outreach" },
 ];
 
+const inputCls = "w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm text-zinc-900 placeholder:text-zinc-400 bg-white focus:outline-none focus:ring-2 focus:ring-nea-blue/20 focus:border-nea-blue transition-colors";
+const labelCls = "block text-xs font-medium text-zinc-700 mb-1.5";
+
 export default function OutreachPage() {
   const { getToken } = useAuth();
   const fid = useId();
@@ -86,17 +89,17 @@ export default function OutreachPage() {
 
   return (
     <div className="flex h-full">
+
       {/* Config panel */}
-      <div className="w-72 shrink-0 border-r border-nea-border bg-nea-surface overflow-y-auto flex flex-col">
-        <div className="h-12 px-5 border-b border-nea-border bg-white flex items-center shrink-0">
-          <h1 className="font-ui text-sm font-semibold text-nea-dark">Outreach</h1>
+      <div className="w-64 shrink-0 border-r border-zinc-200 bg-zinc-50 overflow-y-auto flex flex-col">
+        <div className="h-14 px-5 border-b border-zinc-200 bg-white flex items-center shrink-0">
+          <h1 className="text-sm font-semibold text-zinc-900">Outreach</h1>
         </div>
 
-        <div className="flex-1 px-4 py-4 space-y-4">
+        <div className="flex-1 px-4 py-5 space-y-5">
+
           <div>
-            <label htmlFor={fid + "-co"} className="font-ui block text-xs font-semibold text-nea-dark mb-1.5">
-              Company Domain
-            </label>
+            <label htmlFor={fid + "-co"} className={labelCls}>Company Domain</label>
             <input
               id={fid + "-co"}
               type="text"
@@ -104,71 +107,69 @@ export default function OutreachPage() {
               value={company}
               onChange={e => setCompany(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleGenerate()}
-              className="font-ui w-full px-3 py-2 rounded-md border border-nea-border text-sm text-nea-dark placeholder:text-nea-muted focus:outline-none focus:ring-2 focus:ring-nea-blue/20 focus:border-nea-blue bg-white"
+              className={inputCls}
             />
           </div>
 
           <div>
-            <label htmlFor={fid + "-inv"} className="font-ui block text-xs font-semibold text-nea-dark mb-1.5">
-              Investor Voice
-            </label>
+            <label htmlFor={fid + "-inv"} className={labelCls}>Investor Voice</label>
             <select
               id={fid + "-inv"}
               value={investor}
               onChange={e => setInvestor(e.target.value)}
-              className="font-ui w-full px-3 py-2 rounded-md border border-nea-border text-sm text-nea-dark bg-white focus:outline-none focus:ring-2 focus:ring-nea-blue/20 focus:border-nea-blue"
+              className={inputCls}
             >
               {INVESTORS.map(inv => <option key={inv.key} value={inv.key}>{inv.name}</option>)}
             </select>
-            {selInv && <p className="font-ui text-[11px] text-nea-muted mt-1">{selInv.role}</p>}
+            {selInv && <p className="text-[11px] text-zinc-400 mt-1">{selInv.role}</p>}
           </div>
 
           <div>
-            <label className="font-ui block text-xs font-semibold text-nea-dark mb-1.5">Format</label>
-            <div className="flex rounded-md border border-nea-border overflow-hidden">
+            <label className={labelCls}>Format</label>
+            <div className="flex rounded-lg border border-zinc-300 overflow-hidden">
               {(["email", "linkedin"] as const).map(f => (
                 <button key={f} onClick={() => setFormat(f)}
-                  className={"flex-1 py-1.5 font-ui text-sm font-medium transition-colors " + (format === f ? "bg-nea-blue text-white" : "text-nea-mid hover:bg-nea-surface bg-white")}>
+                  className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                    format === f ? "bg-nea-blue text-white" : "text-zinc-500 hover:bg-zinc-50 bg-white"
+                  }`}>
                   {f === "email" ? "Email" : "LinkedIn"}
                 </button>
               ))}
             </div>
           </div>
 
+          {/* Advanced toggle */}
           <div>
             <button
               onClick={() => setAdvanced(v => !v)}
-              className="font-ui flex items-center gap-1 text-xs text-nea-mid hover:text-nea-blue transition-colors"
+              className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-600 transition-colors"
             >
-              <svg className={"w-3 h-3 transition-transform " + (advanced ? "rotate-90" : "")} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`w-3 h-3 transition-transform ${advanced ? "rotate-90" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
               Advanced options
             </button>
             {advanced && (
-              <div className="mt-3 space-y-3 pl-3 border-l-2 border-nea-border">
+              <div className="mt-3 space-y-3 pl-3 border-l-2 border-zinc-200">
                 <div>
-                  <label className="font-ui block text-xs font-medium text-nea-mid mb-1">Contact Name</label>
+                  <label className={labelCls}>Contact Name</label>
                   <input
                     type="text"
                     placeholder="Patrick Collison"
                     value={contact}
                     onChange={e => setContact(e.target.value)}
-                    className="font-ui w-full px-3 py-1.5 rounded-md border border-nea-border text-sm text-nea-dark placeholder:text-nea-muted focus:outline-none focus:ring-2 focus:ring-nea-blue/20 bg-white"
+                    className={inputCls}
                   />
                 </div>
                 <div>
-                  <label className="font-ui block text-xs font-medium text-nea-mid mb-1">Context Type</label>
-                  <select
-                    value={ctx}
-                    onChange={e => setCtx(e.target.value)}
-                    className="font-ui w-full px-3 py-1.5 rounded-md border border-nea-border text-sm text-nea-dark bg-white focus:outline-none focus:ring-2 focus:ring-nea-blue/20"
-                  >
+                  <label className={labelCls}>Context Type</label>
+                  <select value={ctx} onChange={e => setCtx(e.target.value)} className={inputCls}>
                     {CTX_TYPES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                   </select>
                 </div>
-                <label className="font-ui flex items-center gap-2 cursor-pointer text-xs text-nea-mid">
-                  <input type="checkbox" checked={skipIngest} onChange={e => setSkipIngest(e.target.checked)} className="rounded border-nea-border" />
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-500">
+                  <input type="checkbox" checked={skipIngest} onChange={e => setSkipIngest(e.target.checked)}
+                    className="rounded border-zinc-300" />
                   Use cached company data
                 </label>
               </div>
@@ -178,55 +179,61 @@ export default function OutreachPage() {
           <button
             onClick={handleGenerate}
             disabled={loading || !company.trim()}
-            className="font-ui w-full py-2 rounded-md bg-nea-blue text-white text-sm font-semibold hover:bg-nea-blue-dark disabled:opacity-40 transition-colors"
+            className="w-full py-2 rounded-lg bg-nea-blue text-white text-sm font-semibold hover:bg-nea-blue-dark disabled:opacity-40 transition-colors"
           >
             {loading ? "Generating…" : "Run Outreach"}
           </button>
+
         </div>
       </div>
 
       {/* Result panel */}
       <div className="flex-1 overflow-y-auto px-7 py-6">
+
         {!result && !loading && !error && (
           <div className="flex flex-col items-center justify-center h-full gap-2 text-center">
-            <div className="w-8 h-8 rounded-lg bg-nea-surface border border-nea-border flex items-center justify-center mb-1">
-              <svg className="w-4 h-4 text-nea-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-10 h-10 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center mb-2">
+              <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
-            <p className="font-ui text-sm text-nea-muted">Enter a company domain and click Run Outreach</p>
+            <p className="text-sm text-zinc-500">Configure and run outreach on the left</p>
           </div>
         )}
 
         {error && (
-          <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 mb-5 font-ui">{error}</div>
+          <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 mb-5">{error}</div>
         )}
 
         {loading && (
-          <div className="flex flex-col items-center justify-center h-full gap-4">
-            <div className="w-6 h-6 border-2 border-nea-blue-light border-t-nea-blue rounded-full animate-spin" />
-            <p className="font-ui text-sm text-nea-muted">Generating outreach — about 20 seconds</p>
+          <div className="flex flex-col items-center justify-center h-full gap-3">
+            <div className="w-5 h-5 border-2 border-zinc-200 border-t-nea-blue rounded-full animate-spin" />
+            <p className="text-sm text-zinc-400">Generating outreach — about 20 seconds</p>
           </div>
         )}
 
         {result && !loading && (
           <div className="max-w-2xl">
-            {/* Result meta */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2 flex-wrap min-w-0">
-                <span className="font-ui text-lg font-semibold text-nea-dark break-words">{result.company_name}</span>
-                <span className="font-ui text-xs px-2 py-0.5 rounded bg-nea-blue text-white">{selInv?.name ?? result.investor_key}</span>
+
+            {/* Meta */}
+            <div className="mb-5">
+              <div className="flex items-center gap-2 flex-wrap min-w-0 mb-1">
+                <span className="text-lg font-semibold text-zinc-900 break-words">{result.company_name}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-nea-blue text-white font-medium">
+                  {selInv?.name ?? result.investor_key}
+                </span>
                 {result.context_type && (
-                  <span className="font-ui text-xs px-2 py-0.5 rounded border border-nea-border text-nea-muted">
+                  <span className="text-xs px-2 py-0.5 rounded-full border border-zinc-200 text-zinc-400">
                     {result.context_type.replace(/_/g, " ")}
                   </span>
                 )}
               </div>
               {result.contact_name && (
-                <div className="mt-1.5 flex items-center gap-1.5 font-ui text-xs text-nea-muted min-w-0">
-                  <span className="break-words">To: {result.contact_name}{result.contact_title ? ` (${result.contact_title})` : ""}</span>
+                <div className="flex items-center gap-1.5 text-xs text-zinc-400 min-w-0">
+                  <span>To: {result.contact_name}{result.contact_title ? ` (${result.contact_title})` : ""}</span>
                   {result.contact_linkedin && (
-                    <a href={result.contact_linkedin} target="_blank" rel="noopener noreferrer" className="text-nea-muted hover:text-nea-blue shrink-0">
+                    <a href={result.contact_linkedin} target="_blank" rel="noopener noreferrer"
+                      className="text-zinc-300 hover:text-nea-blue shrink-0 transition-colors">
                       <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
                       </svg>
@@ -237,27 +244,27 @@ export default function OutreachPage() {
             </div>
 
             {/* Message card */}
-            <div className="bg-white rounded-lg border border-nea-border overflow-hidden mb-4">
+            <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden mb-4">
               {result.subject && (
-                <div className="px-5 py-2.5 border-b border-nea-border bg-nea-surface flex items-baseline gap-2">
-                  <span className="font-ui text-[11px] font-semibold text-nea-muted uppercase tracking-wide shrink-0">Subject</span>
-                  <span className="font-ui text-sm font-semibold text-nea-dark min-w-0 break-words">{result.subject}</span>
+                <div className="px-5 py-3 border-b border-zinc-100 bg-zinc-50 flex items-baseline gap-2">
+                  <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide shrink-0">Subject</span>
+                  <span className="text-sm font-semibold text-zinc-900 min-w-0 break-words">{result.subject}</span>
                 </div>
               )}
               {fbMode === "editing"
                 ? <textarea
                     value={edited}
                     onChange={e => setEdited(e.target.value)}
-                    className="font-ui w-full px-5 py-4 text-sm text-nea-dark leading-relaxed focus:outline-none resize-none"
+                    className="w-full px-5 py-4 text-sm text-zinc-800 leading-relaxed focus:outline-none resize-none"
                     rows={18}
                   />
-                : <div className="font-ui px-5 py-4 text-sm text-nea-dark leading-relaxed whitespace-pre-wrap">{result.message}</div>
+                : <div className="px-5 py-4 text-sm text-zinc-800 leading-relaxed whitespace-pre-wrap">{result.message}</div>
               }
             </div>
 
             {/* Actions */}
             {fbMode === "done" ? (
-              <div className="flex items-center gap-2 font-ui text-sm text-green-700">
+              <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
@@ -265,31 +272,34 @@ export default function OutreachPage() {
               </div>
             ) : (
               <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  onClick={copyEmail}
-                  className="font-ui flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-nea-border text-xs text-nea-mid hover:border-nea-blue hover:text-nea-blue transition-colors"
-                >
+                <button onClick={copyEmail}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-500 hover:border-zinc-300 hover:text-zinc-700 transition-colors">
                   {copied ? "✓ Copied" : "Copy"}
                 </button>
                 <div className="flex items-center gap-1.5 ml-auto">
                   {fbMode === "editing" ? (
                     <>
-                      <button onClick={() => setFbMode("idle")} className="font-ui px-3 py-1.5 rounded-md border border-nea-border text-xs text-nea-mid hover:bg-nea-surface transition-colors">
+                      <button onClick={() => setFbMode("idle")}
+                        className="px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-500 hover:bg-zinc-50 transition-colors">
                         Cancel
                       </button>
-                      <button onClick={() => handleFeedback("edited")} disabled={fbBusy} className="font-ui px-4 py-1.5 rounded-md bg-nea-blue text-white text-xs font-semibold hover:bg-nea-blue-dark disabled:opacity-40 transition-colors">
+                      <button onClick={() => handleFeedback("edited")} disabled={fbBusy}
+                        className="px-4 py-1.5 rounded-lg bg-nea-blue text-white text-xs font-semibold hover:bg-nea-blue-dark disabled:opacity-40 transition-colors">
                         {fbBusy ? "Saving…" : "Save Edit"}
                       </button>
                     </>
                   ) : (
                     <>
-                      <button onClick={() => setFbMode("editing")} className="font-ui px-3 py-1.5 rounded-md border border-nea-border text-xs text-nea-mid hover:bg-nea-surface transition-colors">
+                      <button onClick={() => setFbMode("editing")}
+                        className="px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-500 hover:bg-zinc-50 transition-colors">
                         Edit
                       </button>
-                      <button onClick={() => handleFeedback("approved")} disabled={fbBusy} className="font-ui px-3 py-1.5 rounded-md bg-green-50 text-green-700 border border-green-200 text-xs font-semibold hover:bg-green-100 disabled:opacity-40 transition-colors">
+                      <button onClick={() => handleFeedback("approved")} disabled={fbBusy}
+                        className="px-3 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200 text-xs font-semibold hover:bg-green-100 disabled:opacity-40 transition-colors">
                         Approve
                       </button>
-                      <button onClick={() => handleFeedback("rejected")} disabled={fbBusy} className="font-ui px-3 py-1.5 rounded-md bg-red-50 text-red-700 border border-red-200 text-xs font-semibold hover:bg-red-100 disabled:opacity-40 transition-colors">
+                      <button onClick={() => handleFeedback("rejected")} disabled={fbBusy}
+                        className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 border border-red-200 text-xs font-semibold hover:bg-red-100 disabled:opacity-40 transition-colors">
                         Reject
                       </button>
                     </>
@@ -297,6 +307,7 @@ export default function OutreachPage() {
                 </div>
               </div>
             )}
+
           </div>
         )}
       </div>
