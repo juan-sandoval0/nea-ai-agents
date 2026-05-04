@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
+import ReactMarkdown from "react-markdown";
 import {
   generateBriefing, listBriefings, getBriefing,
   type BriefingResponse, type BriefingListItem,
@@ -173,16 +174,21 @@ export default function BriefingPage() {
                 </Section>
               )}
 
-              {result.why_it_matters && result.why_it_matters.length > 0 && (
-                <Section title="Why This Meeting Matters">
-                  <ul className="space-y-2">
-                    {result.why_it_matters.map((p, i) => (
-                      <li key={i} className="flex gap-2 text-sm text-zinc-700">
-                        <span className="text-nea-blue shrink-0 mt-0.5 font-bold">·</span>
-                        <span className="leading-relaxed">{p}</span>
-                      </li>
-                    ))}
-                  </ul>
+              {result.meeting_prep && (
+                <Section title="For This Meeting">
+                  <div className="space-y-2 text-sm text-zinc-700 leading-relaxed">
+                    <ReactMarkdown components={{
+                      h1: ({ children }) => <p className="font-semibold text-zinc-900">{children}</p>,
+                      h2: ({ children }) => <p className="font-semibold text-zinc-900">{children}</p>,
+                      h3: ({ children }) => <p className="font-semibold text-zinc-800">{children}</p>,
+                      strong: ({ children }) => <strong className="font-semibold text-zinc-900">{children}</strong>,
+                      em: ({ children }) => <em className="italic">{children}</em>,
+                      ul: ({ children }) => <ul className="space-y-1 pl-4 list-disc">{children}</ul>,
+                      ol: ({ children }) => <ol className="space-y-1 pl-4 list-decimal">{children}</ol>,
+                      li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                      p: ({ children }) => <p className="leading-relaxed">{children}</p>,
+                    }}>{result.meeting_prep}</ReactMarkdown>
+                  </div>
                 </Section>
               )}
 
@@ -262,6 +268,19 @@ export default function BriefingPage() {
                 </Section>
               )}
 
+              {result.why_it_matters && result.why_it_matters.length > 0 && (
+                <Section title="Why This Meeting Matters">
+                  <ul className="space-y-2">
+                    {result.why_it_matters.map((p, i) => (
+                      <li key={i} className="flex gap-2 text-sm text-zinc-700">
+                        <span className="text-nea-blue shrink-0 mt-0.5 font-bold">·</span>
+                        <span className="leading-relaxed">{p}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Section>
+              )}
+
               {result.news.length > 0 && (
                 <Section title="In the News">
                   <div className="divide-y divide-zinc-100">
@@ -307,12 +326,6 @@ export default function BriefingPage() {
                       </div>
                     );
                   })}
-                </Section>
-              )}
-
-              {result.meeting_prep && (
-                <Section title="For This Meeting">
-                  <div className="text-sm text-zinc-700 leading-relaxed whitespace-pre-wrap">{result.meeting_prep}</div>
                 </Section>
               )}
 
