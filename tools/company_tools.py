@@ -6,8 +6,7 @@ Tools for fetching, storing, and retrieving company data.
 Used by multiple agents for company intelligence.
 
 Implemented Sources:
-- Harmonic: Company profiles, founders, signals
-- Swarm: Founder background enrichment
+- Harmonic: Company profiles, founders, person backgrounds
 - Tavily: Website intelligence/updates
 - Parallel Search: News articles, event signals
 
@@ -25,7 +24,7 @@ Usage:
     # Ingest all data for a company
     result = ingest_company("stripe.com")
 
-    # Enrich founder backgrounds with Swarm data
+    # Enrich founder backgrounds with Harmonic data
     enriched = enrich_founder_backgrounds("stripe.com")
 
     # Get complete bundle for briefing
@@ -55,9 +54,10 @@ from core.database import (
     get_company_bundle_from_supabase,
     patch_company_website_update,
 )
-from core.clients.harmonic import HarmonicClient, HarmonicCompany, HarmonicAPIError
+from core.clients.harmonic import HarmonicClient, HarmonicCompany, HarmonicPerson, HarmonicAPIError
 from core.clients.tavily import TavilyClient, TavilyAPIError
-from core.clients.swarm import SwarmClient, SwarmAPIError, FounderProfile
+# Swarm integration disabled - using Harmonic for all person data
+# from core.clients.swarm import SwarmClient, SwarmAPIError, FounderProfile
 from core.clients.parallel_search import (
     ParallelSearchClient,
     ParallelSearchError,
@@ -683,49 +683,140 @@ Write 2-3 bullet points (•) focusing on their PRIOR experience and credentials
 
 
 # =============================================================================
-# TOOL 2b: enrich_founder_backgrounds (Swarm)
+# TOOL 2b: enrich_founder_backgrounds (Harmonic)
 # =============================================================================
+
+def _format_harmonic_background(person_data: dict, current_company: Optional[str] = None) -> str:
+    """
+    Format a founder background from Harmonic person data.
+
+    Converts experience, education, and highlights into readable text.
+
+    Args:
+        person_data: Raw Harmonic person API response
+        current_company: Name of current company to exclude from background
+
+    Returns:
+        Formatted background string
+    """
+    sections = []
+
+    # Extract experience (skip current position at current_company)
+    experience = person_data.get("experience", []) or []
+    prior_experience = []
+
+    for exp in experience:
+        company_name = exp.get("company_name", exp.get("companyName", ""))
+        title = exp.get("title", "")
+        is_current = exp.get("is_current_position", False)
+
+        # Skip if this is current role at the company we're analyzing
+        if is_current and current_company and company_name and current_company.lower() in company_name.lower():
+            continue
+
+        if title and company_name:
+            date_range = []
+            start = exp.get("start_date", exp.get("startDate"))
+            end = exp.get("end_date", exp.get("endDate"))
+
+            if start:
+                date_range.append(start)
+            if end:
+                date_range.append(end)
+            elif is_current:
+                date_range.append("Present")
+
+            date_str = " - ".join(date_range) if date_range else ""
+            exp_line = f"{title} at {company_name}"
+            if date_str:
+                exp_line += f" ({date_str})"
+
+            prior_experience.append(exp_line)
+
+    if prior_experience:
+        # Limit to top 3-4 most recent positions
+        sections.append("Experience:\n" + "\n".join(f"• {exp}" for exp in prior_experience[:4]))
+
+    # Extract education
+    education = person_data.get("education", []) or []
+    education_lines = []
+
+    for edu in education:
+        school = edu.get("school", "")
+        degree = edu.get("degree", "")
+        field = edu.get("field", edu.get("field_of_study", ""))
+
+        if school:
+            edu_parts = []
+            if degree:
+                edu_parts.append(degree)
+            if field:
+                edu_parts.append(field)
+
+            edu_line = ", ".join(edu_parts) if edu_parts else "Studied"
+            edu_line += f" - {school}"
+
+            start_year = edu.get("start_year", edu.get("startYear"))
+            end_year = edu.get("end_year", edu.get("endYear"))
+            if start_year or end_year:
+                years = []
+                if start_year:
+                    years.append(str(start_year))
+                if end_year:
+                    years.append(str(end_year))
+                edu_line += f" ({'-'.join(years)})"
+
+            education_lines.append(edu_line)
+
+    if education_lines:
+        sections.append("Education:\n" + "\n".join(f"• {edu}" for edu in education_lines[:3]))
+
+    # Extract highlights (achievements, awards, publications)
+    highlights = person_data.get("highlights", []) or []
+    highlight_lines = []
+
+    for highlight in highlights[:5]:  # Limit to top 5
+        highlight_text = highlight.get("text", "")
+        highlight_type = highlight.get("type", "")
+
+        if highlight_text:
+            if highlight_type and highlight_type != "OTHER":
+                highlight_lines.append(f"{highlight_type}: {highlight_text}")
+            else:
+                highlight_lines.append(highlight_text)
+
+    if highlight_lines:
+        sections.append("Highlights:\n" + "\n".join(f"• {h}" for h in highlight_lines))
+
+    # If we have no meaningful data, return empty
+    if not sections:
+        return ""
+
+    return "\n\n".join(sections)
+
 
 def enrich_founder_backgrounds(company_id: str, summarize: bool = True) -> dict:
     """
-    Enrich founder backgrounds using Swarm API with batch async fetching.
+    Enrich founder backgrounds using Harmonic API with batch fetching.
 
     Fetches detailed profile information for all founders in a single batch
     API call, then updates the founders table with background text and sources.
-
-    STATUS: DISABLED - Swarm integration has been removed.
 
     Args:
         company_id: Company URL or domain
         summarize: If True, use OpenAI to create concise summaries (default: True)
 
     Returns:
-        Dict with enrichment results (always returns zero enrichments):
+        Dict with enrichment results:
         {
             "company_id": str,
-            "enriched_count": 0,
-            "skipped_count": 0,
-            "failed_count": 0,
-            "founders": [],
-            "skipped_reason": "Swarm integration disabled"
+            "enriched_count": int,
+            "skipped_count": int,
+            "failed_count": int,
+            "founders": list[dict],
         }
-
-    Founders will have basic info (name, title, LinkedIn) from Harmonic only.
     """
-    logger.info("Swarm integration disabled - skipping founder background enrichment")
-    return {
-        "company_id": normalize_company_id(company_id),
-        "enriched_count": 0,
-        "skipped_count": 0,
-        "failed_count": 0,
-        "founders": [],
-        "skipped_reason": "Swarm integration disabled",
-    }
-
-    # All Swarm enrichment code below has been disabled
-    # Founders will have basic info (name, title, LinkedIn) from Harmonic only
-
-    # normalized_id = normalize_company_id(company_id)
+    normalized_id = normalize_company_id(company_id)
 
     # Get existing founders from Supabase
     founders = read_founders_from_supabase(normalized_id)
@@ -780,62 +871,55 @@ def enrich_founder_backgrounds(company_id: str, summarize: bool = True) -> dict:
         logger.info(f"All founders already enriched for {normalized_id}")
         return results
 
-    # BATCH FETCH: Get all profiles in one API call
-    profiles_by_slug: dict[str, FounderProfile] = {}
+    # BATCH FETCH: Get all profiles in one API call from Harmonic
+    harmonic = HarmonicClient()
+    persons_by_url: dict[str, HarmonicPerson] = {}
 
     if linkedin_urls_to_fetch:
-        logger.info(f"Batch fetching {len(linkedin_urls_to_fetch)} LinkedIn profiles for {normalized_id}")
+        logger.info(f"Batch fetching {len(linkedin_urls_to_fetch)} LinkedIn profiles from Harmonic for {normalized_id}")
         try:
-            fetched_profiles = swarm.fetch_company_founders(
-                linkedin_urls_to_fetch,
-                company_name=company_name
-            )
-            # Index by LinkedIn slug for matching
-            for profile in fetched_profiles:
-                if profile.linkedin_slug:
-                    profiles_by_slug[profile.linkedin_slug.lower()] = profile
-                if profile.linkedin_url:
-                    # Also index by full URL for fallback matching
-                    profiles_by_slug[profile.linkedin_url.lower()] = profile
-            logger.info(f"Batch fetch returned {len(fetched_profiles)} profiles")
-        except SwarmAPIError as e:
-            logger.error(f"Batch Swarm fetch failed: {e}")
+            persons_by_url = harmonic.batch_lookup_persons(linkedin_urls_to_fetch)
+            logger.info(f"Batch fetch returned {len(persons_by_url)} profiles from Harmonic")
+        except HarmonicAPIError as e:
+            logger.error(f"Batch Harmonic fetch failed: {e}")
 
     # Process each founder with the fetched profiles
     for founder, founder_result in founders_to_enrich:
-        profile: Optional[FounderProfile] = None
+        person: Optional[HarmonicPerson] = None
 
-        # Try to find profile by LinkedIn URL
+        # Try to find person by LinkedIn URL (normalized matching)
         if founder.linkedin_url:
-            url_lower = founder.linkedin_url.lower()
-            # Try full URL match
-            if url_lower in profiles_by_slug:
-                profile = profiles_by_slug[url_lower]
-            else:
-                # Try slug extraction
-                slug = swarm._extract_linkedin_slug(founder.linkedin_url)
-                if slug:
-                    profile = profiles_by_slug.get(slug.lower())
+            normalized_url = founder.linkedin_url.lower().rstrip('/')
+            person = persons_by_url.get(normalized_url)
 
-        # Fallback: search by name (individual API call - only if batch didn't find)
-        if not profile:
+            # Try alternative normalizations if not found
+            if not person:
+                # Try without trailing slash
+                alt_url = founder.linkedin_url.rstrip('/')
+                person = persons_by_url.get(alt_url.lower())
+
+            # Try with www prefix if needed
+            if not person and not founder.linkedin_url.startswith('www.'):
+                www_url = founder.linkedin_url.replace('://', '://www.')
+                person = persons_by_url.get(www_url.lower().rstrip('/'))
+
+        # Fallback: try individual lookup if not in batch results
+        if not person and founder.linkedin_url:
             try:
-                swarm_profile = swarm.search_by_name_and_company(founder.name, company_name)
-                if swarm_profile:
-                    profile = swarm_profile.to_founder_profile()
-                    profile.startup_company = company_name
-            except SwarmAPIError as e:
-                logger.warning(f"Swarm name search failed for {founder.name}: {e}")
+                logger.info(f"Batch didn't find {founder.name}, trying individual lookup")
+                person = harmonic.lookup_person(founder.linkedin_url)
+            except HarmonicAPIError as e:
+                logger.warning(f"Individual Harmonic lookup failed for {founder.name}: {e}")
 
-        if not profile:
+        if not person:
             founder_result["status"] = "failed"
-            founder_result["reason"] = "Profile not found in Swarm"
+            founder_result["reason"] = "Profile not found in Harmonic"
             results["failed_count"] += 1
             results["founders"].append(founder_result)
             continue
 
-        # Format background
-        raw_background = profile.format_background()
+        # Format background from Harmonic person data
+        raw_background = _format_harmonic_background(person.raw_data, current_company=company_name)
 
         if not raw_background or len(raw_background) < 20:
             founder_result["status"] = "failed"
@@ -855,18 +939,16 @@ def enrich_founder_backgrounds(company_id: str, summarize: bool = True) -> dict:
         else:
             background = raw_background
 
-        # Format sources as string for storage
+        # Format sources (LinkedIn URL from Harmonic)
         sources = []
-        if profile.linkedin_url:
-            sources.append({"network": "linkedin", "url": profile.linkedin_url})
-        if profile.twitter_url:
-            sources.append({"network": "twitter", "url": profile.twitter_url})
+        if person.linkedin_url:
+            sources.append({"network": "linkedin", "url": person.linkedin_url})
 
         sources_str = ""
         if sources:
             source_urls = [s["url"] for s in sources if s.get("url")]
             if source_urls:
-                sources_str = "\n\n---\nSources: " + ", ".join(source_urls[:3])
+                sources_str = "\n\n---\nSources: " + ", ".join(source_urls)
 
         # Combine background with sources
         full_background = background + sources_str if background else None
@@ -880,15 +962,12 @@ def enrich_founder_backgrounds(company_id: str, summarize: bool = True) -> dict:
 
         # Update founder in database
         founder.background = full_background
-        founder.source = "swarm"
+        founder.source = "harmonic"
         founder.observed_at = datetime.utcnow().isoformat()
 
-        # Also update LinkedIn URL if we found one
-        if profile.linkedin_url and not founder.linkedin_url:
-            if not profile.linkedin_url.startswith("http"):
-                founder.linkedin_url = "https://" + profile.linkedin_url
-            else:
-                founder.linkedin_url = profile.linkedin_url
+        # Also update LinkedIn URL if we found one and founder doesn't have it
+        if person.linkedin_url and not founder.linkedin_url:
+            founder.linkedin_url = person.linkedin_url
 
         sync_founders_to_supabase([founder], company_name=company_name)
 

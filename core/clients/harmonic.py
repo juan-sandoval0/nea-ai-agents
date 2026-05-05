@@ -667,3 +667,51 @@ class HarmonicClient:
             if e.status_code == 404:
                 return None
             raise
+
+    def batch_lookup_persons(self, linkedin_urls: list[str]) -> dict[str, HarmonicPerson]:
+        """
+        Batch lookup persons by LinkedIn URLs.
+
+        Uses POST /persons/batchGet endpoint to fetch up to 500 people efficiently.
+
+        Args:
+            linkedin_urls: List of LinkedIn profile URLs (max 500)
+
+        Returns:
+            Dict mapping LinkedIn URL (normalized) to HarmonicPerson object
+        """
+        if not linkedin_urls:
+            return {}
+
+        # Harmonic supports up to 500 in a batch
+        if len(linkedin_urls) > 500:
+            logger.warning(f"Batch size {len(linkedin_urls)} exceeds limit of 500, truncating")
+            linkedin_urls = linkedin_urls[:500]
+
+        try:
+            # Remove duplicates while preserving order
+            unique_urls = list(dict.fromkeys(linkedin_urls))
+
+            data = self._request("POST", "/persons/batchGet", json_data={"linkedinUrls": unique_urls})
+
+            # Parse results - Harmonic returns array of person objects
+            results = data.get("results", []) if data else []
+
+            # Build lookup dict by LinkedIn URL (normalized for matching)
+            persons_by_url = {}
+            for person_data in results:
+                if person_data:
+                    person = HarmonicPerson.from_api_response(person_data)
+                    # Index by the LinkedIn URL from response
+                    if person.linkedin_url:
+                        normalized_url = person.linkedin_url.lower().rstrip('/')
+                        persons_by_url[normalized_url] = person
+
+            logger.info(f"Batch fetched {len(persons_by_url)} persons from {len(unique_urls)} LinkedIn URLs")
+            return persons_by_url
+
+        except HarmonicAPIError as e:
+            if e.status_code == 404:
+                return {}
+            logger.error(f"Batch person lookup failed: {e}")
+            raise
