@@ -693,44 +693,39 @@ def enrich_founder_backgrounds(company_id: str, summarize: bool = True) -> dict:
     Fetches detailed profile information for all founders in a single batch
     API call, then updates the founders table with background text and sources.
 
-    STATUS: IMPLEMENTED (Swarm batch async + optional OpenAI summarization)
+    STATUS: DISABLED - Swarm integration has been removed.
 
     Args:
         company_id: Company URL or domain
         summarize: If True, use OpenAI to create concise summaries (default: True)
 
     Returns:
-        Dict with enrichment results:
+        Dict with enrichment results (always returns zero enrichments):
         {
             "company_id": str,
-            "enriched_count": int,
-            "skipped_count": int,
-            "failed_count": int,
-            "founders": [
-                {
-                    "name": str,
-                    "status": "enriched" | "skipped" | "failed",
-                    "reason": str (optional),
-                    "sources": list[dict] (if enriched),
-                }
-            ]
-        }
-
-    Returns early with zero counts if SWARM_API_KEY is not set (no error raised).
-    """
-    swarm = get_swarm_client()
-    if swarm is None:
-        logger.info("SWARM_API_KEY not set - skipping founder background enrichment")
-        return {
-            "company_id": normalize_company_id(company_id),
             "enriched_count": 0,
             "skipped_count": 0,
             "failed_count": 0,
             "founders": [],
-            "skipped_reason": "SWARM_API_KEY not set",
+            "skipped_reason": "Swarm integration disabled"
         }
 
-    normalized_id = normalize_company_id(company_id)
+    Founders will have basic info (name, title, LinkedIn) from Harmonic only.
+    """
+    logger.info("Swarm integration disabled - skipping founder background enrichment")
+    return {
+        "company_id": normalize_company_id(company_id),
+        "enriched_count": 0,
+        "skipped_count": 0,
+        "failed_count": 0,
+        "founders": [],
+        "skipped_reason": "Swarm integration disabled",
+    }
+
+    # All Swarm enrichment code below has been disabled
+    # Founders will have basic info (name, title, LinkedIn) from Harmonic only
+
+    # normalized_id = normalize_company_id(company_id)
 
     # Get existing founders from Supabase
     founders = read_founders_from_supabase(normalized_id)

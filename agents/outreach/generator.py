@@ -260,11 +260,11 @@ def _generate_stealth_outreach(
     """
     Generate a founder-centric outreach email for a stealth-mode contact.
 
-    Enriches the person via Swarm (LinkedIn scrape) and generates an email that
-    leads with the investor's thesis and the founder's background rather than
-    company details, since no public company exists to reference.
+    NOTE: Swarm integration has been disabled. This function will use basic info only.
+    Previously enriched via Swarm (LinkedIn scrape), now generates email with
+    investor's thesis and basic founder info (name/title from input parameters).
     """
-    from core.clients import SwarmClient
+    # from core.clients import SwarmClient  # DISABLED - Swarm integration removed
 
     result = {
         "company_id": founder_linkedin_url,
@@ -290,29 +290,31 @@ def _generate_stealth_outreach(
     }
 
     try:
-        # Step 1: Enrich via Swarm
+        # Step 1: Enrich via Swarm (DISABLED - Swarm integration removed)
         swarm_succeeded = False
         background_text = ""
         resolved_name = contact_name or "there"
         resolved_title = "Building in stealth"
 
-        try:
-            swarm = SwarmClient()
-            profile = swarm.get_profile_by_linkedin(founder_linkedin_url)
-            if profile:
-                background_text = profile.format_background()
-                if profile.full_name:
-                    resolved_name = profile.full_name
-                if profile.current_title:
-                    resolved_title = profile.current_title
-                result["contact_name"] = resolved_name
-                result["contact_title"] = resolved_title
-                result["data_sources"]["founders"] = 1
-                swarm_succeeded = True
-            else:
-                logger.warning(f"Swarm returned no profile for {founder_linkedin_url}")
-        except Exception as swarm_err:
-            logger.warning(f"Swarm enrichment failed for stealth outreach: {swarm_err}")
+        # Swarm enrichment disabled - using basic info only
+        logger.info("Swarm integration disabled - stealth outreach will use basic info only")
+        # try:
+        #     swarm = SwarmClient()
+        #     profile = swarm.get_profile_by_linkedin(founder_linkedin_url)
+        #     if profile:
+        #         background_text = profile.format_background()
+        #         if profile.full_name:
+        #             resolved_name = profile.full_name
+        #         if profile.current_title:
+        #             resolved_title = profile.current_title
+        #         result["contact_name"] = resolved_name
+        #         result["contact_title"] = resolved_title
+        #         result["data_sources"]["founders"] = 1
+        #         swarm_succeeded = True
+        #     else:
+        #         logger.warning(f"Swarm returned no profile for {founder_linkedin_url}")
+        # except Exception as swarm_err:
+        #     logger.warning(f"Swarm enrichment failed for stealth outreach: {swarm_err}")
 
         # Step 2: Build founder context string
         founder_context_parts = [

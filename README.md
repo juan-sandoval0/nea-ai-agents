@@ -119,7 +119,7 @@ server (`uvicorn services.api:app --reload --port 8000`) in another terminal.
              │
              ▼
 ┌──────────────────────────────────────────────────────────────────────────┐
-│  Harmonic  •  Tavily  •  Parallel  •  Swarm  •  HackerNews  •  Claude    │
+│  Harmonic  •  Tavily  •  Parallel  •  HackerNews  •  Claude            │
 │                                                                           │
 │  Supabase (Postgres): company_core, founders, briefing_news,              │
 │                       briefing_signals, briefing_competitors,             │
@@ -134,7 +134,7 @@ Batch (scheduled on GitHub Actions — see .github/workflows/):
 ### Data Flow
 
 1. **Input**: Company URL (e.g., `stripe.com`) from the UI or CLI
-2. **Data Ingestion**: `tools/company_tools.py` fetches from Harmonic, Parallel, Tavily, Swarm
+2. **Data Ingestion**: `tools/company_tools.py` fetches from Harmonic, Parallel, Tavily
 3. **Persistence**: Company bundle written to Supabase (no local SQLite)
 4. **LLM Synthesis**: Claude generates the briefing / outreach / digest
 5. **Response**: Returned to the browser; history also saved to Supabase
@@ -151,7 +151,7 @@ Batch (scheduled on GitHub Actions — see .github/workflows/):
 
 **How it works**:
 ```
-URL Input → ingest_company() (Harmonic + Swarm + Tavily → Supabase) → generate_briefing() → Claude
+URL Input → ingest_company() (Harmonic + Tavily → Supabase) → generate_briefing() → Claude
 ```
 
 `ingest_company()` populates the company bundle (profile, founders, signals, news, competitors)
@@ -391,7 +391,7 @@ cp .env.example .env
 |----------|---------|---------|-------------|
 | `TAVILY_API_KEY` | Website intelligence | Website signals | [tavily.com](https://tavily.com/) (FREE: 1K credits/month) |
 | `PARALLEL_API_KEY` | News search | News articles | [parallel.ai](https://parallel.ai/) |
-| `SWARM_API_KEY` | Founder profiles | Background enrichment | [theswarm.com](https://theswarm.com/) |
+| ~~`SWARM_API_KEY`~~ | ~~Founder profiles~~ | ~~Background enrichment~~ | **DISABLED** (integration removed) |
 | `OPENAI_API_KEY` | Embeddings | News-dedupe embeddings | [platform.openai.com](https://platform.openai.com/) |
 | `LANGSMITH_API_KEY` | Tracing | Debugging/observability | [smith.langchain.com](https://smith.langchain.com/) |
 | `LANGSMITH_TRACING` | Tracing toggle | `true` to enable | — |
@@ -442,7 +442,7 @@ DEFAULT_LLM_MODEL = "claude-sonnet-4-5-20250929"  # Change this
 | Harmonic | `core/clients/harmonic.py` | Company data source |
 | Tavily | `core/clients/tavily.py` | Website intelligence |
 | Parallel Search | `core/clients/parallel_search.py` | News search |
-| Swarm | `core/clients/swarm.py` | Founder backgrounds |
+| ~~Swarm~~ | ~~`core/clients/swarm.py`~~ | **DISABLED** (integration removed) |
 | HackerNews | `core/clients/hackernews.py` | Secondary news/discussion signal |
 | Supabase | `core/clients/supabase_client.py` | Persistence backend |
 
@@ -478,7 +478,7 @@ the Databricks-ready versions of the same logic.
 | **Harmonic** | Included | Subscription-based |
 | **Tavily** | ~$0.02 | ~2 credits per crawl |
 | **Parallel Search** | ~$0.01 | Per search query |
-| **Swarm** | Varies | Per profile lookup |
+| ~~**Swarm**~~ | ~~Varies~~ | **DISABLED** (integration removed) |
 
 ### Monthly Projections
 
@@ -687,7 +687,7 @@ Logflare, and Papertrail.
 | `ANTHROPIC_API_KEY` | **Blocks generation** - required for LLM |
 | `TAVILY_API_KEY` | Website signals disabled; placeholder added |
 | `PARALLEL_API_KEY` | News search disabled; empty results |
-| `SWARM_API_KEY` | Founder backgrounds not enriched |
+| ~~`SWARM_API_KEY`~~ | **N/A** (integration permanently disabled) |
 | `OPENAI_API_KEY` | News-dedupe embeddings fall back to lexical comparison |
 
 ---
