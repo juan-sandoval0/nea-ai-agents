@@ -34,8 +34,8 @@ _PROJECT_ROOT = Path(__file__).parent.parent.parent
 DEFAULT_SAMPLES_FILE = _PROJECT_ROOT / "docs" / "email_samples.md"
 DEFAULT_PROFILES_FILE = _PROJECT_ROOT / "agents" / "outreach" / "profiles.yaml"
 
-# Max samples to include in a prompt
-MAX_STYLE_SAMPLES = 3
+# Max samples to include in a prompt (high ceiling — use all available)
+MAX_STYLE_SAMPLES = 50
 
 # Regex to extract fenced YAML blocks: ```yaml ... ```
 _YAML_BLOCK_RE = re.compile(r"```yaml\s*\n(.*?)```", re.DOTALL)

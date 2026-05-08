@@ -562,3 +562,199 @@ maanasi:
     madison: >
       Madison (cc'ed) was previously an AI researcher at Meta and is
       spearheading our investments in AI infra, data, and dev tools.
+
+
+james:
+  full_name: "James"
+  role: "Investor, Public Safety & AI Applications / Defense Tech"
+
+  education: []
+
+  prior_career:
+    - "Investor at NEA focused on public safety, AI applications, and defense technology"
+
+  prior_investments:
+    - "ElevenLabs"
+    - "TwelveLabs (Series A lead)"
+    - "Aurelian (Series A lead)"
+    - "Perplexity (Series A lead)"
+
+  focus_areas:
+    - "public safety"
+    - "AI applications"
+    - "defense technology"
+    - "autonomous systems"
+    - "video AI"
+    - "drones"
+    - "AI-native ITSM"
+    - "enterprise software"
+    - "vertical AI"
+    - "underappreciated industries"
+
+  tone: >
+    Thesis-forward and personal. James leads immediately with his investment
+    passion areas and shares detailed market convictions within cold emails,
+    not just sector interest. His emails feel like a smart investor sharing
+    a worldview — he states specific beliefs ("I have a strong thesis that
+    there is an opportunity to build a $100B company in private home security")
+    with the reasoning behind them. Warm and direct. Uses bold subject lines
+    with formats like "Passionate [X] Investor Looking To Chat" or
+    "CompanyName <> NEA". Comfortable writing longer emails when thesis depth
+    warrants it.
+
+  intro_patterns:
+    default: >
+      My name is James, and I'm an investor at NEA focused on AI applications
+      for underappreciated industries. We're a $25B AUM fund and were early
+      investors in startups like ElevenLabs, Factory, Perplexity, Databricks,
+      Together AI, and more.
+    thesis_first: >
+      I'm an investor at NEA focused on my 2 passion, public safety & AI
+      applications. We're a $25B AUM fund mostly investing at the Series A
+      and have backed companies like ElevenLabs, Perplexity (we led the
+      Series A), TwelveLabs (we led the Series A), and Aurelian (we led the
+      Series A).
+    defense_context: >
+      My name is James, and I'm an investor at NEA. We're a $25B AUM fund
+      that has invested in AI startups like Synthesia, Sana Labs, ElevenLabs,
+      Perplexity, and Databricks, and defense startups like Chaos, SecondFront,
+      and Firestorm.
+
+  structural_pattern: >
+    Personal hook (often praise from mutual network or quick personal note)
+    → Explicit passion area / investment thesis with specific market belief
+    → Company fit within that thesis
+    → Brief firm intro with relevant portfolio
+    → Direct meeting ask
+
+  sign_off_options:
+    - "Best,\nJames"
+
+  differentiators: >
+    Explicitly names his passion areas ("2 passion, public safety & AI
+    applications") as both authentic hook and credibility signal. Shares
+    detailed, quantified market theses in cold emails ("$100B opportunity",
+    "removes the 2 largest cost centers"). Names specific investors and team
+    members to bring into conversations (Lila, Philip, Mustafa, Hilarie).
+    Uses "NEA <> CompanyName" and passion-forward subject lines. San
+    Francisco-based; frequently offers SF meetups.
+
+  portfolio_companies_to_reference:
+    - "ElevenLabs"
+    - "Perplexity"
+    - "TwelveLabs"
+    - "Aurelian"
+    - "Factory"
+    - "Databricks"
+    - "Together AI"
+    - "Synthesia"
+    - "Sana Labs"
+    - "Chaos"
+    - "SecondFront"
+    - "Firestorm"
+    - "Salesforce"
+    - "Workday"
+    - "Tableau"
+
+  colleague_introductions:
+    lila: >
+      Lila (CC'd) is a partner here and was previously deputy CTO at
+      Microsoft.
+    hilarie: >
+      Hilarie Koplow-McAdams who used to run sales at Salesforce and can
+      help you think through scaling your GTM.
+    philip: >
+      Philip, who leads our European investing practice and is based in
+      London.
+    mustafa: >
+      Mustafa, who leads our defense investing practice.
+
+  location: "San Francisco"
+
+
+hunter:
+  full_name: "Hunter Worland"
+  role: "Principal, Fintech & Consumer"
+
+  education: []
+
+  prior_career:
+    - "Principal at NEA leading fintech strategy"
+
+  prior_investments:
+    - "QuoteWell"
+    - "PayZen"
+
+  focus_areas:
+    - "fintech"
+    - "B2B fintech"
+    - "insurance tech"
+    - "edtech"
+    - "agentic payments"
+    - "stablecoins"
+    - "AI-driven banking"
+    - "contextual finance"
+    - "consumer applications"
+
+  tone: >
+    Warm, intellectually generous, and deeply thesis-driven. Hunter writes
+    longer emails than most investors — he openly acknowledges this ("brevity
+    is not my strong suit when I come across something super exciting"). He
+    shares published theses, draws on portfolio company experience as a wedge
+    into industry understanding, and makes personal connections (family
+    background, mutual contacts). His emails feel like a genuine intellectual
+    exchange rather than a sales pitch. Uses "I" and "we" interchangeably.
+    Personable and never cold. Comfortable co-sending with senior NEA partners
+    (Rick) and offering event invitations as a meeting mechanism.
+
+  intro_patterns:
+    default: >
+      By way of intro, I'm Hunter and I'm a Principal at NEA. We're a $28B+
+      global venture firm behind companies like Databricks, Perplexity, Plaid,
+      Cloudflare, and Robinhood. I help lead our fintech strategy.
+    warm_skip: >
+      I'll save you the intro on NEA since I know you had the chance to work
+      with us when you were at [Company].
+    lean: >
+      Happy new year! By way of intro, I'm Hunter and I'm a Principal at NEA.
+
+  structural_pattern: >
+    Warm personal hook (often references mutual connections or prior context)
+    → Deep sector thesis grounded in portfolio company experience
+    → Clear connection between thesis and the company's specific approach
+    → Soft ask — event invite or flexible scheduling offer
+
+  sign_off_options:
+    - "Hunter Worland\nPrincipal @ NEA"
+    - "Best,\nHunter Worland\nPrincipal @ NEA"
+    - "Best,\nHunter"
+
+  differentiators: >
+    Writes the most thesis-rich cold emails. References his own published
+    research ("two theses we've put out") and uses portfolio company experience
+    as a wedge view into industry dynamics (QuoteWell as the lens on insurance).
+    Makes personal connections from his network ("bunch of connections from
+    LinkedIn"). Comfortable with event invites as the meeting vehicle. Signs
+    with full name and title. Often CC's senior colleagues (Rick, Andrew).
+    San Francisco-based.
+
+  portfolio_companies_to_reference:
+    - "Perplexity"
+    - "Robinhood"
+    - "Cloudflare"
+    - "Databricks"
+    - "Plaid"
+    - "QuoteWell"
+    - "PayZen"
+    - "Coursera"
+    - "MasterClass"
+    - "Kira Learning"
+
+  colleague_introductions:
+    rick: >
+      Rick (cc'd) is our Head of Tech Investing.
+    andrew: >
+      CC'ing my colleague Andrew who I think you collaborated with back
+      in the day.
+
+  location: "San Francisco"

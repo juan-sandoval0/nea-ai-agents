@@ -625,3 +625,220 @@ I'm a Partner at NEA where I spend most of my time on AI infrastructure and deve
 Curious what you're thinking about next — happy to keep it short and informal.
 
 Andrew Schoen
+
+---
+
+```yaml
+investor: tiffany
+recipient: Michael
+company: Applied Labs
+context_type: cold_funding_congrats
+personalization_signals: [funding_round, sector_thesis, portfolio_context, applied_ai]
+length: medium
+```
+
+Subject: Reaching out from NEA
+
+Michael,
+
+Congratulations on raising your seed—you have a great group of investors around the table! At NEA, we've been doubling down on applied AI platforms and synthetic audio, with recent investments in Synthesia, Perplexity (led Series A), Sana Labs, and a soon-to-be-announced AI voice synthesis company.
+
+With much of the critical FMs capabilities and agent infrastructure in place, we're excited to see effective support agents emerge as the next frontier for enterprise adoption. We believe success in this space will require feedback-responsive products that support multiple use cases and have omni-channel delivery at their core. We'd love to learn more about the vision for Applied Labs and your learnings so far.
+
+Are you open to a zoom meeting in the next week or two? Or Mason & I are based in NYC if you'd like to meet in person. Look forward to it!
+
+Tiffany
+
+---
+
+```yaml
+investor: tiffany
+recipient: Brendan
+company: Wavvest
+context_type: cold_sector_thesis
+personalization_signals: [sector_focus, portfolio_context, vertical_ai]
+length: short
+```
+
+Brendan,
+
+I'm reaching out from NEA where I focus on enterprise AI. We're spending a lot of time looking at vertical solutions, especially within financial services and wealth management, and I'd love to learn more about what you're building at Wavvest. We've backed many AI companies at the earliest stages, including Perplexity, Twelve Labs, Sana Labs, World Labs, and others. Would you have time for a Zoom in the next few weeks? Look forward to hearing from you!
+
+Tiffany
+
+Tiffany Luck
+Partner @ NEA
+
+---
+
+```yaml
+investor: james
+recipient: Jon
+company: Vale
+context_type: thesis_driven_deep_dive
+personalization_signals: [personal_passion, market_thesis, product_approach, mutual_network]
+length: long
+```
+
+Subject: Passionate Public Safety & AI Investor Looking To Chat
+
+Hey Jon – Heard great things about you from some of my smartest friends. Would love to meet up in SF and hear about your vision for Vale.
+
+For context, I'm an investor at NEA focused on my 2 passion, public safety & AI applications. We're a $25B AUM fund mostly investing at the Series A and have backed companies like ElevenLabs, Perplexity (we led the Series A), TwelveLabs (we led the Series A, video understanding foundation models used by Seoul police) and Aurelian (we led the Series A, public safety voice agents for 911 centers).
+
+I have a strong thesis that there is an opportunity to build a $100B company in private home security. I believe that AI (particularly video analysis) and drones can remove the 2 largest cost centers of remote video monitoring centers and patrol guards. And I believe that this affordability paradigm shift expands the home security TAM dramatically and creates a safety x price tradeoff legacy competitors can't compete with.
+
+I like your approach to start by focusing on software (can decide to do hardware later) to solve for very fast human response. Would love to learn more about your approach.
+
+Free to meet up in SF this week?
+
+Best,
+James
+
+---
+
+```yaml
+investor: james
+recipient: Andres
+company: Luzid
+context_type: thesis_driven_deep_dive
+personalization_signals: [market_thesis, sector_fit, founder_reputation]
+length: medium
+```
+
+Subject: NEA <> Luzid
+
+Hi Andres,
+
+Heard great things about you and how fast you build, so would love to chat!
+
+For context, my name is James, and I'm an investor at NEA focused on AI applications for underappreciated industries. We're a $25B AUM fund and were early investors in startups like ElevenLabs, Factory, Perplexity, Databricks, Together AI, and more.
+
+I have a strong thesis that as it becomes increasingly easy to customize software, the SI ecosystem will explode (we're already starting to see it at Accenture), and you're well positioned as the infrastructure for this new wave.
+
+Would love to chat and hear more about your vision for Luzid. Free over the next few days?
+
+Best,
+James
+
+---
+
+```yaml
+investor: james
+recipient: Will
+company: Arondite
+context_type: cold_technical_interest
+personalization_signals: [blog_reference, sector_thesis, team_intro, defense_focus]
+length: medium
+```
+
+Subject: Arondite <> NEA
+
+Hi Will,
+
+My name is James, and I'm an investor at NEA. We're a $25B AUM fund that has invested in AI startups like Synthesia, Sana Labs, ElevenLabs, Perplexity, and Databricks, and defense startups like Chaos, SecondFront, and Firestorm. Philip, who leads our European investing practice and is based in London, and Mustafa, who leads our defense investing practice, were both keen to meet as well.
+
+We loved your blog posts and also have a strong thesis that the future of warfare is autonomous and that the world needs more advanced AI to both power drones and also to detect and orchestrate drone response as a system.
+
+Would love to chat more about what you're building at Arondite. Are you free over the next week?
+
+Best,
+James
+
+---
+
+```yaml
+investor: james
+recipient: Jake
+company: Serval
+context_type: cold_technical_interest
+personalization_signals: [product_approach, portfolio_customer, team_intro, sector_thesis]
+length: medium
+```
+
+Subject: Serval <> NEA
+
+Hi Jake,
+
+My name is James, and I'm an investor at NEA. We've backed generational software companies attacking big markets like Salesforce, Workday, and Tableau, and AI apps like Perplexity (led the Series A), Together.ai (Series A), ElevenLabs (Series C), and Sana Labs (acquired by Workday for $1.1B this morning).
+
+Lila (CC'd) is a partner here and was previously deputy CTO at Microsoft. I've also CC'd Hilarie Koplow-McAdams who used to run sales at Salesforce and can help you think through scaling your GTM.
+
+We think your natural-language-driven, easy-to-use agent platform is the winning approach for AI-native ITSM as opposed to other highly complex developer-focused approaches. It's also a great signal that some of our portfolio companies are customers!
+
+We'd love to learn more about your vision for Serval. Are you free over the next couple of weeks to chat?
+
+Best,
+James
+
+---
+
+```yaml
+investor: hunter
+recipient: Diego
+company: Divine
+context_type: thesis_driven_deep_dive
+personalization_signals: [published_content, thesis_alignment, product_vision, event_invite]
+length: long
+```
+
+Subject: Hello from NEA / Fintech founders dinner NEA x Stripe (11/12)
+
+Diego,
+
+It's great to be connected and apologies in advance for the long email (brevity is not my strong suit when I come across something super exciting). By way of intro, I'm Hunter, a Principal at NEA, and Rick (cc'd) is our Head of Tech Investing. Quick background on NEA: we're a $28B AUM VC that leads rounds in big ideas like Perplexity, Robinhood, Cloudflare, Databricks, Plaid.
+
+We're co-hosting a small dinner with Stripe in SF on Tuesday, November 12 at Taksim, to bring together just a handful of founders who are genuinely shaping the frontier of fintech, along with Stripe's Product Lead for Money Management (fiat + crypto) and Startup Partnerships Lead. The theme is intersections i.e., where tectonic shifts in AI, stablecoins, DeFi, and agentic payments are converging. We hosted a version of this dinner in New York, and the restaurant literally had to kick us out because no one wanted to leave.
+
+I've been wanting to reach out since I read your post on the Divine website because it seems like Divine / Credit is what we've been imagining and writing about in an actual product. Just across the last two theses we've put out (one on the rise of contextual, AI-driven banking and the second on how AI, stables rails, programmable money reshape what's possible), there's this clear overlap in the idea of rebuilding financial systems from the bottom up to unlock new segments and new experiences. Maybe most relevant is what we wrote around "collaborative" product building so "instead of a one-way offer to accept or reject, the institution and customer can iterate together in real time, adjusting levers like collateral, term length, or repayment structure through a conversational interface." But generally, both theses map squarely with collapsing cost structures and rewiring trust to reach and engage the next billion customers (e.g., the Colombian nurse, Lagos vendor as you put in your post).
+
+Would love to connect and compare notes, and if you're around, I'd be thrilled to have you at the dinner. Here's the invite link: https://luma.com/fintech-dinner-11.12.25
+
+Hunter Worland
+Principal @ NEA
+
+---
+
+```yaml
+investor: hunter
+recipient: Jamie
+company: Pace
+context_type: thesis_driven_deep_dive
+personalization_signals: [portfolio_context, sector_thesis, market_complexity, network_reference]
+length: long
+```
+
+Subject: Hello from NEA
+
+Jamie,
+
+Happy new year! By way of intro, I'm Hunter and I'm a Principal at NEA. We're a $28B+ global venture firm behind companies like Databricks, Perplexity, Plaid, Cloudflare, and Robinhood. I help lead our fintech strategy. I also see we have a bunch of connections from LinkedIn to my favorite people. Love to see that.
+
+I've heard great things about Pace from my network and wanted to reach out directly. From a fintech priorities POV, we've been getting pulled into this corner of the world more and more for two reasons. First, we backed an ex-Palantir founder building an AI-native commercial insurance wholesale brokerage called QuoteWell, and using that as a wedge view into the industry has been pretty eye-opening in terms of how messy, manual, and fragmented such a gigantic category still is (it's one thing to know this to be conceptually true.. another to see it upfront). Second, we're actively looking for AI intersections where the problem is complex enough that off-the-shelf LLMs or generic BI tools can't really penetrate because there's too much deep vertical sophistication. If there were a 2x2 of complexity and industry size, insurance would basically sit in a quadrant of its own!
+
+All to say, excited by what you're building. I'd love the opportunity to properly introduce NEA, trade notes, and learn more about Pace. Any chance you're open to a quick conversation in the next week or two?
+
+Best,
+
+Hunter Worland
+Principal @ NEA
+
+---
+
+```yaml
+investor: hunter
+recipient: Gina
+company: unknown
+context_type: cold_personal_connection
+personalization_signals: [shared_portfolio_history, sector_fit, personal_connection, portfolio_context]
+length: medium
+```
+
+Gina,
+
+By way of introduction, my name is Hunter, and I'm a Principal at NEA. I'll save you the intro on NEA since I know you had the chance to work with us when you were at Duolingo (CC'ing my colleague Andrew who I think you collaborated with back in the day!).
+
+I came across your new venture and wanted to reach out and make sure we maintain the connective tissue. Since Duolingo, we've continued to back exciting edtech companies (e.g., Coursera, MasterClass, Kira Learning). And from what I could gather online, have some relevant experience on bringing down affordability of essential services (like our recent investment in PayZen, which expands access for OOP healthcare procedures). I'll lastly just say, really appreciate the mission not just as an investor but human being (my mom was first in our family in go to college, grew up with a profound appreciation of higher ed). Would love to connect and hear more about the vision. Let me know if you'd be open to a chat—happy to work around your schedule.
+
+Best,
+Hunter

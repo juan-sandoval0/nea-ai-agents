@@ -368,7 +368,7 @@ def _generate_stealth_outreach(
             promoted = load_promoted_samples(investor_key)
             promoted_matching = [s for s in promoted if s.context_type == ctx_type.value]
             combined = promoted_matching + static_examples
-            style_examples = combined[:3]
+            style_examples = combined
         except Exception:
             style_examples = static_examples
 
@@ -626,9 +626,9 @@ def generate_outreach(
             # Context-matching promoted examples take priority
             promoted_matching = [s for s in promoted if s.context_type == ctx_type.value]
             promoted_other = [s for s in promoted if s.context_type != ctx_type.value]
-            # Merge: matching promoted → other promoted → static (capped at 3)
+            # Merge: matching promoted → other promoted → static
             combined = promoted_matching + promoted_other + static_examples
-            style_examples = combined[:3]
+            style_examples = combined
         except Exception as _promo_err:
             logger.warning(f"Could not load promoted samples, using static only: {_promo_err}")
             style_examples = static_examples
