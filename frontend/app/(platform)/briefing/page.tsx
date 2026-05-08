@@ -26,7 +26,35 @@ function signalCls(t: string) {
   return (SIGNAL_CONFIG[t]?.cls ?? "bg-zinc-100 text-zinc-600 border-zinc-200") + " border";
 }
 function signalLabel(t: string) {
-  return SIGNAL_CONFIG[t]?.label ?? t.replace(/_/g, " ");
+  const raw = SIGNAL_CONFIG[t]?.label ?? t.replace(/_/g, " ");
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+function formatDate(value: string | null | undefined): string | null | undefined {
+  if (!value) return value;
+  return value.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z?/g, (m) => {
+    const d = new Date(m);
+    return isNaN(d.getTime()) ? m : d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  });
+}
+
+function CompanyLogo({ domain, name }: { domain: string; name: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <div className="w-10 h-10 rounded-lg bg-nea-blue-light text-nea-blue flex items-center justify-center text-sm font-bold shrink-0">
+        {name[0]?.toUpperCase()}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={`https://logo.clearbit.com/${domain}`}
+      alt={name}
+      onError={() => setFailed(true)}
+      className="w-10 h-10 rounded-lg object-contain border border-zinc-100 shrink-0 bg-white p-0.5"
+    />
+  );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -150,15 +178,18 @@ export default function BriefingPage() {
           )}
 
           {result && !loading && (
-            <div className="space-y-4 max-w-3xl">
+            <div className="space-y-4 w-full">
 
               {/* Result header */}
               <div className="flex items-start justify-between gap-4 pb-2">
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-xl font-semibold text-zinc-900 leading-tight break-words">{result.company_name}</h2>
-                  {result.company_snapshot?.hq && (
-                    <p className="text-xs text-zinc-400 mt-1">{result.company_snapshot.hq}</p>
-                  )}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <CompanyLogo domain={result.company_id} name={result.company_name} />
+                  <div className="min-w-0">
+                    <h2 className="text-xl font-semibold text-zinc-900 leading-tight break-words">{result.company_name}</h2>
+                    {result.company_snapshot?.hq && (
+                      <p className="text-xs text-zinc-400 mt-1">{result.company_snapshot.hq}</p>
+                    )}
+                  </div>
                 </div>
                 <button
                   onClick={copyMarkdown}
@@ -201,13 +232,13 @@ export default function BriefingPage() {
                     <table className="w-full text-sm bg-white table-fixed">
                       <tbody className="divide-y divide-zinc-100">
                         {([
-                          ["Founded", result.company_snapshot.founded],
+                          ["Founded", formatDate(result.company_snapshot.founded)],
                           ["HQ", result.company_snapshot.hq],
                           ["Employees", result.company_snapshot.employees?.toLocaleString()],
                           ["Products", result.company_snapshot.products],
                           ["Customers", result.company_snapshot.customers],
                           ["Total Raised", result.company_snapshot.total_funding ? "$" + (result.company_snapshot.total_funding / 1_000_000).toFixed(1) + "M" : null],
-                          ["Last Round", result.company_snapshot.last_round],
+                          ["Last Round", formatDate(result.company_snapshot.last_round)],
                         ] as [string, string | null | undefined][]).filter(([, v]) => v).map(([label, value]) => (
                           <tr key={label}>
                             <td className="py-2 px-4 text-zinc-400 font-medium w-28 text-xs align-top">{label}</td>
