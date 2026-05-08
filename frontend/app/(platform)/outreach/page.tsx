@@ -6,12 +6,13 @@ import { generateOutreach, submitOutreachFeedback, type OutreachResponse } from 
 
 const INVESTORS = [
   { key: "ashley",   name: "Ashley Jepson",  role: "Investor — Data/AI Infra" },
-  { key: "tiffany",  name: "Tiffany",         role: "Investor — B2B SaaS & AI" },
+  { key: "tiffany",  name: "Tiffany",         role: "Partner — B2B SaaS & AI" },
   { key: "danielle", name: "Danielle",        role: "Partner — Consumer" },
   { key: "madison",  name: "Madison",         role: "Partner — Former Meta AI Researcher" },
   { key: "alexa",    name: "Alexa Grabelle",  role: "Associate — Technology" },
   { key: "andrew",   name: "Andrew Schoen",   role: "Partner — AI/Security/Deep Tech" },
-  { key: "maanasi",  name: "Maanasi",         role: "Associate — AI Infrastructure" },
+  { key: "james",    name: "James",           role: "Investor — Public Safety & AI / Defense" },
+  { key: "hunter",   name: "Hunter Worland",  role: "Principal — Fintech & Consumer" },
 ];
 
 const CTX_TYPES = [
