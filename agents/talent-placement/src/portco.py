@@ -45,12 +45,25 @@ def pick_company(companies: list[PortCo]) -> PortCo:
     print("\nNEA Active Portfolio Companies\n")
     for i, co in enumerate(companies, 1):
         stage = co.stage.replace("_", " ").title() if co.stage else "Unknown"
-        hc = f"{int(float(co.headcount)):,}" if co.headcount else "?"
+        try:
+            hc = f"{int(float(co.headcount)):,}" if co.headcount else "?"
+        except ValueError:
+            hc = "?"
         print(f"  [{i:>3}] {co.name:<35} {stage:<20} {hc} employees")
 
     print()
     while True:
-        raw = input("Select company number: ").strip()
+        raw = input("Search company name (or enter number): ").strip()
         if raw.isdigit() and 1 <= int(raw) <= len(companies):
             return companies[int(raw) - 1]
-        print(f"  Enter a number between 1 and {len(companies)}.")
+        if raw:
+            matches = [c for c in companies if raw.lower() in c.name.lower()]
+            if len(matches) == 1:
+                return matches[0]
+            if matches:
+                print("  Multiple matches:")
+                for c in matches[:10]:
+                    print(f"    {c.name}")
+                print("  Be more specific.")
+            else:
+                print("  No match found. Try again.")

@@ -1,62 +1,25 @@
-"""Score and rank employee × destination pairs using Claude."""
+"""Score and rank employee × destination pairs using the claude CLI."""
 from __future__ import annotations
 
-import os
 import json
 import logging
-import anthropic
-from dotenv import load_dotenv
+import os
+import subprocess
 from .models import Employee, Destination, Match
-
-load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-_MODEL = "claude-sonnet-4-6"
-
 _SYSTEM = """\
 You are a talent placement advisor for NEA, a venture capital firm.
-You evaluate how well a departing portfolio company employee fits an open job requisition.
+You evaluate how well a departing portfolio company employee fits open job requisitions.
 Focus on three signals:
-1. Function/domain fit — does their background match the role's function (engineering, sales, ops, etc.)?
-2. Title/seniority fit — is their seniority level appropriate for the role?
-3. Company stage fit — does their experience align with the hiring company's stage (seed, Series A/B, growth)?
+1. Function/domain fit — does their background match the role's function?
+2. Title/seniority fit — is their seniority level appropriate?
+3. Company stage fit — does their experience align with the hiring company's stage?
 
-Respond ONLY with a JSON object: {"score": <0.0–1.0>, "reasoning": "<one concise sentence>"}
+Respond ONLY with a JSON array, one object per role, in the same order as given:
+[{"score": <0.0-1.0>, "reasoning": "<one concise sentence>"}, ...]
 """
-
-
-def _score_one(employee: Employee, destination: Destination, client: anthropic.Anthropic) -> tuple[float, str]:
-    prompt = f"""\
-Employee:
-- Name: {employee.name}
-- Title: {employee.title or "Unknown"}
-- Company: {employee.company}
-- Founder: {employee.is_founder}, Executive: {employee.is_executive}
-
-Open role at {destination.company}:
-- Role: {destination.role}
-- Description: {destination.description or "N/A"}
-
-Score this match."""
-
-    message = client.messages.create(
-        model=_MODEL,
-        max_tokens=200,
-        system=_SYSTEM,
-        messages=[{"role": "user", "content": prompt}],
-    )
-
-    text = message.content[0].text.strip()
-    try:
-        parsed = json.loads(text)
-        score = float(parsed["score"])
-        reasoning = parsed["reasoning"]
-    except Exception:
-        score = 0.0
-        reasoning = text[:200]
-
-    return score, reasoning
 
 
 def rank_matches(
@@ -64,26 +27,57 @@ def rank_matches(
     destinations: list[Destination],
     top_n: int = 5,
 ) -> list[Match]:
-    """Return the top N matches for an employee, each with a score and one-line reasoning."""
     if not destinations:
         return []
 
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    roles_text = "\n".join(
+        f"{i+1}. {d.role} @ {d.company}: {d.description or 'No description'}"
+        for i, d in enumerate(destinations)
+    )
 
-    scored: list[Match] = []
-    for dest in destinations:
-        try:
-            score, reasoning = _score_one(employee, dest, client)
-        except Exception as e:
-            logger.warning("Scoring failed for %s → %s: %s", employee.name, dest.role, e)
-            score, reasoning = 0.0, "Scoring unavailable"
+    prompt = f"""\
+Employee:
+- Name: {employee.name}
+- Title: {employee.title or "Unknown"}
+- Company: {employee.company}
+- Founder: {employee.is_founder}, Executive: {employee.is_executive}
 
-        scored.append(Match(
+Score this employee against each open role below. Return a JSON array with one object per role in the same order:
+{roles_text}"""
+
+    try:
+        env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
+        result = subprocess.run(
+            [
+                "claude", "-p",
+                "--output-format", "json",
+                "--system-prompt", _SYSTEM,
+                prompt,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            env=env,
+        )
+        data = json.loads(result.stdout)
+        raw = data["result"].strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        scores = json.loads(raw)
+        if not isinstance(scores, list):
+            raise ValueError("Expected a JSON array")
+    except Exception as e:
+        logger.error("Scoring failed for %s: %s", employee.name, e)
+        scores = [{"score": 0.0, "reasoning": "Scoring unavailable"}] * len(destinations)
+
+    matches = []
+    for dest, s in zip(destinations, scores):
+        matches.append(Match(
             employee=employee,
             destination=dest,
-            score=score,
-            reasoning=reasoning,
+            score=float(s.get("score", 0.0)),
+            reasoning=s.get("reasoning", ""),
         ))
 
-    scored.sort(key=lambda m: m.score, reverse=True)
-    return scored[:top_n]
+    matches.sort(key=lambda m: m.score, reverse=True)
+    return matches[:top_n]
