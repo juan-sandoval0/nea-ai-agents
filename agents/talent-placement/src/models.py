@@ -12,6 +12,7 @@ class Employee(BaseModel):
     is_founder: bool = False
     is_executive: bool = False
     start_date: str | None = None
+    tenure_years: float | None = None
 
 
 class Destination(BaseModel):
