@@ -118,9 +118,10 @@ def _pick_mode_interactive(portco_csv: str | None, top_n: int) -> None:
     print("\nNEA Talent Placement\n")
     print("  [1] Portfolio company (pick from list)")
     print("  [2] LinkedIn profile(s) (paste URL(s))")
+    print("  [3] LinkedIn profile(s) (load from file)")
     print()
     while True:
-        choice = _prompt("Choose [1/2]: ").strip()
+        choice = _prompt("Choose [1/2/3]: ").strip()
         if choice == "1":
             from .portco import load_portcos, pick_company
             csv_path = portco_csv or _DEFAULT_PORTCO_CSV
@@ -145,7 +146,19 @@ def _pick_mode_interactive(portco_csv: str | None, top_n: int) -> None:
                 sys.exit(1)
             run_linkedin(urls, top_n=top_n)
             return
-        print("  Please enter 1 or 2.")
+        if choice == "3":
+            file_path = _prompt("\n  Path to URL file: ").strip()
+            p = Path(file_path)
+            if not p.exists():
+                print(f"File not found: {file_path}")
+                sys.exit(1)
+            urls = [line.strip() for line in p.read_text().splitlines() if line.strip() and not line.startswith("#")]
+            if not urls:
+                print(f"No URLs found in {file_path}")
+                sys.exit(1)
+            run_linkedin(urls, top_n=top_n)
+            return
+        print("  Please enter 1, 2, or 3.")
 
 
 def main() -> None:
@@ -154,6 +167,7 @@ def main() -> None:
     group.add_argument("--portco", action="store_true", help="Pick a company interactively from the NEA portco list")
     group.add_argument("--company", help="Company domain or Harmonic ID (e.g. stripe.com or 4292875)")
     group.add_argument("--linkedin", nargs="+", metavar="URL", help="One or more LinkedIn profile URLs to match directly")
+    group.add_argument("--linkedin-file", metavar="FILE", help="Path to a text file with one LinkedIn URL per line")
     parser.add_argument("--portco-csv", help="Path to portco CSV (default: ~/Desktop/Active Portco...csv)")
     parser.add_argument("--top", type=int, default=5, help="Top N matches per employee (default: 5)")
     args = parser.parse_args()
@@ -170,6 +184,16 @@ def main() -> None:
         run(selected.name, selected.harmonic_id, top_n=args.top)
     elif args.linkedin:
         run_linkedin(args.linkedin, top_n=args.top)
+    elif args.linkedin_file:
+        p = Path(args.linkedin_file)
+        if not p.exists():
+            print(f"File not found: {args.linkedin_file}")
+            sys.exit(1)
+        urls = [line.strip() for line in p.read_text().splitlines() if line.strip() and not line.startswith("#")]
+        if not urls:
+            print(f"No URLs found in {args.linkedin_file}")
+            sys.exit(1)
+        run_linkedin(urls, top_n=args.top)
     elif args.company:
         run(args.company, args.company, top_n=args.top)
     else:
