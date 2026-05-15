@@ -21,6 +21,23 @@ Respond ONLY with a JSON array, one object per role, in the same order as given:
 [{"score": <0.0-1.0>, "reasoning": "<one concise sentence>"}, ...]
 """
 
+_PREFILTER_LIMIT = 100
+
+
+def _prefilter(employee: Employee, destinations: list[Destination]) -> list[Destination]:
+    """Keyword-rank destinations and return top _PREFILTER_LIMIT before LLM scoring."""
+    if len(destinations) <= _PREFILTER_LIMIT:
+        return destinations
+    title_words = set((employee.title or "").lower().split())
+    if not title_words:
+        return destinations[:_PREFILTER_LIMIT]
+
+    def score(dest: Destination) -> int:
+        role_words = set(dest.role.lower().split())
+        return len(title_words & role_words)
+
+    return sorted(destinations, key=score, reverse=True)[:_PREFILTER_LIMIT]
+
 
 def rank_matches(
     employee: Employee,
@@ -29,6 +46,8 @@ def rank_matches(
 ) -> list[Match]:
     if not destinations:
         return []
+
+    destinations = _prefilter(employee, destinations)
 
     roles_text = "\n".join(
         f"{i+1}. {d.role} @ {d.company}" + (f" ({d.location})" if d.location else "")
@@ -56,7 +75,7 @@ Score this employee against each open role below. Return a JSON array with one o
             ],
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=180,
             env=env,
         )
         data = json.loads(result.stdout)

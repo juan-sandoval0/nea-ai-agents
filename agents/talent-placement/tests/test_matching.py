@@ -23,7 +23,7 @@ def _mock_run(scores: list[dict]) -> MagicMock:
     return result
 
 
-def test_returns_top_n(tmp_path):
+def test_returns_top_n():
     scores = [{"score": 0.9, "reasoning": "great"}, {"score": 0.5, "reasoning": "ok"}, {"score": 0.1, "reasoning": "weak"}]
     with patch("src.matching.subprocess.run", return_value=_mock_run(scores)):
         matches = rank_matches(_emp(), _dests(3), top_n=2)
