@@ -116,22 +116,18 @@ def run_linkedin(linkedin_urls: list[str], top_n: int = 5) -> None:
 def _pick_mode_interactive(portco_csv: str | None, top_n: int) -> None:
     """Ask the user whether they're working from a company or LinkedIn URLs."""
     print("\nNEA Talent Placement\n")
-    print("  [1] Portfolio company (pick from list)")
+    print("  [1] Portfolio company (enter name)")
     print("  [2] LinkedIn profile(s) (paste URL(s))")
     print("  [3] LinkedIn profile(s) (load from file)")
     print()
     while True:
         choice = _prompt("Choose [1/2/3]: ").strip()
         if choice == "1":
-            from .portco import load_portcos, pick_company
-            csv_path = portco_csv or _DEFAULT_PORTCO_CSV
-            if not Path(csv_path).exists():
-                print(f"Portco CSV not found at: {csv_path}")
-                print("Pass the path with --portco-csv /path/to/file.csv")
+            company_name = _prompt("Enter portfolio company name: ").strip()
+            if not company_name:
+                print("No company name entered.")
                 sys.exit(1)
-            companies = load_portcos(csv_path)
-            selected = pick_company(companies)
-            run(selected.name, selected.harmonic_id, top_n=top_n)
+            run(company_name, company_name, top_n=top_n)
             return
         if choice == "2":
             print("\nPaste LinkedIn URLs one per line. Press Enter on a blank line when done.\n")

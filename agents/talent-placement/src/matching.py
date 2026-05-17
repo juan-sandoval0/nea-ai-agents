@@ -1,10 +1,9 @@
-"""Score and rank employee × destination pairs using the claude CLI."""
+"""Score and rank employee × destination pairs using the Anthropic API."""
 from __future__ import annotations
 
 import json
 import logging
-import os
-import subprocess
+import anthropic
 from .models import Employee, Destination, Match
 
 logger = logging.getLogger(__name__)
@@ -22,6 +21,8 @@ Respond ONLY with a JSON array, one object per role, in the same order as given:
 """
 
 _PREFILTER_LIMIT = 100
+_BATCH_SIZE = 25
+_MODEL = "claude-sonnet-4-5"
 
 
 def _prefilter(employee: Employee, destinations: list[Destination]) -> list[Destination]:
@@ -39,21 +40,16 @@ def _prefilter(employee: Employee, destinations: list[Destination]) -> list[Dest
     return sorted(destinations, key=score, reverse=True)[:_PREFILTER_LIMIT]
 
 
-def rank_matches(
+def _score_batch(
+    client: anthropic.Anthropic,
     employee: Employee,
-    destinations: list[Destination],
-    top_n: int = 5,
-) -> list[Match]:
-    if not destinations:
-        return []
-
-    destinations = _prefilter(employee, destinations)
-
+    batch: list[Destination],
+) -> list[dict]:
+    """Score one batch of up to _BATCH_SIZE destinations against an employee."""
     roles_text = "\n".join(
-        f"{i+1}. {d.role} @ {d.company}" + (f" ({d.location})" if d.location else "")
-        for i, d in enumerate(destinations)
+        f"{i + 1}. {d.role} @ {d.company}" + (f" ({d.location})" if d.location else "")
+        for i, d in enumerate(batch)
     )
-
     prompt = f"""\
 Employee:
 - Name: {employee.name}
@@ -65,32 +61,46 @@ Score this employee against each open role below. Return a JSON array with one o
 {roles_text}"""
 
     try:
-        env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
-        result = subprocess.run(
-            [
-                "claude", "-p",
-                "--output-format", "json",
-                "--system-prompt", _SYSTEM,
-                prompt,
-            ],
-            capture_output=True,
-            text=True,
-            timeout=180,
-            env=env,
+        response = client.messages.create(
+            model=_MODEL,
+            max_tokens=2048,
+            system=_SYSTEM,
+            messages=[{"role": "user", "content": prompt}],
         )
-        data = json.loads(result.stdout)
-        raw = data["result"].strip()
+        raw = response.content[0].text.strip()
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
         scores = json.loads(raw)
         if not isinstance(scores, list):
             raise ValueError("Expected a JSON array")
+        return scores
     except Exception as e:
-        logger.error("Scoring failed for %s: %s", employee.name, e)
-        scores = [{"score": 0.0, "reasoning": "Scoring unavailable"}] * len(destinations)
+        logger.error("Batch scoring failed for %s: %s", employee.name, e)
+        return [{"score": 0.0, "reasoning": "Scoring unavailable"}] * len(batch)
+
+
+def rank_matches(
+    employee: Employee,
+    destinations: list[Destination],
+    top_n: int = 5,
+) -> list[Match]:
+    if not destinations:
+        return []
+
+    destinations = _prefilter(employee, destinations)
+    client = anthropic.Anthropic()
+
+    all_scores: list[dict] = []
+    for i in range(0, len(destinations), _BATCH_SIZE):
+        batch = destinations[i : i + _BATCH_SIZE]
+        scores = _score_batch(client, employee, batch)
+        # Pad short responses so zip stays aligned
+        if len(scores) < len(batch):
+            scores += [{"score": 0.0, "reasoning": "Scoring unavailable"}] * (len(batch) - len(scores))
+        all_scores.extend(scores[: len(batch)])
 
     matches = []
-    for dest, s in zip(destinations, scores):
+    for dest, s in zip(destinations, all_scores):
         matches.append(Match(
             employee=employee,
             destination=dest,
