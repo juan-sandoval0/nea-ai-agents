@@ -116,18 +116,21 @@ def run_linkedin(linkedin_urls: list[str], top_n: int = 5) -> None:
 def _pick_mode_interactive(portco_csv: str | None, top_n: int) -> None:
     """Ask the user whether they're working from a company or LinkedIn URLs."""
     print("\nNEA Talent Placement\n")
-    print("  [1] Portfolio company (enter name)")
+    print("  [1] Company name or LinkedIn URL")
     print("  [2] LinkedIn profile(s) (paste URL(s))")
     print("  [3] LinkedIn profile(s) (load from file)")
     print()
     while True:
         choice = _prompt("Choose [1/2/3]: ").strip()
         if choice == "1":
-            company_name = _prompt("Enter portfolio company name: ").strip()
-            if not company_name:
-                print("No company name entered.")
+            entry = _prompt("Enter company name or LinkedIn URL: ").strip()
+            if not entry:
+                print("Nothing entered.")
                 sys.exit(1)
-            run(company_name, company_name, top_n=top_n)
+            if "linkedin.com" in entry:
+                run_linkedin([entry], top_n=top_n)
+            else:
+                run(entry, entry, top_n=top_n)
             return
         if choice == "2":
             print("\nPaste LinkedIn URLs one per line. Press Enter on a blank line when done.\n")
