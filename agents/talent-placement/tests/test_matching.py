@@ -1,5 +1,6 @@
 """Tests for matching.rank_matches (subprocess mocked)."""
 import json
+import pytest
 from unittest.mock import MagicMock, patch
 
 from src.models import Employee, Destination
@@ -17,6 +18,15 @@ def _dests(n: int = 3) -> list[Destination]:
     ]
 
 
+def _dims(fs: int, sn: int, sf: int, do: int, reasoning: str = "ok") -> dict:
+    return {"functional_skill": fs, "seniority": sn, "stage_fit": sf, "domain_overlap": do, "reasoning": reasoning}
+
+
+def _uniform(pct: int, reasoning: str = "ok") -> dict:
+    """All four dimensions set to the same value so composite == pct / 100."""
+    return _dims(pct, pct, pct, pct, reasoning)
+
+
 def _mock_run(scores: list[dict]) -> MagicMock:
     result = MagicMock()
     result.stdout = json.dumps({"result": json.dumps(scores)})
@@ -24,14 +34,14 @@ def _mock_run(scores: list[dict]) -> MagicMock:
 
 
 def test_returns_top_n():
-    scores = [{"score": 0.9, "reasoning": "great"}, {"score": 0.5, "reasoning": "ok"}, {"score": 0.1, "reasoning": "weak"}]
+    scores = [_uniform(90, "great"), _uniform(50, "ok"), _uniform(10, "weak")]
     with patch("src.matching.subprocess.run", return_value=_mock_run(scores)):
         matches = rank_matches(_emp(), _dests(3), top_n=2)
     assert len(matches) == 2
 
 
 def test_sorted_by_score_descending():
-    scores = [{"score": 0.3, "reasoning": "low"}, {"score": 0.9, "reasoning": "high"}, {"score": 0.6, "reasoning": "mid"}]
+    scores = [_uniform(30, "low"), _uniform(90, "high"), _uniform(60, "mid")]
     with patch("src.matching.subprocess.run", return_value=_mock_run(scores)):
         matches = rank_matches(_emp(), _dests(3), top_n=3)
     assert matches[0].score == 0.9
@@ -55,7 +65,7 @@ def test_subprocess_failure_returns_fallback_scores():
 
 
 def test_markdown_fenced_json_is_parsed():
-    scores = [{"score": 0.8, "reasoning": "solid"}]
+    scores = [_uniform(80, "solid")]
     fenced = "```json\n" + json.dumps(scores) + "\n```"
     result = MagicMock()
     result.stdout = json.dumps({"result": fenced})
@@ -65,17 +75,36 @@ def test_markdown_fenced_json_is_parsed():
 
 
 def test_top_n_does_not_exceed_available():
-    scores = [{"score": 0.5, "reasoning": "ok"}]
+    scores = [_uniform(50)]
     with patch("src.matching.subprocess.run", return_value=_mock_run(scores)):
         matches = rank_matches(_emp(), _dests(1), top_n=10)
     assert len(matches) == 1
 
 
 def test_reasoning_is_preserved():
-    scores = [{"score": 0.7, "reasoning": "Good domain fit."}]
+    scores = [_uniform(70, "Good domain fit.")]
     with patch("src.matching.subprocess.run", return_value=_mock_run(scores)):
         matches = rank_matches(_emp(), _dests(1), top_n=5)
     assert matches[0].reasoning == "Good domain fit."
+
+
+def test_dimension_scores_are_stored():
+    scores = [_dims(85, 90, 70, 80, "Strong skills match.")]
+    with patch("src.matching.subprocess.run", return_value=_mock_run(scores)):
+        matches = rank_matches(_emp(), _dests(1), top_n=5)
+    m = matches[0]
+    assert m.functional_skill == 85
+    assert m.seniority == 90
+    assert m.stage_fit == 70
+    assert m.domain_overlap == 80
+
+
+def test_composite_score_formula():
+    scores = [_dims(100, 100, 0, 0, "skills only")]
+    with patch("src.matching.subprocess.run", return_value=_mock_run(scores)):
+        matches = rank_matches(_emp(), _dests(1), top_n=5)
+    # 0.35*100 + 0.25*100 + 0.20*0 + 0.20*0 = 60 → 0.60
+    assert matches[0].score == pytest.approx(0.60)
 
 
 def test_batching_makes_multiple_calls():
@@ -83,8 +112,8 @@ def test_batching_makes_multiple_calls():
     from src.matching import _BATCH_SIZE
     n = _BATCH_SIZE + 5  # 30 destinations
     responses = [
-        _mock_run([{"score": 0.5, "reasoning": "ok"}] * _BATCH_SIZE),
-        _mock_run([{"score": 0.5, "reasoning": "ok"}] * 5),
+        _mock_run([_uniform(50)] * _BATCH_SIZE),
+        _mock_run([_uniform(50)] * 5),
     ]
     with patch("src.matching.subprocess.run", side_effect=responses) as mock_run:
         matches = rank_matches(_emp(), _dests(n), top_n=n)

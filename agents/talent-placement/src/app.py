@@ -52,6 +52,8 @@ def _match_and_approve(employees: list, destinations: list, top_n: int) -> None:
             label = _fit_label(score_pct)
             print(f"\n  [{i}] {match.destination.role} @ {match.destination.company}  —  {score_pct}%  {label}")
             print(f"      {match.reasoning}")
+            if match.functional_skill is not None:
+                print(f"      → Skills {match.functional_skill}  |  Seniority {match.seniority}  |  Stage {match.stage_fit}  |  Domain {match.domain_overlap}")
 
         answer = _prompt(
             "\n  To send an intro for a match, enter its number(s) below."

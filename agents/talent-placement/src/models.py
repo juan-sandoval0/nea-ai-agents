@@ -30,7 +30,11 @@ class Destination(BaseModel):
 class Match(BaseModel):
     employee: Employee
     destination: Destination
-    score: float  # 0.0–1.0
+    score: float  # 0.0–1.0 composite
     reasoning: str
+    functional_skill: int | None = None  # 0-100
+    seniority: int | None = None         # 0-100
+    stage_fit: int | None = None         # 0-100
+    domain_overlap: int | None = None    # 0-100
     partner_notes: str | None = None
     approved: bool = False

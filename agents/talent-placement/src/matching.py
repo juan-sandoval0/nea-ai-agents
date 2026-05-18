@@ -12,16 +12,49 @@ logger = logging.getLogger(__name__)
 _SYSTEM = """\
 You are a talent placement advisor for NEA, a venture capital firm.
 You evaluate how well a departing portfolio company employee fits open job requisitions.
-Focus on three signals:
-1. Function/domain fit — does their background match the role's function?
-2. Title/seniority fit — is their seniority level appropriate?
-3. Company stage fit — does their experience align with the hiring company's stage?
+
+Score each employee-role pair on four dimensions (0-100 each):
+
+1. functional_skill (35%): Does their core function match the role?
+   Direct match = 80-100. Strong overlap with one gap = 60-79.
+   Partial match = 40-59. Weak/tangential = 20-39. No overlap = 0-19.
+
+2. seniority (25%): Is the level right? Both over AND under-qualification are penalized.
+   Direct title match = 80-100. One level off = 60-79.
+   Two levels off = 40-59. Three or more = 0-39.
+
+3. stage_fit (20%): Does their company stage experience match the hiring company's stage?
+   Same or adjacent stage = 80-100. One stage off = 60-79.
+   Two stages off = 40-59. Fundamentally different = 0-39.
+
+4. domain_overlap (20%): Does their industry/domain transfer?
+   Same domain = 80-100. Adjacent = 60-79. Some overlap = 40-59. Major shift = 0-39.
 
 Respond ONLY with a JSON array, one object per role, in the same order as given:
-[{"score": <0.0-1.0>, "reasoning": "<one concise sentence>"}, ...]
+[
+  {
+    "functional_skill": <0-100>,
+    "seniority": <0-100>,
+    "stage_fit": <0-100>,
+    "domain_overlap": <0-100>,
+    "reasoning": "<one sentence explaining the most important factor>"
+  },
+  ...
+]
 """
 
+_FALLBACK = {"functional_skill": 0, "seniority": 0, "stage_fit": 0, "domain_overlap": 0, "reasoning": "Scoring unavailable"}
+
 _PREFILTER_LIMIT = 100
+
+
+def _composite(s: dict) -> float:
+    return (
+        0.35 * s.get("functional_skill", 0)
+        + 0.25 * s.get("seniority", 0)
+        + 0.20 * s.get("stage_fit", 0)
+        + 0.20 * s.get("domain_overlap", 0)
+    ) / 100.0
 _BATCH_SIZE = 25
 
 
@@ -80,7 +113,7 @@ Score this employee against each open role below. Return a JSON array with one o
         return scores
     except Exception as e:
         logger.error("Batch scoring failed for %s: %s", employee.name, e)
-        return [{"score": 0.0, "reasoning": "Scoring unavailable"}] * len(batch)
+        return [_FALLBACK] * len(batch)
 
 
 def rank_matches(
@@ -99,7 +132,7 @@ def rank_matches(
         scores = _score_batch(employee, batch)
         # Pad short responses so zip stays aligned
         if len(scores) < len(batch):
-            scores += [{"score": 0.0, "reasoning": "Scoring unavailable"}] * (len(batch) - len(scores))
+            scores += [_FALLBACK] * (len(batch) - len(scores))
         all_scores.extend(scores[: len(batch)])
 
     matches = []
@@ -107,8 +140,12 @@ def rank_matches(
         matches.append(Match(
             employee=employee,
             destination=dest,
-            score=float(s.get("score", 0.0)),
+            score=_composite(s),
             reasoning=s.get("reasoning", ""),
+            functional_skill=s.get("functional_skill"),
+            seniority=s.get("seniority"),
+            stage_fit=s.get("stage_fit"),
+            domain_overlap=s.get("domain_overlap"),
         ))
 
     matches.sort(key=lambda m: m.score, reverse=True)
