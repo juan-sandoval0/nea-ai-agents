@@ -5,6 +5,7 @@ import json
 import sqlite3
 from pathlib import Path
 from .models import Match, Employee, Destination
+from . import db
 
 _DB_PATH = Path(__file__).parent.parent / "data" / "audit.db"
 
@@ -61,6 +62,8 @@ def log_match(match: Match, db_path: Path = _DB_PATH) -> None:
             match.destination.model_dump_json(),
         ))
         conn.commit()
+    status = "approved" if match.approved else "pending"
+    db.save_match(match.employee, match, status)
 
 
 def get_approved_matches(db_path: Path = _DB_PATH) -> list[Match]:

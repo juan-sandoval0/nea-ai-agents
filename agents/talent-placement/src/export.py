@@ -9,6 +9,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from .models import Match
+from . import db
 
 _EXPORT_DIR = Path(__file__).parent.parent / "data" / "approved_matches"
 
@@ -22,4 +23,10 @@ def export_match(match: Match) -> Path:
     filename = f"{safe_name}__{safe_role}__{ts}.json"
     path = _EXPORT_DIR / filename
     path.write_text(json.dumps(match.model_dump(), indent=2))
+    db.log_action(
+        action="export",
+        employee_name=match.employee.name,
+        company_name=match.employee.company,
+        details={"destination_company": match.destination.company, "destination_role": match.destination.role, "file": str(path)},
+    )
     return path
