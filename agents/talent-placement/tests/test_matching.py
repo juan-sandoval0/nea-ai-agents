@@ -18,13 +18,13 @@ def _dests(n: int = 3) -> list[Destination]:
     ]
 
 
-def _dims(fs: int, sn: int, sf: int, do: int, reasoning: str = "ok") -> dict:
-    return {"functional_skill": fs, "seniority": sn, "stage_fit": sf, "domain_overlap": do, "reasoning": reasoning}
+def _dims(fs: int, sn: int, tp: int, sf: int, do: int, reasoning: str = "ok") -> dict:
+    return {"functional_skill": fs, "seniority": sn, "transition_pattern": tp, "stage_fit": sf, "domain_overlap": do, "reasoning": reasoning}
 
 
 def _uniform(pct: int, reasoning: str = "ok") -> dict:
-    """All four dimensions set to the same value so composite == pct / 100."""
-    return _dims(pct, pct, pct, pct, reasoning)
+    """All five dimensions set to the same value so composite == pct / 100."""
+    return _dims(pct, pct, pct, pct, pct, reasoning)
 
 
 def _mock_run(scores: list[dict]) -> MagicMock:
@@ -89,22 +89,23 @@ def test_reasoning_is_preserved():
 
 
 def test_dimension_scores_are_stored():
-    scores = [_dims(85, 90, 70, 80, "Strong skills match.")]
+    scores = [_dims(85, 90, 75, 70, 80, "Strong skills match.")]
     with patch("src.matching.subprocess.run", return_value=_mock_run(scores)):
         matches = rank_matches(_emp(), _dests(1), top_n=5)
     m = matches[0]
     assert m.functional_skill == 85
     assert m.seniority == 90
+    assert m.transition_pattern == 75
     assert m.stage_fit == 70
     assert m.domain_overlap == 80
 
 
 def test_composite_score_formula():
-    scores = [_dims(100, 100, 0, 0, "skills only")]
+    scores = [_dims(100, 100, 0, 0, 0, "skills only")]
     with patch("src.matching.subprocess.run", return_value=_mock_run(scores)):
         matches = rank_matches(_emp(), _dests(1), top_n=5)
-    # 0.35*100 + 0.25*100 + 0.20*0 + 0.20*0 = 60 → 0.60
-    assert matches[0].score == pytest.approx(0.60)
+    # 0.30*100 + 0.20*100 + 0.15*0 + 0.20*0 + 0.15*0 = 50 → 0.50
+    assert matches[0].score == pytest.approx(0.50)
 
 
 def test_batching_makes_multiple_calls():

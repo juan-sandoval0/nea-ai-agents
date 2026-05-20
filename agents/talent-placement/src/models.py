@@ -13,6 +13,7 @@ class Employee(BaseModel):
     is_executive: bool = False
     start_date: str | None = None
     tenure_years: float | None = None
+    career_company_count: int | None = None
 
 
 class Destination(BaseModel):
@@ -32,9 +33,10 @@ class Match(BaseModel):
     destination: Destination
     score: float  # 0.0–1.0 composite
     reasoning: str
-    functional_skill: int | None = None  # 0-100
-    seniority: int | None = None         # 0-100
-    stage_fit: int | None = None         # 0-100
-    domain_overlap: int | None = None    # 0-100
+    functional_skill: int | None = None   # 0-100
+    seniority: int | None = None          # 0-100
+    transition_pattern: int | None = None # 0-100
+    stage_fit: int | None = None          # 0-100
+    domain_overlap: int | None = None     # 0-100
     partner_notes: str | None = None
     approved: bool = False

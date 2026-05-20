@@ -12,48 +12,68 @@ logger = logging.getLogger(__name__)
 _SYSTEM = """\
 You are a talent placement advisor for NEA, a venture capital firm.
 You evaluate how well a departing portfolio company employee fits open job requisitions.
+These employees are being placed from a winding-down portfolio company.
 
-Score each employee-role pair on four dimensions (0-100 each):
+Score each employee-role pair on five dimensions (0-100 each):
 
-1. functional_skill (35%): Does their core function match the role?
-   Direct match = 80-100. Strong overlap with one gap = 60-79.
-   Partial match = 40-59. Weak/tangential = 20-39. No overlap = 0-19.
+1. functional_skill (30%): Does their core function match the role?
+   80-100: Direct match
+   60-79: Strong overlap, one gap
+   40-59: Partial match, retraining needed
+   20-39: Weak/tangential
+   0-19: No overlap
 
-2. seniority (25%): Is the level right? Both over AND under-qualification are penalized.
-   Direct title match = 80-100. One level off = 60-79.
-   Two levels off = 40-59. Three or more = 0-39.
+2. seniority (20%): Symmetric — both over and under-qualified are penalized.
+   80-100: Same level or one-level transition
+   60-79: One level off
+   40-59: Two levels off
+   0-39: Three or more levels off
 
-3. stage_fit (20%): Does their company stage experience match the hiring company's stage?
-   Same or adjacent stage = 80-100. One stage off = 60-79.
-   Two stages off = 40-59. Fundamentally different = 0-39.
+3. transition_pattern (15%): Given employee is from a winding-down company:
+   80-100: Lateral move (same level, new context) — high success rate
+   70-90: Intentional step-up with trajectory supporting growth
+   60-80: Intentional step-down (founder/exec to operator at earlier stage)
+   20-40: Forced step-down with no intentional-choice signal
+   30-50: Premature step-up without supporting trajectory
 
-4. domain_overlap (20%): Does their industry/domain transfer?
-   Same domain = 80-100. Adjacent = 60-79. Some overlap = 40-59. Major shift = 0-39.
+4. stage_fit (20%): Does their company stage experience match hiring company?
+   80-100: Same or adjacent stage
+   60-79: One stage off
+   40-59: Two stages off
+   0-39: Fundamentally different
+
+5. domain_overlap (15%): Industry transferability:
+   80-100: Same domain
+   60-79: Adjacent domain
+   40-59: Some overlap
+   0-39: Major shift
 
 Respond ONLY with a JSON array, one object per role, in the same order as given:
 [
   {
     "functional_skill": <0-100>,
     "seniority": <0-100>,
+    "transition_pattern": <0-100>,
     "stage_fit": <0-100>,
     "domain_overlap": <0-100>,
-    "reasoning": "<one sentence explaining the most important factor>"
+    "reasoning": "<one sentence on the most important factor>"
   },
   ...
 ]
 """
 
-_FALLBACK = {"functional_skill": 0, "seniority": 0, "stage_fit": 0, "domain_overlap": 0, "reasoning": "Scoring unavailable"}
+_FALLBACK = {"functional_skill": 0, "seniority": 0, "transition_pattern": 0, "stage_fit": 0, "domain_overlap": 0, "reasoning": "Scoring unavailable"}
 
 _PREFILTER_LIMIT = 100
 
 
 def _composite(s: dict) -> float:
     return (
-        0.35 * s.get("functional_skill", 0)
-        + 0.25 * s.get("seniority", 0)
+        0.30 * s.get("functional_skill", 0)
+        + 0.20 * s.get("seniority", 0)
+        + 0.15 * s.get("transition_pattern", 0)
         + 0.20 * s.get("stage_fit", 0)
-        + 0.20 * s.get("domain_overlap", 0)
+        + 0.15 * s.get("domain_overlap", 0)
     ) / 100.0
 _BATCH_SIZE = 25
 
@@ -79,12 +99,16 @@ def _score_batch(employee: Employee, batch: list[Destination]) -> list[dict]:
         f"{i + 1}. {d.role} @ {d.company}" + (f" ({d.location})" if d.location else "")
         for i, d in enumerate(batch)
     )
+    tenure = f"{employee.tenure_years:.1f} years" if employee.tenure_years is not None else "Unknown"
+    companies = str(employee.career_company_count) if employee.career_company_count is not None else "Unknown"
     prompt = f"""\
 Employee:
 - Name: {employee.name}
 - Title: {employee.title or "Unknown"}
 - Company: {employee.company}
 - Founder: {employee.is_founder}, Executive: {employee.is_executive}
+- Tenure at current company: {tenure}
+- Distinct companies in career: {companies}
 
 Score this employee against each open role below. Return a JSON array with one object per role in the same order:
 {roles_text}"""
@@ -144,6 +168,7 @@ def rank_matches(
             reasoning=s.get("reasoning", ""),
             functional_skill=s.get("functional_skill"),
             seniority=s.get("seniority"),
+            transition_pattern=s.get("transition_pattern"),
             stage_fit=s.get("stage_fit"),
             domain_overlap=s.get("domain_overlap"),
         ))
