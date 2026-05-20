@@ -62,5 +62,15 @@ def scrape() -> None:
     print(f"Found {len(all_jobs)} jobs. Saved to {OUTPUT}")
 
 
+def scrape_if_stale(max_age_days: int = 7) -> None:
+    """Run scrape() only when OUTPUT is missing or older than max_age_days."""
+    if OUTPUT.exists():
+        age_days = (time.time() - OUTPUT.stat().st_mtime) / 86400
+        if age_days < max_age_days:
+            print(f"Job reqs are {age_days:.1f} days old (threshold: {max_age_days}d) — skipping scrape.")
+            return
+    scrape()
+
+
 if __name__ == "__main__":
     scrape()

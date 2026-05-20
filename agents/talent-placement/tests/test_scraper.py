@@ -5,7 +5,7 @@ import csv
 from pathlib import Path
 from unittest.mock import MagicMock, patch, call
 
-from src.scraper import fetch_page, scrape, OUTPUT
+from src.scraper import fetch_page, scrape, scrape_if_stale, OUTPUT
 
 
 def _mock_response(data: dict, status: int = 200) -> MagicMock:
@@ -107,3 +107,37 @@ def test_scrape_creates_output_directory(tmp_path):
          patch("src.scraper.OUTPUT", nested):
         scrape()
     assert nested.exists()
+
+
+# ---------------------------------------------------------------------------
+# scrape_if_stale
+# ---------------------------------------------------------------------------
+
+def test_scrape_if_stale_skips_when_fresh(tmp_path):
+    csv_file = tmp_path / "jobs.csv"
+    csv_file.write_text("company,title,location,url\n")
+    # mtime is now — well within 7-day window
+    with patch("src.scraper.OUTPUT", csv_file), \
+         patch("src.scraper.scrape") as mock_scrape:
+        scrape_if_stale(max_age_days=7)
+    mock_scrape.assert_not_called()
+
+
+def test_scrape_if_stale_runs_when_old(tmp_path):
+    csv_file = tmp_path / "jobs.csv"
+    csv_file.write_text("company,title,location,url\n")
+    import os, time as _time
+    stale_mtime = _time.time() - 8 * 86400  # 8 days ago
+    os.utime(csv_file, (stale_mtime, stale_mtime))
+    with patch("src.scraper.OUTPUT", csv_file), \
+         patch("src.scraper.scrape") as mock_scrape:
+        scrape_if_stale(max_age_days=7)
+    mock_scrape.assert_called_once()
+
+
+def test_scrape_if_stale_runs_when_missing(tmp_path):
+    csv_file = tmp_path / "jobs.csv"  # does not exist
+    with patch("src.scraper.OUTPUT", csv_file), \
+         patch("src.scraper.scrape") as mock_scrape:
+        scrape_if_stale(max_age_days=7)
+    mock_scrape.assert_called_once()

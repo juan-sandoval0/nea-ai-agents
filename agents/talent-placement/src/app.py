@@ -9,7 +9,7 @@ from .roster import load_job_reqs
 from .matching import rank_matches
 from .export import export_match
 from .store import init_db, log_match
-from .scraper import scrape as refresh_job_reqs
+from .scraper import scrape_if_stale as refresh_job_reqs
 
 _DEFAULT_PORTCO_CSV = Path.home() / "Desktop" / "Active Portco (LU March 2026) (1).csv"
 
